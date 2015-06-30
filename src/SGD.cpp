@@ -193,7 +193,7 @@ void run_sgd(char* filename, int nthreads) {
   G.setAllActive();
   run_graph_program(&rmsep, G, 1, &rmsep_tmp);
 
-  for (int i = 0; i < G.nvertices; i++) err += G.vertexproperty[i].sqerr;
+  for (int i = 0; i < G.nvertices; i++) err += G.getVertexproperty(i).sqerr;
   printf("RMSE error = %lf per edge \n", sqrt(err/(G.nnz)));
 
   printf("SGD Init over\n");
@@ -232,12 +232,12 @@ void run_sgd(char* filename, int nthreads) {
   graph_program_clear(rmsep_tmp);
 
   err = 0.0;
-  for (int i = 0; i < G.nvertices; i++) err += G.vertexproperty[i].sqerr;
+  for (int i = 0; i < G.nvertices; i++) err += G.getVertexproperty(i).sqerr;
   printf("RMSE error = %lf per edge \n", sqrt(err/(G.nnz)));
 
   for (int i = 0; i <= std::min(10, G.nvertices); i++) { 
     printf("%d : ", i) ;
-    G.vertexproperty[i].print();
+    G.getVertexproperty(i).print();
     printf("\n");
   }
 }
