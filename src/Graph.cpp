@@ -542,7 +542,7 @@ bool compare_notrans(const edge_t & a, const edge_t & b)
   
   if(a.src < b.src) return true;
   else if(a.src > b.src) return false;
-  return true;
+  return false;
 }
 
 bool compare_trans(const edge_t & a, const edge_t & b)
