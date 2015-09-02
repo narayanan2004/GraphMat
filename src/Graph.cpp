@@ -63,8 +63,7 @@ class Graph {
 
   public:
     V* vertexproperty;
-    :1
-MatrixDC<E>** mat;
+    MatrixDC<E>** mat;
     MatrixDC<E>** matT; //transpose
     int nparts;
     //unsigned long long int* id; // vertex id's if any
