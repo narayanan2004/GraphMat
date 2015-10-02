@@ -349,8 +349,8 @@ void writeLine (FILE * ofile, int src, int dst, double val)
 }
 
 template <typename T> void writeFile(const char* ofilename, edge<T>* edges, int n, unsigned long int nnz, struct myoptions opt) {
-	if (opt.outputedgeweights == 0 || opt.outputedgeweights == 3) {
-		printf("Writer not yet implemented for no or random edge weights\n");
+	if (opt.outputedgeweights == 0) {
+		printf("Writer not yet implemented for no edge weights\n");
 		exit(1);
 	}
 	FILE * ofile;
@@ -378,6 +378,14 @@ template <typename T> void writeFile(const char* ofilename, edge<T>* edges, int 
         if (opt.outputedgeweights == 2) {
 	  for (unsigned long int i = 0; i < nnz; i++) {
             edges[i].val = 1;  
+          }
+        }
+        if (opt.outputedgeweights == 3) {
+	  for (unsigned long int i = 0; i < nnz; i++) {
+            double t = ((double)rand()/RAND_MAX*opt.random_range);  
+            if (t > opt.random_range) t = opt.random_range;
+            if (t < 0) t = 0;
+            edges[i].val = (T) t;  
           }
         }
 
