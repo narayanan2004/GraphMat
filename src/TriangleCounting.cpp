@@ -29,12 +29,12 @@
 /* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
 
+#include "GraphMatRuntime.cpp"
 #include <vector>
 #include <set>
 #include <algorithm>
 #include <assert.h>
 #include <memory>
-#include "GraphMatRuntime.cpp"
 
 void set_bit(unsigned int idx, int* bitvec) {
     unsigned int neighbor_id = idx;

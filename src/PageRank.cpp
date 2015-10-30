@@ -85,7 +85,7 @@ void run_pagerank(const char* filename, int nthreads) {
   Degree<PR> dg;
 
  
-  G.ReadMTX(filename, nthreads*4); //nthread pieces of matrix
+  G.ReadMTX(filename, nthreads*8); //nthread pieces of matrix
 
   auto dg_tmp = graph_program_init(dg, G);
 
@@ -93,7 +93,8 @@ void run_pagerank(const char* filename, int nthreads) {
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  run_graph_program(&dg, G, 1, &dg_tmp);
+  //run_graph_program(&dg, G, 1, &dg_tmp);
+  run_graph_program(&dg, G, 1);
 
   gettimeofday(&end, 0);
   double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
@@ -106,7 +107,8 @@ void run_pagerank(const char* filename, int nthreads) {
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  run_graph_program(&pr, G, -1, &pr_tmp);
+  //run_graph_program(&pr, G, -1, &pr_tmp);
+  run_graph_program(&pr, G, -1);
   
   gettimeofday(&end, 0);
   time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
@@ -114,12 +116,16 @@ void run_pagerank(const char* filename, int nthreads) {
 
   graph_program_clear(pr_tmp);
 
-  for (int i = 0; i < std::min((unsigned long long int)25, (unsigned long long int)G.getNumberOfVertices()); i++) { 
-    printf("%d : %d %f\n", i, G.getVertexproperty(i).degree, G.getVertexproperty(i).pagerank);
+  for (int i = 1; i < std::min((unsigned long long int)25, (unsigned long long int)G.getNumberOfVertices()); i++) { 
+    if (G.vertexproperty.node_owner(i)) {
+      printf("%d : %d %f\n", i, G.getVertexproperty(i).degree, G.getVertexproperty(i).pagerank);
+    }
   }
 }
 
 int main(int argc, char* argv[]) {
+  MPI_Init(&argc, &argv);
+  PCL_Graph_BLAS::GB_Init();
 
   const char* input_filename = argv[1];
 
@@ -139,6 +145,6 @@ int main(int argc, char* argv[]) {
   
   run_pagerank(input_filename, nthreads);
 
-  
+  MPI_Finalize();
 }
 

@@ -39,6 +39,7 @@
 #include <parallel/algorithm>
 #include <omp.h>
 #include <cassert>
+#include "ipdps/layouts.h"
 
 inline double sec(struct timeval start, struct timeval end)
 {
@@ -62,25 +63,29 @@ template <class V, class E=int>
 class Graph {
 
   public:
-    V* vertexproperty;
-    MatrixDC<E>** mat;
-    MatrixDC<E>** matT; //transpose
-    int nparts;
+    //V* vertexproperty;
+    //MatrixDC<E>** mat;
+    //MatrixDC<E>** matT; //transpose
+    //int nparts;
     //unsigned long long int* id; // vertex id's if any
-    bool* active;
+    //bool* active;
     int nvertices;
     long long int nnz;
     int vertexpropertyowner;
 
-    int *start_src_vertices; //start and end of transpose parts
-    int *end_src_vertices;
+    //int *start_src_vertices; //start and end of transpose parts
+    //int *end_src_vertices;
+
+    PCL_Graph_BLAS::SpMat<PCL_Graph_BLAS::DCSCTile<E> > A;
+    PCL_Graph_BLAS::SpMat<PCL_Graph_BLAS::DCSCTile<E> > AT;
+    PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<V> > vertexproperty;
+    PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<bool> > active;
 //    int start_dst_vertices[MAX_PARTS];
 //    int end_dst_vertices[MAX_PARTS];
 
   public:
     void ReadMTX(const char* filename, int grid_size); 
-    //void ReadMTX_old(const char* filename, int grid_size); 
-    void ReadMTX_sort(const char* filename, int grid_size); 
+    void ReadMTX_sort(const char* filename, int grid_size, int alloc=1); 
     void ReadMTX_sort(edge_t* edges, int m, int n, int nnz, int grid_size, int alloc=1); 
     void setAllActive();
     void setAllInactive();
@@ -996,11 +1001,22 @@ void Graph<V,E>::ReadMTX(const char* filename, int grid_size) {
   return;
 }
 
-
 template<class V, class E>
-void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size) {
+void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
 
   struct timeval start, end;
+  gettimeofday(&start, 0);
+  {
+    PCL_Graph_BLAS::edgelist_t<int> A_edges;
+    PCL_Graph_BLAS::ReadEdgesBin(&A_edges, filename, false);
+
+    int tiles_per_dim = PCL_Graph_BLAS::global_nrank;
+
+    //int (*partition_fn)(int,int,int,int,int);
+    //get_fn_and_tiles(3, PCL_Graph_BLAS::global_nrank, &partition_fn, &tiles_per_dim);
+    PCL_Graph_BLAS::AssignSpMat(A_edges, &A, tiles_per_dim, tiles_per_dim, partition_fn_2d);
+    PCL_Graph_BLAS::Transpose(A, &AT, tiles_per_dim, tiles_per_dim, partition_fn_2d);
+  /*
   gettimeofday(&start, 0);
 
   int m_, n_, nnz_;
@@ -1016,10 +1032,32 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size) {
   ReadMTX_sort(edges, m_, n_, nnz_, grid_size);
 
   _mm_free((void*)edges);
-
   gettimeofday(&end, 0);
   double time = (end.tv_sec-start.tv_sec)+(end.tv_usec-start.tv_usec)*1e-6;
   printf("Completed reading A from file in %lf seconds.\n", time);
+*/
+    int m_ = A.m;
+    assert(A.m == A.n);
+    nnz = A.getNNZ();
+    if(alloc) {
+      vertexproperty.AllocatePartitioned(A.m, tiles_per_dim, vector_partition_fn);
+      V *__v = new V;
+      vertexproperty.setAll(*__v);
+      delete __v;
+      active.AllocatePartitioned(A.m, tiles_per_dim, vector_partition_fn);
+      active.setAll(false);
+    } else {
+      //vertexproperty = NULL; 
+      //active = NULL;
+    }
+
+    nvertices = m_;
+    vertexpropertyowner = 1;
+  }
+  gettimeofday(&end, 0);
+  std::cout << "Finished GraphPad read + construction, time: " << sec(start,end)  << std::endl;
+
+
 }
 
 template<class V, class E>
@@ -1273,62 +1311,77 @@ void Graph<V,E>::ReadMTX_sort(edge_t* edges, int m_, int n_, int nnz_, int grid_
   // vertexpropertyowner = 1;
 // }
 
+
 template<class V, class E> 
 void Graph<V,E>::setAllActive() {
   //for (int i = 0; i <= nvertices; i++) {
   //  active[i] = true;
   //}
-  memset(active, 0xff, sizeof(bool)*(nvertices));
+  //memset(active, 0xff, sizeof(bool)*(nvertices));
+  //PCL_Graph_BLAS::Apply(active, &active, set_all_true);
+  active.setAll(true);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setAllInactive() {
-  memset(active, 0x0, sizeof(bool)*(nvertices));
+  //memset(active, 0x0, sizeof(bool)*(nvertices));
+  //PCL_Graph_BLAS::Apply(active, &active, set_all_false);
+  active.setAll(false);
+  PCL_Graph_BLAS::Clear(&active);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setActive(int v) {
-  active[v] = true;
+  //active[v] = true;
+  active.set(v, true);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setInactive(int v) {
-  active[v] = false;
+  //active[v] = false;
+  active.set(v, false);
 }
 template<class V, class E> 
 void Graph<V,E>::reset() {
-  memset(active, 0, sizeof(bool)*(nvertices));
-
-  #pragma omp parallel for num_threads(nthreads)
-  for (int i = 0; i < nvertices; i++) {
-    V v;
-    vertexproperty[i] = v;
-  }
+  //memset(active, 0, sizeof(bool)*(nvertices));
+  setAllInactive();
+  V v;
+  vertexproperty.setAll(v);
+  //#pragma omp parallel for num_threads(nthreads)
+  //for (int i = 0; i < nvertices; i++) {
+  //  V v;
+  //  vertexproperty[i] = v;
+  //}
 }
 
 template<class V, class E> 
 void Graph<V,E>::shareVertexProperty(Graph<V,E>& g) {
-  delete [] vertexproperty;
+  //delete [] vertexproperty;
   vertexproperty = g.vertexproperty;
   vertexpropertyowner = 0;
 }
 
 template<class V, class E> 
 void Graph<V,E>::setAllVertexproperty(const V& val) {
-  #pragma omp parallel for num_threads(nthreads)
-  for (int i = 0; i < nvertices; i++) {
-    vertexproperty[i] = val;
-  }
+  //#pragma omp parallel for num_threads(nthreads)
+  //for (int i = 0; i < nvertices; i++) {
+  //  vertexproperty[i] = val;
+  //}
+  vertexproperty.setAll(val);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setVertexproperty(int v, const V& val) {
-  vertexproperty[v] = val;
+  //vertexproperty[v] = val;
+  vertexproperty.set(v, val);
 }
 
 template<class V, class E> 
-V Graph<V,E>::getVertexproperty(int v) const {
-  return vertexproperty[v];
+V Graph<V,E>::getVertexproperty(const int v) const {
+  //return vertexproperty[v];
+  V vp ;
+  vertexproperty.get(v, &vp);
+  return vp;
 }
 
 int getId(const int i, const int* start, const int* end, const int n) {
@@ -1357,20 +1410,21 @@ int Graph<V,E>::getNumberOfVertices() const {
 template<class V, class E> 
 void Graph<V,E>::applyToAllVertices( void (*func)(V& _v)) {
   //#pragma omp parallel for num_threads(nthreads)
-  for (int i = 0; i < nvertices; i++) {
-    func(vertexproperty[i]);
-  }
+  //for (int i = 0; i < nvertices; i++) {
+  //  func(vertexproperty[i]);
+  //}
+  PCL_Graph_BLAS::Apply(vertexproperty, &vertexproperty, func);
 }
 
 template<class V, class E> 
 Graph<V,E>::~Graph() {
   if (vertexpropertyowner) {
-    if(vertexproperty) delete [] vertexproperty;
+    //if(vertexproperty) delete [] vertexproperty;
   }
-  if (active) delete [] active;
+  //if (active) delete [] active;
   //if (id) delete [] id;
-  if (start_src_vertices) delete [] start_src_vertices;
-  if (end_src_vertices) delete [] end_src_vertices;
+  //if (start_src_vertices) delete [] start_src_vertices;
+  //if (end_src_vertices) delete [] end_src_vertices;
 
 }
 

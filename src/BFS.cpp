@@ -211,23 +211,37 @@ void run_bfs(char* filename, int nthreads, int v) {
   Graph<BFSD2> G;
   G.ReadMTX(filename, nthreads*4); //nthread pieces of matrix
   
-  for (int i = 0; i < G.nvertices; i++) G.vertexproperty[i].id = i;
+  //for (int i = 0; i < G.nvertices; i++) G.vertexproperty[i].id = i;
+  for(int i = 0 ; i < G.getNumberOfVertices() ; i++)
+  {
+    BFSD2 vp = G.getVertexproperty(i+1);
+    vp.id = i+1;
+    G.setVertexproperty(i+1, vp);
+  }
   //BFS b;
   BFS2 b;
-  Calc_Parent pc;
 
-  auto pc_tmp = graph_program_init(pc, G);
   auto b_tmp = graph_program_init(b, G);
   //int v = 1758293;
   //int v = 6;
 
-  G.vertexproperty[v].depth = 0;
-  G.active[v] = true;
+  //G.vertexproperty[v].depth = 0;
+  //G.active[v] = true;
+  G.setAllInactive();
+  printf("Nactive  = %d\n", G.active.getNNZ());
+
+  auto vp = G.getVertexproperty(v);
+  vp.depth = 0;
+  G.setVertexproperty(v, vp);
+  G.setActive(v);
+
+  printf("Nactive  = %d\n", G.active.getNNZ());
 
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  run_graph_program(&b, G, -1, &b_tmp);
+  //run_graph_program(&b, G, -1, &b_tmp);
+  run_graph_program(&b, G, -1);
   //G.setAllActive();
   //run_graph_program(pc, G, 1, &pc_tmp);
   //run_dense_graph_program(b, G, -1);
@@ -235,20 +249,22 @@ void run_bfs(char* filename, int nthreads, int v) {
   gettimeofday(&end, 0);
   printf("Time = %.3f ms \n", (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3);
  
-  graph_program_clear(pc_tmp);
+  //graph_program_clear(pc_tmp);
   graph_program_clear(b_tmp);
 
   int reachable_vertices = 0;
-  for (int i = 0; i < G.nvertices; i++) {
-    if (G.vertexproperty[i].depth < 255) {
+  for (int i = 1; i <= G.getNumberOfVertices(); i++) {
+    if (G.vertexproperty.node_owner(i) && G.getVertexproperty(i).depth < 255) {
       reachable_vertices++;
     }
   }
   printf("Reachable vertices = %d \n", reachable_vertices);
 
-  for (int i = 0; i <= std::min(10, G.nvertices); i++) {
-    if (G.vertexproperty[i].depth < 255) {
-      printf("Depth %d : %d \n", i, G.vertexproperty[i].depth);
+  for (int i = 1; i <= std::min(10, G.nvertices); i++) {
+    if (G.vertexproperty.node_owner(i))
+    if (G.getVertexproperty(i).depth < 255) {
+      //printf("Depth %d : %d \n", i, G.vertexproperty[i].depth);
+      printf("Depth %d : %d parent: %d\n", i, G.getVertexproperty(i).depth, G.getVertexproperty(i).parent);
     }
     else {
       printf("Depth %d : INF \n", i);
@@ -265,6 +281,9 @@ void run_bfs(char* filename, int nthreads, int v) {
 }
 
 int main(int argc, char* argv[]) {
+  MPI_Init(&argc, &argv);
+  PCL_Graph_BLAS::GB_Init();
+
   if (argc < 3) {
     printf("Correct format: %s A.mtx source_vertex (1-based index)\n", argv[0]);
     return 0;
@@ -288,11 +307,10 @@ int main(int argc, char* argv[]) {
   
 
   int source_vertex = atoi(argv[2]);
-  //run_pagerank(argv[1], nthreads);
-  run_bfs(argv[1], nthreads, source_vertex-1);
-  //run_triangle_counting(argv[1], nthreads); 
-  //run_sgd(argv[1], nthreads); 
-  //run_graph_coloring(argv[1], nthreads); 
+  //run_bfs(argv[1], nthreads, source_vertex-1);
+  run_bfs(argv[1], nthreads, source_vertex);
+
+  MPI_Finalize();
   
-  }
+}
 
