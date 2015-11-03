@@ -1327,7 +1327,15 @@ void Graph<V,E>::setAllInactive() {
   //memset(active, 0x0, sizeof(bool)*(nvertices));
   //PCL_Graph_BLAS::Apply(active, &active, set_all_false);
   active.setAll(false);
-  PCL_Graph_BLAS::Clear(&active);
+  //PCL_Graph_BLAS::Clear(&active);
+  for(int segmentId = 0 ; segmentId < active.nsegments ; segmentId++)
+  {
+    if(active.nodeIds[segmentId] == PCL_Graph_BLAS::global_myrank)
+    {
+      PCL_Graph_BLAS::DenseSegment<bool>* s1 = &(active.segments[segmentId]);
+      PCL_Graph_BLAS::clear_dense_segment(s1->properties.value, s1->properties.bit_vector, s1->num_ints);
+    }
+  }
 }
 
 template<class V, class E> 

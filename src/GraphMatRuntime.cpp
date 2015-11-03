@@ -441,12 +441,12 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
       if(y.nodeIds[segmentId] == PCL_Graph_BLAS::global_myrank)
       {
         auto segment = y.segments[segmentId].properties;
-        #pragma omp parallel for num_threads(nthreads) reduction(&:local_converged)
+        #pragma omp parallel for reduction(&:local_converged) 
         for (int i = 0; i < y.segments[segmentId].num_ints; i++) {
           unsigned int value = segment.bit_vector[i];
           while (value != 0) {
             int last_bit = _bit_scan_forward(value);
-            int idx = i*32 + last_bit; // idx must be 1-based
+            int idx = i*32 + last_bit; 
 
             V old_prop;
             old_prop = g.vertexproperty.segments[segmentId].properties.value[idx];
@@ -454,6 +454,8 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
             gp->apply(segment.value[idx], g.vertexproperty.segments[segmentId].properties.value[idx]);
             if (old_prop != g.vertexproperty.segments[segmentId].properties.value[idx]) {
               g.active.segments[segmentId].set(idx+1, true);
+              //g.active.segments[segmentId].properties.value[idx] = true;
+              //set_bitvector(idx, g.active.segments[segmentId].properties.bit_vector);
               local_converged = 0;
             }
 

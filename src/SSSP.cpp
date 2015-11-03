@@ -222,7 +222,8 @@ void run_sssp(const char* filename, int nthreads, int v) {
 
   //__itt_resume();
 
-  run_graph_program(&b, G, -1, &tmp_ds);
+  run_graph_program(&b, G, -1);
+  //run_graph_program(&b, G, -1, &tmp_ds);
   //run_dense_graph_program(b, G, -1);
 
   //__itt_pause();
@@ -233,19 +234,22 @@ void run_sssp(const char* filename, int nthreads, int v) {
  
   int reachable_vertices = 0;
 
-  for (int i = 0; i < G.nvertices; i++) {
-    if (G.getVertexproperty(i).distance < MAX_DIST) {
+  for (int i = 1; i <= G.nvertices; i++) {
+    if (G.vertexproperty.node_owner(i) && G.getVertexproperty(i).distance < MAX_DIST) {
       reachable_vertices++;
     }
   }
+  MPI_Allreduce(MPI_IN_PLACE, &reachable_vertices, 1,  MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-  printf("Reachable vertices = %d \n", reachable_vertices);
+  if (PCL_Graph_BLAS::global_myrank == 0) printf("Reachable vertices = %d \n", reachable_vertices);
 
-  for (int i = 0; i <= std::min((unsigned long long int)25, (unsigned long long int)G.nvertices); i++) {
+  for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.nvertices); i++) {
   //for (int i = 1; i <= G.nvertices; i++) {
+    if (G.vertexproperty.node_owner(i)) {
     printf("%d : ", i);
     //G.vertexproperty[i].print();
     G.getVertexproperty(i).print();
+    }
     /*if (G.vertexproperty[i].distance < MAX_DIST) {
       printf("PATH: ");
       int par = i;
@@ -278,6 +282,8 @@ void run_sssp(const char* filename, int nthreads, int v) {
 }
 
 int main (int argc, char* argv[]) {
+  MPI_Init(&argc, &argv);
+  PCL_Graph_BLAS::GB_Init();
 
   const char* input_filename = argv[1];
 
@@ -297,7 +303,9 @@ int main (int argc, char* argv[]) {
   }
   
   int source_vertex = atoi(argv[2]);
-  run_sssp(input_filename, nthreads, source_vertex-1);
+  //run_sssp(input_filename, nthreads, source_vertex-1);
+  run_sssp(input_filename, nthreads, source_vertex);
+  MPI_Finalize();
  
  
 }

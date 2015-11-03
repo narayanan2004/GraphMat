@@ -228,14 +228,14 @@ void run_bfs(char* filename, int nthreads, int v) {
   //G.vertexproperty[v].depth = 0;
   //G.active[v] = true;
   G.setAllInactive();
-  printf("Nactive  = %d\n", G.active.getNNZ());
+  //printf("Nactive  = %d\n", G.active.getNNZ());
 
   auto vp = G.getVertexproperty(v);
   vp.depth = 0;
   G.setVertexproperty(v, vp);
   G.setActive(v);
 
-  printf("Nactive  = %d\n", G.active.getNNZ());
+  //printf("Nactive  = %d\n", G.active.getNNZ());
 
   struct timeval start, end;
   gettimeofday(&start, 0);
@@ -258,7 +258,9 @@ void run_bfs(char* filename, int nthreads, int v) {
       reachable_vertices++;
     }
   }
-  printf("Reachable vertices = %d \n", reachable_vertices);
+  MPI_Allreduce(MPI_IN_PLACE, &reachable_vertices, 1,  MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+  if (PCL_Graph_BLAS::global_myrank == 0) printf("Reachable vertices = %d \n", reachable_vertices);
 
   for (int i = 1; i <= std::min(10, G.nvertices); i++) {
     if (G.vertexproperty.node_owner(i))
