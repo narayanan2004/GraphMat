@@ -441,6 +441,7 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
       if(y.nodeIds[segmentId] == PCL_Graph_BLAS::global_myrank)
       {
         auto segment = y.segments[segmentId].properties;
+        auto vpValueArray = g.vertexproperty.segments[segmentId].properties.value;
         #pragma omp parallel for reduction(&:local_converged) 
         for (int i = 0; i < y.segments[segmentId].num_ints; i++) {
           unsigned int value = segment.bit_vector[i];
@@ -449,10 +450,12 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
             int idx = i*32 + last_bit; 
 
             V old_prop;
-            old_prop = g.vertexproperty.segments[segmentId].properties.value[idx];
+            //old_prop = g.vertexproperty.segments[segmentId].properties.value[idx];
+            old_prop = vpValueArray[idx];
       
-            gp->apply(segment.value[idx], g.vertexproperty.segments[segmentId].properties.value[idx]);
-            if (old_prop != g.vertexproperty.segments[segmentId].properties.value[idx]) {
+            //gp->apply(segment.value[idx], g.vertexproperty.segments[segmentId].properties.value[idx]);
+            gp->apply(segment.value[idx], vpValueArray[idx]);
+            if (old_prop != vpValueArray[idx]) {
               g.active.segments[segmentId].set(idx+1, true);
               //g.active.segments[segmentId].properties.value[idx] = true;
               //set_bitvector(idx, g.active.segments[segmentId].properties.bit_vector);
