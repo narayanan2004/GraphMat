@@ -456,9 +456,9 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
             //gp->apply(segment.value[idx], g.vertexproperty.segments[segmentId].properties.value[idx]);
             gp->apply(segment.value[idx], vpValueArray[idx]);
             if (old_prop != vpValueArray[idx]) {
-              g.active.segments[segmentId].set(idx+1, true);
-              //g.active.segments[segmentId].properties.value[idx] = true;
-              //set_bitvector(idx, g.active.segments[segmentId].properties.bit_vector);
+              //g.active.segments[segmentId].set(idx+1, true);
+              g.active.segments[segmentId].properties.value[idx] = true;
+              PCL_Graph_BLAS::set_bitvector(idx, g.active.segments[segmentId].properties.bit_vector);
               local_converged = 0;
             }
 
