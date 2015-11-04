@@ -514,9 +514,6 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
       g.setAllActive();
     }
 
-    #ifdef __TIMING
-    printf("Number of vertices that changed state = %d \n", g.active.getNNZ());
-    #endif
 
     //end = __rdtsc();
     gettimeofday(&end, 0);
@@ -533,7 +530,8 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
     #ifdef __TIMING
     //printf("Iteration %d :: %f msec :: updated %d vertices \n", it, (iteration_end-iteration_start)/(CPU_FREQ)*1e3, y.getNNZ());
     time = (iteration_end.tv_sec-iteration_start.tv_sec)*1e3+(iteration_end.tv_usec-iteration_start.tv_usec)*1e-3;
-    printf("Iteration %d :: %f msec :: updated %d vertices \n", it, time, y.getNNZ());
+    //printf("Number of vertices that changed state = %d \n", g.active.getNNZ());
+    printf("Iteration %d :: %f msec :: updated %d vertices :: changed %d vertices \n", it, time, y.getNNZ(), g.active.getNNZ());
     #endif
 
     it++;
