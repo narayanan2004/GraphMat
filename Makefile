@@ -1,5 +1,5 @@
 
-GRAPHBLAS_PATH=/home/sundara1/work/PCLGraphBLAS/
+GRAPHBLAS_PATH=../PCLGraphBLAS/
 include $(GRAPHBLAS_PATH)/Make.inc
 
 #CXX=icpc

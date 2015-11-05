@@ -33,7 +33,7 @@
 #include <cstring>
 #include <vector>
 #include <unordered_map>
-#include <immintrin.h>
+//#include <immintrin.h>
 #include "utils.h"
 #include <iostream>
 

@@ -42,33 +42,33 @@
 #include <assert.h>
 #endif
 
-#include "class_MatrixDC.cpp"
+//#include "class_MatrixDC.cpp"
 #include "Graph.cpp"
 #include "GraphProgram.cpp"
-#include "SparseVector.cpp"
+//#include "SparseVector.cpp"
 #include "SPMV.cpp"
 
 int nthreads;
 
 template<class T, class U, class V>
 struct run_graph_program_temp_structure {
-  SparseInVector<T>* px;
-  SparseOutVector<U>* py;
+  //SparseInVector<T>* px;
+  //SparseOutVector<U>* py;
 };
 
 template<class T, class U, class V>
 struct run_graph_program_temp_structure<T,U,V> graph_program_init(const GraphProgram<T,U,V>& gp, const Graph<V>& g) {
 
   struct run_graph_program_temp_structure<T,U,V> rgpts;
-  rgpts.px = new SparseInVector<T>(g.nvertices);
-  rgpts.py = new SparseOutVector<U>(g.nvertices);
+  //rgpts.px = new SparseInVector<T>(g.nvertices);
+  //rgpts.py = new SparseOutVector<U>(g.nvertices);
   return rgpts;
 }
 
 template<class T, class U, class V>
 void graph_program_clear(struct run_graph_program_temp_structure<T,U,V>& rgpts) {
-  delete rgpts.px;
-  delete rgpts.py;
+  //delete rgpts.px;
+  //delete rgpts.py;
 }
 /*
 template <class T, class U, class V>
