@@ -620,7 +620,7 @@ void read_from_binary(const char * fname, int &m, int &n, int &nnz, edge_t * &ed
   }
   else
   {
-    std::cout << "File did not open" << std::endl;
+    std::cout << "Could not open file " << fname << std::endl;
     exit(0);
   }
   fin.close();
@@ -1007,11 +1007,11 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size) {
 
   // Insert my code here
   edge_t * edges;
-  std::cout << "Starting file read" << std::endl;
+  std::cout << "Starting file read of " << filename << std::endl;
   gettimeofday(&start, NULL);
   read_from_binary(filename, m_, n_, nnz_, edges);
   gettimeofday(&end, NULL);
-  std::cout << "Finished file read, time: " << sec(start,end)  << std::endl;
+  std::cout << "Finished file read of " << filename << ", time: " << sec(start,end)  << std::endl;
 
   ReadMTX_sort(edges, m_, n_, nnz_, grid_size);
 
