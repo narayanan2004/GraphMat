@@ -348,11 +348,12 @@ void writeLine (FILE * ofile, int src, int dst, double val)
   fprintf(ofile, "%d %d %1.16e\n", src, dst, val);
 }
 
+void writeLine (FILE * ofile, int src, int dst)
+{
+  fprintf(ofile, "%d %d\n", src, dst);
+}
+
 template <typename T> void writeFile(const char* ofilename, edge<T>* edges, int n, unsigned long int nnz, struct myoptions opt) {
-	if (opt.outputedgeweights == 0) {
-		printf("Writer not yet implemented for no edge weights\n");
-		exit(1);
-	}
 	FILE * ofile;
 	if (opt.outputformat == 0) {
 		ofile = fopen(ofilename, "wb");
@@ -390,11 +391,19 @@ template <typename T> void writeFile(const char* ofilename, edge<T>* edges, int 
         }
 
 	if (opt.outputformat == 0) {
+		if (opt.outputedgeweights == 0) {
+			printf("Writer not yet implemented for no edge weights\n");
+			exit(1);
+		}
 		//printf("First line %d %d %d\n", edges[0].src, edges[0].dst, edges[0].val);
 		fwrite(edges, sizeof(edge<T>), nnz, ofile);
 	} else {
 		for (unsigned long int i = 0; i < nnz; i++) {
-                        writeLine(ofile, edges[i].src, edges[i].dst, edges[i].val);
+			if (opt.outputedgeweights == 0) {
+                        	writeLine(ofile, edges[i].src, edges[i].dst);
+			} else {
+                        	writeLine(ofile, edges[i].src, edges[i].dst, edges[i].val);
+			}
 		}
 	}
 	printf("Wrote %lu edges and %d vertices to file %s\n", nnz, n, ofilename);
