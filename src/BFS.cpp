@@ -260,7 +260,7 @@ void run_bfs(char* filename, int nthreads, int v) {
   }
   MPI_Allreduce(MPI_IN_PLACE, &reachable_vertices, 1,  MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-  if (PCL_Graph_BLAS::global_myrank == 0) printf("Reachable vertices = %d \n", reachable_vertices);
+  if (GraphPad::global_myrank == 0) printf("Reachable vertices = %d \n", reachable_vertices);
 
   for (int i = 1; i <= std::min(10, G.nvertices); i++) {
     if (G.vertexproperty.node_owner(i))
@@ -284,7 +284,7 @@ void run_bfs(char* filename, int nthreads, int v) {
 
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
-  PCL_Graph_BLAS::GB_Init();
+  GraphPad::GB_Init();
 
   if (argc < 3) {
     printf("Correct format: %s A.mtx source_vertex (1-based index)\n", argv[0]);

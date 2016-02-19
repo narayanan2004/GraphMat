@@ -51,11 +51,11 @@ void Addfn(U a, U b, U * c, void* gpv) {
 }
 
 template <class T, class U, class V>
-void SpMSpV(const Graph<V>& G, const GraphProgram<T,U,V>* gp, const PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<T> >& x, PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<U> >& y) {
+void SpMSpV(const Graph<V>& G, const GraphProgram<T,U,V>* gp, const GraphPad::SpVec<GraphPad::DenseSegment<T> >& x, GraphPad::SpVec<GraphPad::DenseSegment<U> >& y) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  PCL_Graph_BLAS::SpMSpV(G.A, x, &y, Mulfn<T,U,V>, Addfn<T,U,V>, (void*)gp);
+  GraphPad::SpMSpV(G.A, x, &y, Mulfn<T,U,V>, Addfn<T,U,V>, (void*)gp);
 
   #ifdef __TIMING
   gettimeofday(&end, 0);
@@ -64,11 +64,11 @@ void SpMSpV(const Graph<V>& G, const GraphProgram<T,U,V>* gp, const PCL_Graph_BL
   #endif
 }
 template <class T, class U, class V>
-void SpMTSpV(const Graph<V>& G, const GraphProgram<T,U,V>* gp, const PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<T> >& x, PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<U> >& y) {
+void SpMTSpV(const Graph<V>& G, const GraphProgram<T,U,V>* gp, const GraphPad::SpVec<GraphPad::DenseSegment<T> >& x, GraphPad::SpVec<GraphPad::DenseSegment<U> >& y) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  PCL_Graph_BLAS::SpMSpV(G.AT, x, &y, Mulfn<T,U,V>, Addfn<T,U,V>, (void*)gp);
+  GraphPad::SpMSpV(G.AT, x, &y, Mulfn<T,U,V>, Addfn<T,U,V>, (void*)gp);
 
   #ifdef __TIMING
   gettimeofday(&end, 0);

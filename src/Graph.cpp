@@ -39,7 +39,7 @@
 #include <parallel/algorithm>
 #include <omp.h>
 #include <cassert>
-#include "ipdps/layouts.h"
+#include "src/layouts.h"
 
 inline double sec(struct timeval start, struct timeval end)
 {
@@ -76,10 +76,10 @@ class Graph {
     //int *start_src_vertices; //start and end of transpose parts
     //int *end_src_vertices;
 
-    PCL_Graph_BLAS::SpMat<PCL_Graph_BLAS::DCSCTile<E> > A;
-    PCL_Graph_BLAS::SpMat<PCL_Graph_BLAS::DCSCTile<E> > AT;
-    PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<V> > vertexproperty;
-    PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<bool> > active;
+    GraphPad::SpMat<GraphPad::DCSCTile<E> > A;
+    GraphPad::SpMat<GraphPad::DCSCTile<E> > AT;
+    GraphPad::SpVec<GraphPad::DenseSegment<V> > vertexproperty;
+    GraphPad::SpVec<GraphPad::DenseSegment<bool> > active;
 //    int start_dst_vertices[MAX_PARTS];
 //    int end_dst_vertices[MAX_PARTS];
 
@@ -1007,15 +1007,15 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
   struct timeval start, end;
   gettimeofday(&start, 0);
   {
-    PCL_Graph_BLAS::edgelist_t<int> A_edges;
-    PCL_Graph_BLAS::ReadEdgesBin(&A_edges, filename, false);
+    GraphPad::edgelist_t<int> A_edges;
+    GraphPad::ReadEdgesBin(&A_edges, filename, false);
 
-    int tiles_per_dim = PCL_Graph_BLAS::global_nrank;
+    int tiles_per_dim = GraphPad::global_nrank;
 
     //int (*partition_fn)(int,int,int,int,int);
-    //get_fn_and_tiles(3, PCL_Graph_BLAS::global_nrank, &partition_fn, &tiles_per_dim);
-    PCL_Graph_BLAS::AssignSpMat(A_edges, &A, tiles_per_dim, tiles_per_dim, partition_fn_2d);
-    PCL_Graph_BLAS::Transpose(A, &AT, tiles_per_dim, tiles_per_dim, partition_fn_2d);
+    //get_fn_and_tiles(3, GraphPad::global_nrank, &partition_fn, &tiles_per_dim);
+    GraphPad::AssignSpMat(A_edges, &A, tiles_per_dim, tiles_per_dim, GraphPad::partition_fn_2d);
+    GraphPad::Transpose(A, &AT, tiles_per_dim, tiles_per_dim, GraphPad::partition_fn_2d);
   /*
   gettimeofday(&start, 0);
 
@@ -1040,11 +1040,11 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
     assert(A.m == A.n);
     nnz = A.getNNZ();
     if(alloc) {
-      vertexproperty.AllocatePartitioned(A.m, tiles_per_dim, vector_partition_fn);
+      vertexproperty.AllocatePartitioned(A.m, tiles_per_dim, GraphPad::vector_partition_fn);
       V *__v = new V;
       vertexproperty.setAll(*__v);
       delete __v;
-      active.AllocatePartitioned(A.m, tiles_per_dim, vector_partition_fn);
+      active.AllocatePartitioned(A.m, tiles_per_dim, GraphPad::vector_partition_fn);
       active.setAll(false);
     } else {
       //vertexproperty = NULL; 
@@ -1318,22 +1318,22 @@ void Graph<V,E>::setAllActive() {
   //  active[i] = true;
   //}
   //memset(active, 0xff, sizeof(bool)*(nvertices));
-  //PCL_Graph_BLAS::Apply(active, &active, set_all_true);
+  //GraphPad::Apply(active, &active, set_all_true);
   active.setAll(true);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setAllInactive() {
   //memset(active, 0x0, sizeof(bool)*(nvertices));
-  //PCL_Graph_BLAS::Apply(active, &active, set_all_false);
+  //GraphPad::Apply(active, &active, set_all_false);
   active.setAll(false);
-  //PCL_Graph_BLAS::Clear(&active);
+  //GraphPad::Clear(&active);
   for(int segmentId = 0 ; segmentId < active.nsegments ; segmentId++)
   {
-    if(active.nodeIds[segmentId] == PCL_Graph_BLAS::global_myrank)
+    if(active.nodeIds[segmentId] == GraphPad::global_myrank)
     {
-      PCL_Graph_BLAS::DenseSegment<bool>* s1 = &(active.segments[segmentId]);
-      PCL_Graph_BLAS::clear_dense_segment(s1->properties.value, s1->properties.bit_vector, s1->num_ints);
+      GraphPad::DenseSegment<bool>* s1 = &(active.segments[segmentId]);
+      GraphPad::clear_dense_segment(s1->properties.value, s1->properties.bit_vector, s1->num_ints);
     }
   }
 }
@@ -1421,7 +1421,7 @@ void Graph<V,E>::applyToAllVertices( void (*func)(V& _v)) {
   //for (int i = 0; i < nvertices; i++) {
   //  func(vertexproperty[i]);
   //}
-  PCL_Graph_BLAS::Apply(vertexproperty, &vertexproperty, func);
+  GraphPad::Apply(vertexproperty, &vertexproperty, func);
 }
 
 template<class V, class E> 

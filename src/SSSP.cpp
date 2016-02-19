@@ -241,7 +241,7 @@ void run_sssp(const char* filename, int nthreads, int v) {
   }
   MPI_Allreduce(MPI_IN_PLACE, &reachable_vertices, 1,  MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-  if (PCL_Graph_BLAS::global_myrank == 0) printf("Reachable vertices = %d \n", reachable_vertices);
+  if (GraphPad::global_myrank == 0) printf("Reachable vertices = %d \n", reachable_vertices);
 
   for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.nvertices); i++) {
   //for (int i = 1; i <= G.nvertices; i++) {
@@ -283,7 +283,7 @@ void run_sssp(const char* filename, int nthreads, int v) {
 
 int main (int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
-  PCL_Graph_BLAS::GB_Init();
+  GraphPad::GB_Init();
 
   const char* input_filename = argv[1];
 

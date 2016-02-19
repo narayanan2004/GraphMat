@@ -29,7 +29,7 @@
 /* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
 
-#include "src/graph_blas.h"
+#include "src/graphpad.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -305,22 +305,22 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
 
   //SparseInVector<T>* px;
   //SparseOutVector<U>* py;
-  PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<T> >* px;
-  PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<U> >* py;
+  GraphPad::SpVec<GraphPad::DenseSegment<T> >* px;
+  GraphPad::SpVec<GraphPad::DenseSegment<U> >* py;
 
   if (rgpts == NULL) {
-    px  = new PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<T> >();
-    px->AllocatePartitioned(g.nvertices, PCL_Graph_BLAS::global_nrank, vector_partition_fn);
+    px  = new GraphPad::SpVec<GraphPad::DenseSegment<T> >();
+    px->AllocatePartitioned(g.nvertices, GraphPad::global_nrank, GraphPad::vector_partition_fn);
     T _t;
     px->setAll(_t);
-    py  = new PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<U> >();
-    py->AllocatePartitioned(g.nvertices, PCL_Graph_BLAS::global_nrank, vector_partition_fn);
+    py  = new GraphPad::SpVec<GraphPad::DenseSegment<U> >();
+    py->AllocatePartitioned(g.nvertices, GraphPad::global_nrank, GraphPad::vector_partition_fn);
     U _u;
     py->setAll(_u);
   }
 
-  PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<T> >& x = *px;
-  PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<T> >& y = *py;
+  GraphPad::SpVec<GraphPad::DenseSegment<T> >& x = *px;
+  GraphPad::SpVec<GraphPad::DenseSegment<T> >& y = *py;
   //SparseInVector<T>&x = (rgpts==NULL)?(*px):*(rgpts->px);
   //SparseOutVector<U>& y = (rgpts==NULL)?(*py):*(rgpts->py);
 
@@ -345,8 +345,8 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
 
     //x.clear();
     //y.clear();
-    PCL_Graph_BLAS::Clear(&x);
-    PCL_Graph_BLAS::Clear(&y);
+    GraphPad::Clear(&x);
+    GraphPad::Clear(&y);
     converged = 1;
 
     //start = __rdtsc();
@@ -370,8 +370,8 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
     }
     }
     x.length = count;*/
-    PCL_Graph_BLAS::IntersectReduce(g.active, g.vertexproperty, &x, send_message<T,U,V>, (void*)gp);
-    //PCL_Graph_BLAS::IntersectReduce(g.active, g.vertexproperty, &x, send_message<int, int, V>, (void*)gp);
+    GraphPad::IntersectReduce(g.active, g.vertexproperty, &x, send_message<T,U,V>, (void*)gp);
+    //GraphPad::IntersectReduce(g.active, g.vertexproperty, &x, send_message<int, int, V>, (void*)gp);
     //y.setAll(0);
 
     #ifdef __TIMING
@@ -421,7 +421,7 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
 
     //printf("y[1] = %d\n", py->get(1));
 
-    //PCL_Graph_BLAS::SpVec<PCL_Graph_BLAS::DenseSegment<U> > tmp;
+    //GraphPad::SpVec<GraphPad::DenseSegment<U> > tmp;
     //U tmp_v; tmp.get(1, &tmp_v);
     //U tmp_v; y.get(1, &tmp_v);
     //std::cout<< "y[1] = " << tmp_v << std::endl;
@@ -433,12 +433,12 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
     int local_converged = 1;
     converged = 1;
 
-    //PCL_Graph_BLAS::IntersectReduce(g.active, y, &g.vertexproperty, set_y<U,V>);
+    //GraphPad::IntersectReduce(g.active, y, &g.vertexproperty, set_y<U,V>);
     //auto apply_func  = set_y_apply<U,V>;
-    //PCL_Graph_BLAS::Apply(y, &g.vertexproperty, apply_func<T,U,V>, (void*)gp);
+    //GraphPad::Apply(y, &g.vertexproperty, apply_func<T,U,V>, (void*)gp);
     for(int segmentId = 0 ; segmentId < y.nsegments ; segmentId++)
     {
-      if(y.nodeIds[segmentId] == PCL_Graph_BLAS::global_myrank)
+      if(y.nodeIds[segmentId] == GraphPad::global_myrank)
       {
         auto segment = y.segments[segmentId].properties;
         auto vpValueArray = g.vertexproperty.segments[segmentId].properties.value;
@@ -458,7 +458,7 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
             if (old_prop != vpValueArray[idx]) {
               //g.active.segments[segmentId].set(idx+1, true);
               g.active.segments[segmentId].properties.value[idx] = true;
-              PCL_Graph_BLAS::set_bitvector(idx, g.active.segments[segmentId].properties.bit_vector);
+              GraphPad::set_bitvector(idx, g.active.segments[segmentId].properties.bit_vector);
               local_converged = 0;
             }
 
