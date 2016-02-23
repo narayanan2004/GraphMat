@@ -56,8 +56,8 @@ struct run_graph_program_temp_structure {
   //SparseOutVector<U>* py;
 };
 
-template<class T, class U, class V>
-struct run_graph_program_temp_structure<T,U,V> graph_program_init(const GraphProgram<T,U,V>& gp, const Graph<V>& g) {
+template<class T, class U, class V, class E>
+struct run_graph_program_temp_structure<T,U,V> graph_program_init(const GraphProgram<T,U,V,E>& gp, const Graph<V, E>& g) {
 
   struct run_graph_program_temp_structure<T,U,V> rgpts;
   //rgpts.px = new SparseInVector<T>(g.nvertices);
@@ -275,22 +275,22 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
 */
 
 
-template <class T,class U, class V>
+template <class T,class U, class V, class E>
 void send_message(bool a, V _v, T* b, void* gpv) {
-  GraphProgram<T,U,V>* gp = (GraphProgram<T,U,V>*) gpv;
+  GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
   if(a == true) {
     gp->send_message(_v, *b);
   }
 }
 
-template <class T, class U, class V>
+template <class T, class U, class V, class E>
 void apply_func(U y, V* b, void* gpv) {
-  GraphProgram<T,U,V>* gp = (GraphProgram<T,U,V>*) gpv;
+  GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
   gp->apply(y, *b);
 }
 
-template <class T, typename U, class V>
-void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, struct run_graph_program_temp_structure<T,U,V>* rgpts=NULL) { //iterations = -1 ==> until convergence
+template <class T, typename U, class V, class E>
+void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=1, struct run_graph_program_temp_structure<T,U,V>* rgpts=NULL) { //iterations = -1 ==> until convergence
   int it = 0;
   int converged = 1;
 
@@ -370,7 +370,7 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
     }
     }
     x.length = count;*/
-    GraphPad::IntersectReduce(g.active, g.vertexproperty, &x, send_message<T,U,V>, (void*)gp);
+    GraphPad::IntersectReduce(g.active, g.vertexproperty, &x, send_message<T,U,V,E>, (void*)gp);
     //GraphPad::IntersectReduce(g.active, g.vertexproperty, &x, send_message<int, int, V>, (void*)gp);
     //y.setAll(0);
 

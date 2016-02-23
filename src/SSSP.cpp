@@ -39,10 +39,7 @@ typedef unsigned int distance_type;
 //typedef double distance_type;
 //typedef float distance_type;
 
-//distance_type MAX_DIST = 255;
-distance_type MAX_DIST = INT_MAX;
-//distance_type MAX_DIST = DBL_MAX;
-//distance_type MAX_DIST = FLT_MAX;
+distance_type MAX_DIST = std::numeric_limits<distance_type>::max();
 
 class BFSD2 {
   public: 
@@ -55,12 +52,10 @@ class BFSD2 {
       return (this->distance != p.distance);
     }
     void print() const {
-      //printf("depth %d \n", depth);
       if (distance < MAX_DIST) {
-        //printf("distance = %f \n", distance);
-        printf("distance = %d \n", distance);
+        std::cout << "distance = " << distance << std::endl;
       } else {
-        printf("distance = INF \n");
+        std::cout << "distance = INF" << std::endl;
       }
     }
 };
@@ -100,7 +95,8 @@ class ID_dist {
     int id;
 };
 
-class SSSP : public GraphProgram<distance_type, distance_type, BFSD2> {
+template <class edge_type>
+class SSSP : public GraphProgram<distance_type, distance_type, BFSD2, edge_type> {
 
   public:
     //char current_depth;
@@ -109,7 +105,7 @@ class SSSP : public GraphProgram<distance_type, distance_type, BFSD2> {
 
   SSSP() {
     //current_depth = 1;
-    order = OUT_EDGES;
+    this->order = OUT_EDGES;
     //async = true;
   }
 
@@ -118,7 +114,7 @@ class SSSP : public GraphProgram<distance_type, distance_type, BFSD2> {
     a = (a<=b)?(a):(b);
   }
 
-  void process_message(const distance_type& message, const int edge_val, const BFSD2& vertexprop, distance_type &res) const {
+  void process_message(const distance_type& message, const edge_type edge_val, const BFSD2& vertexprop, distance_type &res) const {
     res = message + edge_val;
   }
 
@@ -181,10 +177,11 @@ class SSSPwithParent : public GraphProgram<ID_dist, ID_dist, SSSPD> {
 
 extern unsigned long long int edges_traversed;
 
+template<class edge_type>
 void run_sssp(const char* filename, int nthreads, int v) {
   //__itt_pause();
 
-  Graph<BFSD2> G;
+  Graph<BFSD2, edge_type> G;
   //Graph<SSSPD> G;
   //G.ReadMTX_sort(filename, nthreads*8); //8 nthread pieces of matrix
   G.ReadMTX(filename, nthreads*8); //8 nthread pieces of matrix
@@ -192,7 +189,7 @@ void run_sssp(const char* filename, int nthreads, int v) {
 
   //BFS b;
   //BFS2 b;
-  SSSP b;
+  SSSP<edge_type> b;
   //SSSPwithParent b;
   auto tmp_ds = graph_program_init(b, G);
 
@@ -304,7 +301,7 @@ int main (int argc, char* argv[]) {
   
   int source_vertex = atoi(argv[2]);
   //run_sssp(input_filename, nthreads, source_vertex-1);
-  run_sssp(input_filename, nthreads, source_vertex);
+  run_sssp<int>(input_filename, nthreads, source_vertex);
   MPI_Finalize();
  
  

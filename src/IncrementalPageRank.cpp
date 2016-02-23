@@ -103,7 +103,7 @@ void run_pagerank(const char* filename, int nthreads) {
 
   Graph<dPR> G;
   DeltaPageRank dpr;
-  Degree<dPR> dg;
+  Degree<dPR, int> dg;
   
   G.ReadMTX(filename, nthreads*4); //nthread*4 pieces of matrix
 

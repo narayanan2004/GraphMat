@@ -1007,7 +1007,7 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
   struct timeval start, end;
   gettimeofday(&start, 0);
   {
-    GraphPad::edgelist_t<int> A_edges;
+    GraphPad::edgelist_t<E> A_edges;
     GraphPad::ReadEdgesBin(&A_edges, filename, false);
 
     int tiles_per_dim = GraphPad::global_nrank;

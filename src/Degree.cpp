@@ -30,8 +30,8 @@
  * ******************************************************************************/
 
 //----------------------------------------------------------------------------
-template<class V>
-class Degree : public GraphProgram<int, int, V> {
+template<class V, class E>
+class Degree : public GraphProgram<int, int, V, E> {
   public:
 
   Degree() {
@@ -43,7 +43,7 @@ class Degree : public GraphProgram<int, int, V> {
     return true;
   }
 
-  void process_message(const int& message, const int edge_value, const V& vertexprop, int& result) const {
+  void process_message(const int& message, const E edge_value, const V& vertexprop, int& result) const {
     result = message;
   }
 

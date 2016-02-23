@@ -36,26 +36,26 @@
 #include <cstdlib>
 #include <cstring>
 
-template <class T, class U, class V>
-void Mulfn(int a, T b, U * c, void* gpv) { 
-  GraphProgram<T,U,V>* gp = (GraphProgram<T,U,V>*) gpv;
+template <class T, class U, class V, class E>
+void Mulfn(E a, T b, U * c, void* gpv) { 
+  GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
   V dummy;
   gp->process_message(b, a, dummy, *c); 
 }
 
-template <class T, class U, class V>
+template <class T, class U, class V, class E>
 void Addfn(U a, U b, U * c, void* gpv) { 
-  GraphProgram<T,U,V>* gp = (GraphProgram<T,U,V>*) gpv; 
+  GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv; 
   *c = a;
   gp->reduce_function(*c, b);
 }
 
-template <class T, class U, class V>
-void SpMSpV(const Graph<V>& G, const GraphProgram<T,U,V>* gp, const GraphPad::SpVec<GraphPad::DenseSegment<T> >& x, GraphPad::SpVec<GraphPad::DenseSegment<U> >& y) {
+template <class T, class U, class V, class E>
+void SpMSpV(const Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, const GraphPad::SpVec<GraphPad::DenseSegment<T> >& x, GraphPad::SpVec<GraphPad::DenseSegment<U> >& y) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  GraphPad::SpMSpV(G.A, x, &y, Mulfn<T,U,V>, Addfn<T,U,V>, (void*)gp);
+  GraphPad::SpMSpV(G.A, x, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
 
   #ifdef __TIMING
   gettimeofday(&end, 0);
@@ -63,12 +63,12 @@ void SpMSpV(const Graph<V>& G, const GraphProgram<T,U,V>* gp, const GraphPad::Sp
   printf("SPMSPV: time = %.3f ms \n", time);
   #endif
 }
-template <class T, class U, class V>
-void SpMTSpV(const Graph<V>& G, const GraphProgram<T,U,V>* gp, const GraphPad::SpVec<GraphPad::DenseSegment<T> >& x, GraphPad::SpVec<GraphPad::DenseSegment<U> >& y) {
+template <class T, class U, class V, class E>
+void SpMTSpV(const Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, const GraphPad::SpVec<GraphPad::DenseSegment<T> >& x, GraphPad::SpVec<GraphPad::DenseSegment<U> >& y) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  GraphPad::SpMSpV(G.AT, x, &y, Mulfn<T,U,V>, Addfn<T,U,V>, (void*)gp);
+  GraphPad::SpMSpV(G.AT, x, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
 
   #ifdef __TIMING
   gettimeofday(&end, 0);

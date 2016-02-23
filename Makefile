@@ -8,7 +8,7 @@ CXX_OPTIONS=-openmp -std=c++11 -I./src/ -I$(GRAPHBLAS_PATH)
 
 
 ifeq (${debug}, 1)
-  CXX_OPTIONS += -O0 -g $(GBFLAGS)
+  CXX_OPTIONS += -O0 -g -D__DEBUG $(GBFLAGS)
 else
   CXX_OPTIONS += -O3 -ipo $(GBFLAGS)
 endif
