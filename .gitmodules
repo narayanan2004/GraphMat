@@ -1,0 +1,3 @@
+[submodule "GraphMatDistributedPrimitives"]
+	path = GraphMatDistributedPrimitives
+	url = https://github.com/mjanderson09/GraphMatDistributedPrimitives.git

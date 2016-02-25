@@ -1,16 +1,16 @@
 
-GRAPHBLAS_PATH=../PCLGraphBLAS/
-include $(GRAPHBLAS_PATH)/Make.inc
+DIST_PRIMITIVES_PATH=GraphMatDistributedPrimitives
+include $(DIST_PRIMITIVES_PATH)/Make.inc
 
 #CXX=icpc
 CXX=mpiicpc
-CXX_OPTIONS=-openmp -std=c++11 -I./src/ -I$(GRAPHBLAS_PATH)
+CXX_OPTIONS=-openmp -std=c++11 -I./src/ -I$(DIST_PRIMITIVES_PATH)
 
 
 ifeq (${debug}, 1)
-  CXX_OPTIONS += -O0 -g -D__DEBUG $(GBFLAGS)
+  CXX_OPTIONS += -O0 -g -D__DEBUG $(GPFLAGS)
 else
-  CXX_OPTIONS += -O3 -ipo $(GBFLAGS)
+  CXX_OPTIONS += -O3 -ipo $(GPFLAGS)
 endif
 
 CXX_OPTIONS += -xHost
@@ -25,16 +25,13 @@ BINDIR=bin
 
 SOURCES=$(SRCDIR)/PageRank.cpp $(SRCDIR)/Degree.cpp $(SRCDIR)/BFS.cpp $(SRCDIR)/SGD.cpp $(SRCDIR)/TriangleCounting.cpp $(SRCDIR)/SSSP.cpp $(SRCDIR)/Delta.cpp
 
-DEPS=$(SRCDIR)/SPMV.cpp $(SRCDIR)/Graph.cpp $(SRCDIR)/GraphProgram.cpp $(SRCDIR)/SparseVector.cpp $(SRCDIR)/GraphMatRuntime.cpp $(GRAPHBLAS_PATH)/src/layouts.h $(GRAPHBLAS_PATH)/src/graphpad.h
+DEPS=$(SRCDIR)/SPMV.cpp $(SRCDIR)/Graph.cpp $(SRCDIR)/GraphProgram.cpp $(SRCDIR)/SparseVector.cpp $(SRCDIR)/GraphMatRuntime.cpp $(DIST_PRIMITIVES_PATH)/src/layouts.h $(DIST_PRIMITIVES_PATH)/src/graphpad.h
 
 EXE=$(BINDIR)/PageRank $(BINDIR)/IncrementalPageRank $(BINDIR)/BFS $(BINDIR)/SSSP #$(BINDIR)/TriangleCounting $(BINDIR)/SGD $(BINDIR)/DS
 
 
 all: $(EXE) graph_converter
 	
-#bin/layouts.o: $(GRAPHBLAS_PATH)/ipdps/layouts.cc $(GRAPHBLAS_PATH)/ipdps/layouts.h
-#	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/layouts.o -c $(GRAPHBLAS_PATH)/ipdps/layouts.cc
-        
 graph_converter: graph_utils/graph_convert.cpp
 	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/graph_converter graph_utils/graph_convert.cpp
 
