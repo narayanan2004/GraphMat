@@ -95,6 +95,7 @@ class Graph {
     int getBlockIdByDst(int vertexid) const;
     int getNumberOfVertices() const;
     void applyToAllVertices( void (*func)(V& _v));
+    template<class T> void applyReduceAllVertices(T (*func)(V& _v), T* val);
     ~Graph();
 };
 
@@ -1356,11 +1357,23 @@ int Graph<V,E>::getNumberOfVertices() const {
 
 template<class V, class E> 
 void Graph<V,E>::applyToAllVertices( void (*func)(V& _v)) {
-  //#pragma omp parallel for num_threads(nthreads)
+  #pragma omp parallel for num_threads(nthreads)
   for (int i = 0; i < nvertices; i++) {
     func(vertexproperty[i]);
   }
 }
+
+template<class V, class E> 
+template<class T> 
+void Graph<V,E>::applyReduceAllVertices(T (*func)(V& _v), T* val) {
+  T sum = *val;
+  #pragma omp parallel for num_threads(nthreads) reduction(+:sum)
+  for (int i = 0; i < nvertices; i++) {
+    sum += func(vertexproperty[i]);
+  }
+  *val = sum;
+}
+
 
 template<class V, class E> 
 Graph<V,E>::~Graph() {
