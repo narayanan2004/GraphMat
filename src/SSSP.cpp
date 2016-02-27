@@ -233,7 +233,7 @@ void run_sssp(const char* filename, int nthreads, int v) {
  
   int reachable_vertices = 0;
 
-  for (int i = 0; i < G.nvertices; i++) {
+  for (int i = 1; i <= G.nvertices; i++) {
     if (G.getVertexproperty(i).distance < MAX_DIST) {
       reachable_vertices++;
     }
@@ -241,7 +241,7 @@ void run_sssp(const char* filename, int nthreads, int v) {
 
   printf("Reachable vertices = %d \n", reachable_vertices);
 
-  for (int i = 0; i <= std::min((unsigned long long int)25, (unsigned long long int)G.nvertices); i++) {
+  for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.nvertices); i++) {
   //for (int i = 1; i <= G.nvertices; i++) {
     printf("%d : ", i);
     //G.vertexproperty[i].print();
@@ -297,7 +297,7 @@ int main (int argc, char* argv[]) {
   }
   
   int source_vertex = atoi(argv[2]);
-  run_sssp(input_filename, nthreads, source_vertex-1);
+  run_sssp(input_filename, nthreads, source_vertex);
  
  
 }

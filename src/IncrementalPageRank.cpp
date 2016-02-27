@@ -134,7 +134,7 @@ void run_pagerank(const char* filename, int nthreads) {
 
   graph_program_clear(dpr_tmp);
 
-  for (int i = 0; i < std::min((unsigned long long int)25, (unsigned long long int)G.getNumberOfVertices()); i++) { 
+  for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.getNumberOfVertices()); i++) { 
     printf("%d : %d %f\n", i, G.getVertexproperty(i).degree, G.getVertexproperty(i).pagerank);
   }
 }

@@ -209,7 +209,7 @@ void run_triangle_counting(char* filename, int nthreads) {
   
   struct timeval start, end;
 
-  for (int i = 0; i < numberOfVertices; i++) {
+  for (int i = 1; i <= numberOfVertices; i++) {
 	TC vp = G.getVertexproperty(i);
 	vp.id = i;
     G.setVertexproperty(i, vp);
@@ -230,10 +230,10 @@ void run_triangle_counting(char* filename, int nthreads) {
   graph_program_clear(ct_tmp);  
 
   unsigned long int ntriangles = 0;
-  for (int i = 0; i < numberOfVertices; i++) ntriangles += G.getVertexproperty(i).triangles;
+  for (int i = 1; i <= numberOfVertices; i++) ntriangles += G.getVertexproperty(i).triangles;
   printf("Total triangles = %lu \n", ntriangles);
   
-  for (int i = 0; i < std::min(10, numberOfVertices); i++) {
+  for (int i = 1; i <= std::min(10, numberOfVertices); i++) {
     G.getVertexproperty(i).print();
   }
 

@@ -1288,12 +1288,12 @@ void Graph<V,E>::setAllInactive() {
 
 template<class V, class E> 
 void Graph<V,E>::setActive(int v) {
-  active[v] = true;
+  active[v-1] = true;
 }
 
 template<class V, class E> 
 void Graph<V,E>::setInactive(int v) {
-  active[v] = false;
+  active[v-1] = false;
 }
 template<class V, class E> 
 void Graph<V,E>::reset() {
@@ -1323,12 +1323,12 @@ void Graph<V,E>::setAllVertexproperty(const V& val) {
 
 template<class V, class E> 
 void Graph<V,E>::setVertexproperty(int v, const V& val) {
-  vertexproperty[v] = val;
+  vertexproperty[v-1] = val;
 }
 
 template<class V, class E> 
 V Graph<V,E>::getVertexproperty(int v) const {
-  return vertexproperty[v];
+  return vertexproperty[v-1];
 }
 
 int getId(const int i, const int* start, const int* end, const int n) {

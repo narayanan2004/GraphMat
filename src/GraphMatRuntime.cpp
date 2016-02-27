@@ -214,7 +214,8 @@ void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, s
           nout++;
 
             if (old_prop != g.vertexproperty[idx]) {
-	      g.setActive(idx);
+	      //g.setActive(idx);
+	      g.active[idx]= true;
               count_ones++;
               converged = 0;
               total_search++;
