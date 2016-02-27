@@ -439,9 +439,7 @@ template<typename T> void process_graph(const char * ifilename, const char * ofi
 		unsigned long int edge_offset = 0;
 		for (int i = 0; i < Opt.nsplits; i++) {
 			std::string ofilename_i =	std::string(ofilename) + 
-							std::to_string((unsigned long long)i) + 
-							"_" +
-							std::to_string((unsigned long long)Opt.nsplits);
+							std::to_string((unsigned long long)i);
 			unsigned long int nnz_written = nnz_per_file + ((remainder>0)?(1):(0)); 
 			remainder--;
 			writeFile<T>(ofilename_i.c_str(), edges + edge_offset, n, nnz_written, Opt);
