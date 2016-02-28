@@ -177,6 +177,15 @@ class SSSPwithParent : public GraphProgram<ID_dist, ID_dist, SSSPD> {
 
 extern unsigned long long int edges_traversed;
 
+void reachable_or_not(BFSD2 v, int *result, void* params=nullptr) {
+  int reachable = 0;
+  if (v.distance < MAX_DIST) {
+    reachable = 1;
+  } 
+  *result = reachable;
+}
+
+
 template<class edge_type>
 void run_sssp(const char* filename, int nthreads, int v) {
   //__itt_pause();
@@ -231,12 +240,14 @@ void run_sssp(const char* filename, int nthreads, int v) {
  
   int reachable_vertices = 0;
 
-  for (int i = 1; i <= G.nvertices; i++) {
+  /*for (int i = 1; i <= G.nvertices; i++) {
     if (G.vertexproperty.node_owner(i) && G.getVertexproperty(i).distance < MAX_DIST) {
       reachable_vertices++;
     }
   }
-  MPI_Allreduce(MPI_IN_PLACE, &reachable_vertices, 1,  MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &reachable_vertices, 1,  MPI_INT, MPI_SUM, MPI_COMM_WORLD);*/
+  
+  G.applyReduceAllVertices(&reachable_vertices, reachable_or_not); //default reduction = sum
 
   if (GraphPad::global_myrank == 0) printf("Reachable vertices = %d \n", reachable_vertices);
 

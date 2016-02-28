@@ -54,6 +54,10 @@ typedef __declspec(align(16)) struct EDGE_T
   int partition_id;
 } edge_t;
 
+template<class T>
+void AddFn(T a, T b, T* c, void* vsp) {
+  *c = a + b ;
+}
 
 extern int nthreads;
 
@@ -99,7 +103,8 @@ class Graph {
     int getBlockIdBySrc(int vertexid) const;
     int getBlockIdByDst(int vertexid) const;
     int getNumberOfVertices() const;
-    void applyToAllVertices( void (*func)(V& _v));
+    void applyToAllVertices(void (*ApplyFn)(V, V*, void*));
+    template<class T> void applyReduceAllVertices(T* val, void (*ApplyFn)(V, T*, void*), void (*ReduceFn)(T,T,T*,void*)=AddFn<T>);
     ~Graph();
 };
 
@@ -1416,12 +1421,15 @@ int Graph<V,E>::getNumberOfVertices() const {
 }
 
 template<class V, class E> 
-void Graph<V,E>::applyToAllVertices( void (*func)(V& _v)) {
-  //#pragma omp parallel for num_threads(nthreads)
-  //for (int i = 0; i < nvertices; i++) {
-  //  func(vertexproperty[i]);
-  //}
-  GraphPad::Apply(vertexproperty, &vertexproperty, func);
+void Graph<V,E>::applyToAllVertices( void (*ApplyFn)(V, V*, void*)) {
+  GraphPad::Apply(vertexproperty, &vertexproperty, ApplyFn);
+}
+
+
+template<class V, class E> 
+template<class T> 
+void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V, T*, void*), void (*ReduceFn)(T,T,T*,void*)) {
+  GraphPad::MapReduce(vertexproperty, val, ApplyFn, ReduceFn);
 }
 
 template<class V, class E> 
