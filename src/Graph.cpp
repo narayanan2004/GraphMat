@@ -744,11 +744,15 @@ void set_edge_pointers(edge_t * edges, int * row_pointers, int * &edge_pointers,
   {
     // binary search
     int e1 = 0;
-    int e2 = nnz-1;
+    int e2 = nnz;
     int eh;
     while(e2 >= e1)
     {
       eh = e2 - (e2 - e1) / 2;
+      if(eh == 0) 
+      {  
+        break;
+      }
       if((edges[eh-1].src < row_pointers[p]) && edges[eh].src >= row_pointers[p])
       {
         break;
@@ -766,6 +770,23 @@ void set_edge_pointers(edge_t * edges, int * row_pointers, int * &edge_pointers,
     //std::cout << edge_pointers[p] << "\t" << eh << std::endl;
   }
   edge_pointers[num_partitions] = nnz;
+//#define CHECK_EDGE_POINTERS
+#ifdef CHECK_EDGE_POINTERS
+  int p = 0;
+  for(int edge_id = 0 ; edge_id < nnz ; edge_id++)
+  {
+    while(edges[edge_id].src >= row_pointers[p])
+    {
+      assert(edge_pointers[p] == edge_id);
+      p++;
+    }
+  }
+  assert(edge_pointers[p] == nnz);
+  for(p = p+1 ; p < num_partitions+1 ; p++)
+  {
+    assert(edge_pointers[p] == nnz);
+  }
+#endif // CHECK_EDGE_POINTERS
 #endif
 }
 
@@ -879,6 +900,16 @@ void partition_and_build_dcsc(int * &row_pointers,
       }
     }
     edges[edge_id].partition_id = h_p;
+//#define CHECK_PARTITION_IDS
+#ifdef CHECK_PARTITION_IDS
+    for(int p = 0 ; p < num_partitions ; p++)
+    {
+      if(edges[edge_id].src >= row_pointers[p] && edges[edge_id].src < row_pointers[p+1])
+      {
+        assert(edges[edge_id].partition_id == p);
+      }
+    }
+#endif // CHECK_PARTITION_IDS
 #endif
   }
   gettimeofday(&end, NULL);
