@@ -57,6 +57,10 @@ typedef __declspec(align(16)) struct EDGE_T
 extern int nthreads;
 
 //const int MAX_PARTS = 512; 
+template<class T>
+void AddFn(T a, T b, T* c, void* vsp) {
+  *c = a + b ;
+}
 
 template <class V, class E=int>
 class Graph {
@@ -94,8 +98,8 @@ class Graph {
     int getBlockIdBySrc(int vertexid) const;
     int getBlockIdByDst(int vertexid) const;
     int getNumberOfVertices() const;
-    void applyToAllVertices( void (*func)(V& _v));
-    template<class T> void applyReduceAllVertices(T (*func)(V& _v), T* val);
+    void applyToAllVertices(void (*ApplyFn)(V, V*, void*), void* param=nullptr);
+    template<class T> void applyReduceAllVertices(T* val, void (*ApplyFn)(V, T*, void*), void (*ReduceFn)(T,T,T*,void*)=AddFn<T>, void* param=nullptr);
     ~Graph();
 };
 
@@ -1356,21 +1360,38 @@ int Graph<V,E>::getNumberOfVertices() const {
 }
 
 template<class V, class E> 
-void Graph<V,E>::applyToAllVertices( void (*func)(V& _v)) {
+void Graph<V,E>::applyToAllVertices(void (*ApplyFn)(V, V*, void*), void* param) {
   #pragma omp parallel for num_threads(nthreads)
   for (int i = 0; i < nvertices; i++) {
-    func(vertexproperty[i]);
+    ApplyFn(vertexproperty[i], &vertexproperty[i], param);
   }
 }
 
 template<class V, class E> 
 template<class T> 
-void Graph<V,E>::applyReduceAllVertices(T (*func)(V& _v), T* val) {
+void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V, T*, void*), void (*ReduceFn)(T,T,T*,void*), void* param) {
   T sum = *val;
-  #pragma omp parallel for num_threads(nthreads) reduction(+:sum)
+
+  /*for (int i = 0; i < nvertices; i++) {
+    T tmp;
+    ApplyFn(vertexproperty[i], &tmp, param);
+    ReduceFn(sum, tmp, &sum, param);
+  }*/
+  T* tmpsum = new T[nthreads*16]; //reduce false sharing
+  for(int i = 0; i < nthreads; i++) tmpsum[i*16] = sum;
+  #pragma omp parallel for num_threads(nthreads)
   for (int i = 0; i < nvertices; i++) {
-    sum += func(vertexproperty[i]);
+    T tmp;
+    int tid = omp_get_thread_num();
+    ApplyFn(vertexproperty[i], &tmp, param);
+    ReduceFn(tmpsum[tid*16], tmp, &tmpsum[tid*16], param);
   }
+
+  for(int i = 0; i < nthreads; i++) {
+    ReduceFn(tmpsum[i*16], sum, &sum, param);
+  }
+  delete [] tmpsum;
+
   *val = sum;
 }
 

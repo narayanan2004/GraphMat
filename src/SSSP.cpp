@@ -181,12 +181,15 @@ class SSSPwithParent : public GraphProgram<ID_dist, ID_dist, SSSPD> {
 
 extern unsigned long long int edges_traversed;
 
-int reachable_or_not(BFSD2& v) {
+void reachable_or_not(BFSD2 v, int* output, void* param=nullptr) {
   int reachable = 0;
   if (v.distance < MAX_DIST) {
     reachable = 1;
   } 
-  return reachable;
+  *output = reachable;
+}
+void add(int a, int b, int *c, void* param=nullptr) {
+  *c = a+b;
 }
 
 void run_sssp(const char* filename, int nthreads, int v) {
@@ -245,8 +248,11 @@ void run_sssp(const char* filename, int nthreads, int v) {
     if (G.getVertexproperty(i).distance < MAX_DIST) {
       reachable_vertices++;
     }
-  }*/
-  G.applyReduceAllVertices<int>(reachable_or_not, &reachable_vertices);
+  }
+  printf("Reachable vertices = %d \n", reachable_vertices);
+  
+  reachable_vertices = 0;*/
+  G.applyReduceAllVertices<int>(&reachable_vertices, reachable_or_not, add);
 
   printf("Reachable vertices = %d \n", reachable_vertices);
 
