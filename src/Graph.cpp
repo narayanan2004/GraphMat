@@ -104,7 +104,7 @@ class Graph {
     int getBlockIdByDst(int vertexid) const;
     int getNumberOfVertices() const;
     void applyToAllVertices(void (*ApplyFn)(V, V*, void*), void* param=nullptr);
-    template<class T> void applyReduceAllVertices(T* val, void (*ApplyFn)(V, T*, void*), void (*ReduceFn)(T,T,T*,void*)=AddFn<T>, void* param=nullptr);
+    template<class T> void applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*)=AddFn<T>, void* param=nullptr);
     ~Graph();
 };
 
@@ -1428,7 +1428,7 @@ void Graph<V,E>::applyToAllVertices( void (*ApplyFn)(V, V*, void*), void* param)
 
 template<class V, class E> 
 template<class T> 
-void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V, T*, void*), void (*ReduceFn)(T,T,T*,void*), void* param) {
+void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*), void* param) {
   GraphPad::MapReduce(vertexproperty, val, ApplyFn, ReduceFn, param);
 }
 
