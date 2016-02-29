@@ -744,11 +744,15 @@ void set_edge_pointers(edge_t * edges, int * row_pointers, int * &edge_pointers,
   {
     // binary search
     int e1 = 0;
-    int e2 = nnz-1;
+    int e2 = nnz;
     int eh;
     while(e2 >= e1)
     {
       eh = e2 - (e2 - e1) / 2;
+      if(eh == 0) 
+      {  
+        break;
+      }
       if((edges[eh-1].src < row_pointers[p]) && edges[eh].src >= row_pointers[p])
       {
         break;
