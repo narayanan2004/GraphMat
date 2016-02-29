@@ -99,7 +99,7 @@ class Graph {
     int getBlockIdByDst(int vertexid) const;
     int getNumberOfVertices() const;
     void applyToAllVertices(void (*ApplyFn)(V, V*, void*), void* param=nullptr);
-    template<class T> void applyReduceAllVertices(T* val, void (*ApplyFn)(V, T*, void*), void (*ReduceFn)(T,T,T*,void*)=AddFn<T>, void* param=nullptr);
+    template<class T> void applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*)=AddFn<T>, void* param=nullptr);
     ~Graph();
 };
 
@@ -1369,7 +1369,7 @@ void Graph<V,E>::applyToAllVertices(void (*ApplyFn)(V, V*, void*), void* param) 
 
 template<class V, class E> 
 template<class T> 
-void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V, T*, void*), void (*ReduceFn)(T,T,T*,void*), void* param) {
+void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*), void* param) {
   T sum = *val;
 
   /*for (int i = 0; i < nvertices; i++) {
@@ -1383,7 +1383,7 @@ void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V, T*, void*), v
   for (int i = 0; i < nvertices; i++) {
     T tmp;
     int tid = omp_get_thread_num();
-    ApplyFn(vertexproperty[i], &tmp, param);
+    ApplyFn(&vertexproperty[i], &tmp, param);
     ReduceFn(tmpsum[tid*16], tmp, &tmpsum[tid*16], param);
   }
 

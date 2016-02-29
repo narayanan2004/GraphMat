@@ -181,9 +181,9 @@ class SSSPwithParent : public GraphProgram<ID_dist, ID_dist, SSSPD> {
 
 extern unsigned long long int edges_traversed;
 
-void reachable_or_not(BFSD2 v, int* output, void* param=nullptr) {
+void reachable_or_not(BFSD2* v, int* output, void* param=nullptr) {
   int reachable = 0;
-  if (v.distance < MAX_DIST) {
+  if (v->distance < MAX_DIST) {
     reachable = 1;
   } 
   *output = reachable;
