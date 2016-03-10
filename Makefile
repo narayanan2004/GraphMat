@@ -1,5 +1,5 @@
 CXX=icpc
-CXX_OPTIONS=-openmp -std=c++11 -I./src/ 
+CXX_OPTIONS=-qopenmp -std=c++11 -I./src/ 
 
 
 ifeq (${debug}, 1)
