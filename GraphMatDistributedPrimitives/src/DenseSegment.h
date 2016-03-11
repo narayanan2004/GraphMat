@@ -37,6 +37,7 @@
 #include "src/edgelist.h"
 #include "src/bitvector.h"
 
+
 template <typename T>
 class segment_props
 {
@@ -224,6 +225,11 @@ class DenseSegment {
       start_nnzs[p] = mystart;
       mystart += my_nz_per;
       if(mystart > properties.nnz) mystart = properties.nnz;
+      if(mystart < properties.nnz)
+      {
+        int start32 = properties.compressed_indices[mystart] / 32;
+        while((mystart < properties.nnz) && properties.compressed_indices[mystart] / 32  == start32) mystart++;
+      }
       end_nnzs[p] = mystart;
     }
 

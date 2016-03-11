@@ -44,6 +44,11 @@ class PR {
     int operator!=(const PR& p) {
       return (fabs(p.pagerank-pagerank)>1e-8);
     }
+    friend std::ostream &operator<<(std::ostream &outstream, const PR & val)
+    {
+      outstream << val.degree; 
+      return outstream;
+    }
 };
 
 template <class E>
@@ -123,6 +128,8 @@ void run_pagerank(const char* filename, int nthreads) {
       printf("%d : %d %f\n", i, G.getVertexproperty(i).degree, G.getVertexproperty(i).pagerank);
     }
   }
+
+  G.saveVertexproperty("vp.mtx");
 }
 
 int main(int argc, char* argv[]) {
