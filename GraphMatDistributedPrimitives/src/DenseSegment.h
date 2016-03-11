@@ -453,6 +453,20 @@ class DenseSegment {
     }
   }
 
-
+  void save(std::string fname, int start_id, int _m)
+  {
+    int nnz = compute_nnz();
+    std::ofstream fout;
+    fout.open(fname);
+    fout << _m << " " << nnz << std::endl;
+    for(int i = 0 ; i < capacity ; i++)
+    {
+      if(get_bitvector(i, properties.bit_vector))
+      {
+        fout << i + start_id << " " << properties.value[i] << std::endl;
+      }
+    }
+    fout.close();
+  }
 };
 #endif  // SRC_DENSESEGMENT_H_

@@ -30,6 +30,7 @@
  * ******************************************************************************/
 
 #include <climits>
+#include <ostream>
 #include "GraphMatRuntime.cpp"
 
 typedef unsigned int depth_type;
@@ -102,6 +103,12 @@ class BFSD2 {
     }
     void print() {
       printf("depth %d \n", depth);
+    }
+
+  friend std::ostream &operator<<(std::ostream &outstream, const BFSD2 & val)
+    {
+      outstream << val.depth; 
+      return outstream;
     }
 };
 
@@ -272,6 +279,8 @@ void run_bfs(char* filename, int nthreads, int v) {
       printf("Depth %d : INF \n", i);
     }
   }
+
+  G.saveVertexproperty("vp.mtx");
 
   /*FILE* f;
   f = fopen("out", "w");
