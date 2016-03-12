@@ -46,7 +46,7 @@ class PR {
     }
     friend std::ostream &operator<<(std::ostream &outstream, const PR & val)
     {
-      outstream << val.degree; 
+      outstream << val.pagerank; 
       return outstream;
     }
 };

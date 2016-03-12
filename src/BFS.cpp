@@ -29,9 +29,9 @@
 /* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
 
+#include "GraphMatRuntime.cpp"
 #include <climits>
 #include <ostream>
-#include "GraphMatRuntime.cpp"
 
 typedef unsigned int depth_type;
 
@@ -101,9 +101,9 @@ class BFSD2 {
     bool operator != (const BFSD2& p) {
       return (this->depth != p.depth);
     }
-    void print() {
-      printf("depth %d \n", depth);
-    }
+    //void print() {
+    //  printf("depth %d \n", depth);
+    //}
 
   friend std::ostream &operator<<(std::ostream &outstream, const BFSD2 & val)
     {

@@ -50,15 +50,12 @@ void Addfn(U a, U b, U * c, void* gpv) {
   gp->reduce_function(*c, b);
 }
 
-//static int spmv_file_cnt = 0;
-//static int spmvT_file_cnt = 0;
 
 template <class T, class U, class V, class E>
 void SpMSpV(const Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, const GraphPad::SpVec<GraphPad::DenseSegment<T> >& x, GraphPad::SpVec<GraphPad::DenseSegment<U> >& y) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  //x.save(std::string("spmv_x") + std::to_string(spmv_file_cnt) + std::string(".mtx")); spmv_file_cnt++;
   GraphPad::SpMSpV(G.A, x, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
 
   #ifdef __TIMING
@@ -72,7 +69,6 @@ void SpMTSpV(const Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, const GraphPa
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  //x.save(std::string("spmvT_x") + std::to_string(spmvT_file_cnt) + std::string(".mtx")); spmvT_file_cnt++;
   GraphPad::SpMSpV(G.AT, x, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
 
   #ifdef __TIMING
