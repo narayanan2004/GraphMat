@@ -30,6 +30,7 @@
  * ******************************************************************************/
 
 #include <cstring>
+#include <string>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -98,6 +99,7 @@ class Graph {
     void setAllVertexproperty(const V& val);
     void setVertexproperty(int v, const V& val);
     V getVertexproperty(int v) const;
+    void saveVertexproperty(std::string fname) const;
     void reset();
     void shareVertexProperty(Graph<V,E>& g);
     int getBlockIdBySrc(int vertexid) const;
@@ -1388,6 +1390,12 @@ void Graph<V,E>::setVertexproperty(int v, const V& val) {
   //vertexproperty[v] = val;
   vertexproperty.set(v, val);
 }
+
+template<class V, class E> 
+void Graph<V,E>::saveVertexproperty(std::string fname) const {
+  vertexproperty.save(fname);
+}
+
 
 template<class V, class E> 
 V Graph<V,E>::getVertexproperty(const int v) const {

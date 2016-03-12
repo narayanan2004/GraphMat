@@ -50,6 +50,7 @@ void Addfn(U a, U b, U * c, void* gpv) {
   gp->reduce_function(*c, b);
 }
 
+
 template <class T, class U, class V, class E>
 void SpMSpV(const Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, const GraphPad::SpVec<GraphPad::DenseSegment<T> >& x, GraphPad::SpVec<GraphPad::DenseSegment<U> >& y) {
   struct timeval start, end;
