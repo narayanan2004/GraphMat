@@ -81,8 +81,8 @@ class Graph {
     //int *start_src_vertices; //start and end of transpose parts
     //int *end_src_vertices;
 
-    GraphPad::SpMat<GraphPad::COOTile<E> > A;
-    GraphPad::SpMat<GraphPad::COOTile<E> > AT;
+    GraphPad::SpMat<GraphPad::COOSIMD32Tile<E> > A;
+    GraphPad::SpMat<GraphPad::COOSIMD32Tile<E> > AT;
     GraphPad::SpVec<GraphPad::DenseSegment<V> > vertexproperty;
     GraphPad::SpVec<GraphPad::DenseSegment<bool> > active;
 //    int start_dst_vertices[MAX_PARTS];

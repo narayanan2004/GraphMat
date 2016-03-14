@@ -35,23 +35,33 @@
 
 #include <string>
 #include <algorithm>
+#include <parallel/algorithm>
 #include <vector>
 
 #include "binary_search.h"
 
 template <typename T>
-bool compare_notrans_coo(const edge_t<T>& a, const edge_t<T>& b) {
-  if (a.src < b.src)
-    return true;
-  else if (a.src > b.src)
-    return false;
+bool compare_notrans_coosimd32(const tedge_t<T> & a, const tedge_t<T> & b)
+{
+  if(a.tile_id < b.tile_id) return true;
+  else if(a.tile_id > b.tile_id) return false;
 
-  if (a.dst < b.dst)
-    return true;
-  else if (a.dst > b.dst)
-    return false;
+  if(a.dst < b.dst) return true;
+  else if(a.dst > b.dst) return false;
+
+  if(a.src < b.src) return true;
+  else if(a.src > b.src) return false;
+
   return false;
 }
+
+struct partition_bin_coosimd32 {
+  int p32;
+  int num_total;
+  int num_left;
+  int num_taken;
+};
+
 
 template <typename T>
 class COOSIMD32Tile {
@@ -64,6 +74,7 @@ class COOSIMD32Tile {
   int* ja;
   int* ia;
   int * partition_start;
+  int * simd_nnz;
   int num_partitions;
 
   COOSIMD32Tile() : name("TEMP"), m(0), n(0), nnz(0) {}
@@ -75,26 +86,32 @@ class COOSIMD32Tile {
       : name("TEMP"), m(_m), n(_n), nnz(_nnz) {
       double stt = MPI_Wtime();
     if (nnz > 0) {
-      __gnu_parallel::sort(edges, edges + nnz, compare_notrans_coo<T>);
       a = reinterpret_cast<T*>(
           _mm_malloc((uint64_t)nnz * (uint64_t)sizeof(T), 64));
       ja = reinterpret_cast<int*>(
           _mm_malloc((uint64_t)nnz * (uint64_t)sizeof(int), 64));
       ia = reinterpret_cast<int*>(
           _mm_malloc((uint64_t)nnz * (uint64_t)sizeof(int), 64));
+      tedge_t<T> * tmpedges = new tedge_t<T>[nnz];
+      num_partitions = omp_get_max_threads() * 4;
 
-      // convert to COOSIMD32
+      // Set partition IDs
       #pragma omp parallel for
-      for (uint64_t i = 0; i < (uint64_t)nnz; i++) {
-        a[i] = edges[i].val;
-        ja[i] = edges[i].dst - col_start; // one-based
-        ia[i] = edges[i].src - row_start; // one-based
-#ifdef __DEBUG
-        assert(ja[i] > 0);
-        assert(ja[i] <= n);
-        assert(ia[i] > 0);
-        assert(ia[i] <= m);
-#endif
+      for(int edge_id = 0 ; edge_id < nnz ; edge_id++)
+      {
+        tmpedges[edge_id].src = edges[edge_id].src - row_start;
+        tmpedges[edge_id].dst = edges[edge_id].dst - col_start;
+        tmpedges[edge_id].val = edges[edge_id].val;
+        tmpedges[edge_id].tile_id = (tmpedges[edge_id].src-1) / 32;
+      }
+
+      // Sort
+      __gnu_parallel::sort(tmpedges, tmpedges+nnz, compare_notrans_coosimd32<T>);
+
+      #pragma omp parallel for
+      for(int edge_id = 0 ; edge_id < nnz ; edge_id++)
+      {
+        ia[edge_id] = tmpedges[edge_id].src;
       }
 
       // Set partitions
@@ -102,23 +119,165 @@ class COOSIMD32Tile {
       int rows_per_partition = (m + num_partitions - 1) / num_partitions;
       rows_per_partition = ((rows_per_partition + 31) / 32) * 32;
       partition_start = new int[num_partitions+1];
+      simd_nnz = new int[num_partitions+1];
       
-      #pragma omp parallel for
-      for(int p = 0 ; p < num_partitions ; p++)
+      int nnztotal = 0;
+      #pragma omp parallel for 
+      for (int p = 0; p < num_partitions ; p++) 
       {
         int start_row = p * rows_per_partition;
         int end_row = (p+1) * rows_per_partition;
         if(end_row > m) end_row = m;
-        int start_edge_id = l_binary_search(0, nnz, ia, start_row+1);
-        int end_edge_id = l_binary_search(0, nnz, ia, end_row+1);
+        //int start_edge_id = l_binary_search(0, nnz, ia, start_row+1);
+        //int end_edge_id = l_binary_search(0, nnz, ia, end_row+1);
+        
+        int start_edge_id = l_linear_search(0, nnz, ia, start_row+1);
+        int end_edge_id = l_linear_search(0, nnz, ia, end_row+1);
         partition_start[p] = start_edge_id;
 #ifdef __DEBUG
         assert(start_edge_id == l_linear_search(0, nnz, ia, start_row+1));
         assert(end_edge_id == l_linear_search(0, nnz, ia, end_row+1));
         assert(start_edge_id >= 0);
 #endif
+        int partition_nnz = end_edge_id - start_edge_id;
       }
       partition_start[num_partitions] = nnz;
+
+
+      // Create arrays
+      #pragma omp parallel for
+      for (int p = 0; p < num_partitions; p++) 
+      {
+        int start_row = p * rows_per_partition;
+        int end_row = (p+1) * rows_per_partition;
+        if(end_row > m) end_row = m;
+        int start_edge_id = partition_start[p];
+        int end_edge_id = partition_start[p+1];
+        int partition_nnz = end_edge_id - start_edge_id;
+
+        // For each 32 partition
+        int npartitions = ((end_row-start_row) + 31) / 32;
+        int * borders = new int[npartitions+1];
+        int current_partition = 0;
+        for(int eid = start_edge_id ; eid < end_edge_id ; eid++)
+        {
+          int new_partition = (ia[eid] - ia[eid]) / 32;
+          while(current_partition <= new_partition)
+          {
+            borders[current_partition] = eid;
+            current_partition++;
+          }
+        }
+        while(current_partition <= npartitions)
+        {
+          borders[current_partition] = end_edge_id;
+          current_partition++;
+        }
+
+        std::vector<partition_bin_coosimd32> bins = std::vector<partition_bin_coosimd32>(npartitions);
+        int n_full32 = 0;
+        for(int bin = 0 ; bin < npartitions ; bin++)
+        {
+          bins[bin].p32 = bin;
+          bins[bin].num_total = bins[bin].num_left = borders[bin+1]-borders[bin];
+          bins[bin].num_taken = 0;
+          if(bins[bin].num_total > 0) n_full32++;
+        }
+
+        // Sort bins for heuristic
+        std::sort(bins.begin(), bins.end(), 
+          [](partition_bin_coosimd32 const & bin1, partition_bin_coosimd32 const & bin2) -> bool { return bin1.num_total > bin2.num_total; });
+
+        // Round robin assignment
+        int nnzsimd = 0;
+        while(n_full32 >= 32)
+        {
+          int rotation_count = 0;
+          for(int bin = 0 ; bin < npartitions ; bin++)
+          {
+            if(bins[bin].num_left > 0) 
+            {
+              int eid = borders[bins[bin].p32] + bins[bin].num_taken;
+              bins[bin].num_taken++;
+              bins[bin].num_left--;
+              if(bins[bin].num_left == 0) n_full32--;
+
+              // Copy edge
+              ja[nnzsimd+partition_start[p]] = tmpedges[eid].dst;
+              ia[nnzsimd+partition_start[p]] = tmpedges[eid].src;
+              a[nnzsimd+partition_start[p]] = tmpedges[eid].val;
+
+              nnzsimd++;
+              rotation_count++;
+            }
+            if(rotation_count == 32) break;
+          }
+        }
+        simd_nnz[p] = nnzsimd;
+
+        int nnzincrement = nnzsimd;
+        for(int bin = 0 ; bin < npartitions ; bin++)
+        {
+          for(int taken_cnt = bins[bin].num_taken ; taken_cnt < bins[bin].num_total ; taken_cnt++)
+          {
+            int eid = borders[bins[bin].p32] + taken_cnt;
+
+            // Copy edge
+            ja[nnzincrement+partition_start[p]] = tmpedges[eid].dst;
+            ia[nnzincrement+partition_start[p]] = tmpedges[eid].src;
+            a[nnzincrement+partition_start[p]] = tmpedges[eid].val;
+            nnzincrement++;
+          }
+        }
+
+        if(nnzincrement != partition_nnz)
+        {
+          std::cout << "nnzincrement: " << nnzincrement << "\t partition_nnz: " << partition_nnz << std::endl;
+          exit(0);
+        }
+        assert(nnzincrement == (partition_start[p+1]-partition_start[p]));
+
+        delete [] borders;
+      }
+#ifdef __DEBUG
+      // Check against edgelist
+      tedge_t<T> * check_edges = new tedge_t<T>[nnz];
+      for(int nzid = 0 ; nzid < nnz ; nzid++)
+      {
+        check_edges[nzid].dst = ja[nzid];
+        check_edges[nzid].src = ia[nzid];
+        check_edges[nzid].val = a[nzid];
+        check_edges[nzid].tile_id = (ia[nzid]-1) / 32;
+      }
+      __gnu_parallel::sort(check_edges, check_edges+nnz, compare_notrans_coosimd32<T>);
+
+      #pragma omp parallel
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        assert(tmpedges[i].dst == check_edges[i].dst);
+        assert(tmpedges[i].src == check_edges[i].src);
+        assert(tmpedges[i].val == check_edges[i].val);
+      }
+
+      delete [] check_edges;
+
+      #pragma omp parallel for
+      for(int p = 0 ; p < num_partitions ; p++) {
+        assert(simd_nnz[p] % 32 == 0);
+        assert(simd_nnz[p] < (partition_start[p+1] - partition_start[p]));
+        for(int i32 = 0 ; i32 < simd_nnz[p] ; i32+=32) {
+          for(int i = 0 ; i < 32 ; i++) {
+            for(int j = i+1 ; j < 32 ; j++) {
+              int partition_i = ia[partition_start[p] + i32 + i] / 32;
+              int partition_j = ia[partition_start[p] + i32 + j] / 32;
+              assert(partition_i != partition_j);
+            }
+          }
+        }
+      }
+#endif // __DEBUG
+
+      delete [] tmpedges;
     }
   }
 
@@ -159,92 +318,20 @@ class COOSIMD32Tile {
   ~COOSIMD32Tile(void) {}
 
   void send_tile_metadata(int myrank, int dst_rank, int output_rank) {
-    if (myrank == output_rank)
-      std::cout << "Rank: " << myrank << " sending " << name << " to rank "
-                << dst_rank << std::endl;
-
-    MPI_Send(&(nnz), 1, MPI_INT, dst_rank, 0, MPI_COMM_WORLD);
-    MPI_Send(&(m), 1, MPI_INT, dst_rank, 0, MPI_COMM_WORLD);
-    MPI_Send(&(n), 1, MPI_INT, dst_rank, 0, MPI_COMM_WORLD);
-    MPI_Send(&(num_partitions), 1, MPI_INT, dst_rank, 0, MPI_COMM_WORLD);
-
-    if (myrank == output_rank)
-      std::cout << "Metadata sent, nnz: " << nnz << std::endl;
+    assert(0);
   }
 
   void recv_tile_metadata(int myrank, int src_rank, int output_rank) {
-    if (!isEmpty()) {
-      clear();
-    }
-    MPI_Recv(&(nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
-             MPI_STATUS_IGNORE);
-    MPI_Recv(&(m), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Recv(&(n), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    MPI_Recv(&(num_partitions), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    assert(0);
   }
 
   void send_tile(int myrank, int dst_rank, int output_rank, bool block, std::vector<MPI_Request>* reqs) {
-    if (!isEmpty()) {
-      if (block) {
-        MPI_Send(this->a, (uint64_t)(this->nnz * sizeof(T)), MPI_BYTE, dst_rank,
-                 0, MPI_COMM_WORLD);
-        MPI_Send(this->ja, (uint64_t)(this->nnz), MPI_INT, dst_rank, 0,
-                 MPI_COMM_WORLD);
-        MPI_Send(this->ia, ((uint64_t)(this->nnz), MPI_INT, dst_rank, 0,
-                 MPI_COMM_WORLD);
-        MPI_Send(this->partition_start, ((this->num_partitions) + 1), MPI_INT, dst_rank, 0,
-                 MPI_COMM_WORLD);
-      } else {
-        MPI_Request r1, r2, r3, r4;
-        MPI_Isend(this->a, (uint64_t)(this->nnz * sizeof(T)), MPI_BYTE,
-                  dst_rank, 0, MPI_COMM_WORLD, &r1);
-        MPI_Isend(this->ja, (uint64_t)(this->nnz), MPI_INT, dst_rank, 0,
-                  MPI_COMM_WORLD, &r2);
-        MPI_Isend(this->ia, (uint64_t)(this->nnz), MPI_INT, dst_rank, 0,
-                  MPI_COMM_WORLD, &r3);
-        MPI_Isend(this->ia, (this->num_partitions) + 1, MPI_INT, dst_rank, 0,
-                  MPI_COMM_WORLD, &r4);
-        (*reqs).push_back(r1);
-        (*reqs).push_back(r2);
-        (*reqs).push_back(r3);
-        (*reqs).push_back(r4);
-      }
-    }
+    assert(0);
   }
 
   void recv_tile(int myrank, int src_rank, int output_rank, bool block,
                  std::vector<MPI_Request>* reqs) {
-    if (!(isEmpty())) {
-      a = reinterpret_cast<T*>(
-          _mm_malloc((uint64_t)(nnz) * (uint64_t)sizeof(T), 64));
-      ja = reinterpret_cast<int*>(
-          _mm_malloc((uint64_t)(nnz) * (uint64_t)sizeof(int), 64));
-      ia = reinterpret_cast<int*>(
-          _mm_malloc((uint64_t)(nnz) * (uint64_t)sizeof(int), 64));
-
-      if (block) {
-        MPI_Recv(a, (uint64_t)(nnz * sizeof(T)), MPI_BYTE, src_rank, 0,
-                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(ja, (uint64_t)(nnz), MPI_INT, src_rank, 0, MPI_COMM_WORLD,
-                 MPI_STATUS_IGNORE);
-        MPI_Recv(ia, (uint64_t) nnz, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
-                 MPI_STATUS_IGNORE);
-        MPI_Recv(partition_start, num_partitions+1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
-                 MPI_STATUS_IGNORE);
-      } else {
-        MPI_Request r1, r2, r3, r4;
-        MPI_Irecv(a, (uint64_t)(nnz * sizeof(T)), MPI_BYTE, src_rank, 0,
-                  MPI_COMM_WORLD, &r1);
-        MPI_Irecv(ja, (uint64_t)(nnz), MPI_INT, src_rank, 0, MPI_COMM_WORLD,
-                  &r2);
-        MPI_Irecv(ia, (uint64_t)(nnz), MPI_INT, src_rank, 0, MPI_COMM_WORLD, &r3);
-        MPI_Irecv(partition_start, num_partitions+1, MPI_INT, src_rank, 0, MPI_COMM_WORLD, &r4);
-        (*reqs).push_back(r1);
-        (*reqs).push_back(r2);
-        (*reqs).push_back(r3);
-        (*reqs).push_back(r4);
-      }
-    }
+    assert(0);
   }
 };
 
