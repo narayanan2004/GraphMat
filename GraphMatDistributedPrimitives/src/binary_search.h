@@ -117,5 +117,36 @@ T binary_search_right_border(T * vec, T val,  long start,  long end,  long len)
   }
 }
 
+int l_binary_search(int start, int end, int * v, int item) {
+  int e1 = start;
+  int e2 = end;
+  int eh;
+  while(e2 >= e1)
+  {
+    eh = e2 - (e2 - e1) / 2;
+    if(eh == 0) break;
+    if(v[eh-1] < item && v[eh] >= item) break;
+    if(v[eh] >= item)
+    {
+      e2 = eh-1;
+    }
+    else
+    {
+      e1 = eh+1;
+    }
+  }
+  return eh;
+}
+
+
+int l_linear_search(int start, int end, int * v, int item) {
+  if(v[0] >= item) return 0;
+  for(int i = start ; i < end -1 ; i++)
+  {
+    if(v[i] < item && v[i+1] >= item) return i+1;
+  }
+  return end;
+}
+
 
 #endif  // SRC_BINARY_SEARCH_H_

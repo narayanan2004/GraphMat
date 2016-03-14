@@ -34,6 +34,7 @@
 #define SRC_TILEOPS_H_
 
 #include "src/CSRTile.h"
+#include "src/COOTile.h"
 #include "src/DCSCTile.h"
 #include "src/DenseTile.h"
 #include "src/DenseSegment.h"
@@ -225,6 +226,22 @@ void mult_segment(const CSRTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
                mul_fp, add_fp, vsp);
   segmenty->properties.nnz = segmenty->compute_nnz();
 }
+
+
+template <typename Ta, typename Tx, typename Ty>
+void mult_segment(const COOTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
+                  DenseSegment<Ty>* segmenty, int output_rank,
+                  void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+  segmenty->alloc();
+  segmenty->initialize();
+  int nnz = 0;
+  my_coospmspv(tile.a, tile.ia, tile.ja, tile.num_partitions, tile.partition_start,
+               segmentx.properties.value, segmentx.properties.bit_vector,
+               segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
+               mul_fp, add_fp, vsp);
+  segmenty->properties.nnz = segmenty->compute_nnz();
+}
+
 
 template <typename Ta, typename Tx, typename Ty, typename Tm>
 void fmult_segment(const CSRTile<Ta>& tile, const DenseSegment<Tx>& segmentx, DenseSegment<Tm> &segmentm,

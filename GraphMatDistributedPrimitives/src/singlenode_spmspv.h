@@ -135,4 +135,48 @@ void my_csrspmspv(Ta* a, int* ia, int* ja, Tx* xvalue, int * xbit_vector,
   //*nnz = m * n;
 }
 
+
+template <typename Ta, typename Tx, typename Ty>
+void my_coospmspv(Ta* a, int* ia, int* ja, int num_partitions, int * partition_starts,
+                  Tx* xvalue, int * xbit_vector,
+                  Ty* yvalue, int * ybit_vector, int m, int n, int* nnz,
+                  void (*op_mul)(Ta, Tx, Ty*, void*), void (*op_add)(Ty, Ty, Ty*, void*), void* vsp) {
+
+  #pragma omp parallel for schedule(dynamic, 1)
+  for(int partition = 0 ; partition < num_partitions ; partition++)
+  {
+    for(int nz = partition_starts[partition] ; nz < partition_starts[partition+1] ; nz++)
+    {
+      int row = ia[nz]-1;
+      int col = ja[nz]-1;
+#ifdef __DEBUG
+      assert(row < m);
+      assert(row >= 0);
+      assert(col < n);
+      assert(col >= 0);
+#endif
+      if(get_bitvector(col, xbit_vector))
+      {
+        Ty tmp_mul;
+        op_mul(a[nz], xvalue[col], &tmp_mul, vsp);
+        bool row_exists = get_bitvector(row, ybit_vector);
+        if(!row_exists)
+        {
+          yvalue[row] = tmp_mul;
+        }
+        else
+        {
+          Ty tmp_add = yvalue[row];
+          Ty yval;
+          op_add(tmp_add, tmp_mul, &yval, vsp);
+          yvalue[row] = yval;
+        }
+        set_bitvector(row, ybit_vector);
+      }
+    }
+  }
+}
+
+
+
 #endif  // SRC_SINGLENODE_SPMSPV_H_

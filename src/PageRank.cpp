@@ -46,7 +46,7 @@ class PR {
     }
     friend std::ostream &operator<<(std::ostream &outstream, const PR & val)
     {
-      outstream << val.pagerank; 
+      outstream << val.degree; 
       return outstream;
     }
 };
@@ -129,7 +129,7 @@ void run_pagerank(const char* filename, int nthreads) {
     }
   }
 
-  //G.saveVertexproperty("vp.mtx");
+  G.saveVertexproperty("vp.mtx");
 }
 
 int main(int argc, char* argv[]) {
