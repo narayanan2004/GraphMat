@@ -161,7 +161,7 @@ class COOSIMD32Tile {
         int current_partition = 0;
         for(int eid = start_edge_id ; eid < end_edge_id ; eid++)
         {
-          int new_partition = (ia[eid] - ia[eid]) / 32;
+          int new_partition = (ia[eid] - start_row - 1) / 32;
           while(current_partition <= new_partition)
           {
             borders[current_partition] = eid;
@@ -268,8 +268,8 @@ class COOSIMD32Tile {
         for(int i32 = 0 ; i32 < simd_nnz[p] ; i32+=32) {
           for(int i = 0 ; i < 32 ; i++) {
             for(int j = i+1 ; j < 32 ; j++) {
-              int partition_i = ia[partition_start[p] + i32 + i] / 32;
-              int partition_j = ia[partition_start[p] + i32 + j] / 32;
+              int partition_i = (ia[partition_start[p] + i32 + i]-1) / 32;
+              int partition_j = (ia[partition_start[p] + i32 + j]-1) / 32;
               assert(partition_i != partition_j);
             }
           }
