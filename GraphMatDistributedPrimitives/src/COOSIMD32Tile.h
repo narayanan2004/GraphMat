@@ -127,6 +127,7 @@ class COOSIMD32Tile {
       {
         int start_row = p * rows_per_partition;
         int end_row = (p+1) * rows_per_partition;
+        if(start_row > m) start_row = m;
         if(end_row > m) end_row = m;
         //int start_edge_id = l_binary_search(0, nnz, ia, start_row+1);
         //int end_edge_id = l_binary_search(0, nnz, ia, end_row+1);
@@ -150,6 +151,7 @@ class COOSIMD32Tile {
       {
         int start_row = p * rows_per_partition;
         int end_row = (p+1) * rows_per_partition;
+        if(start_row > m) start_row = m;
         if(end_row > m) end_row = m;
         int start_edge_id = partition_start[p];
         int end_edge_id = partition_start[p+1];
@@ -264,7 +266,7 @@ class COOSIMD32Tile {
       #pragma omp parallel for
       for(int p = 0 ; p < num_partitions ; p++) {
         assert(simd_nnz[p] % 32 == 0);
-        assert(simd_nnz[p] < (partition_start[p+1] - partition_start[p]));
+        assert(simd_nnz[p] <= (partition_start[p+1] - partition_start[p]));
         for(int i32 = 0 ; i32 < simd_nnz[p] ; i32+=32) {
           for(int i = 0 ; i < 32 ; i++) {
             for(int j = i+1 ; j < 32 ; j++) {
