@@ -280,7 +280,7 @@ void run_bfs(char* filename, int nthreads, int v) {
     }
   }
 
-  G.saveVertexproperty("vp.mtx");
+  //G.saveVertexproperty("vp.mtx");
 
   /*FILE* f;
   f = fopen("out", "w");
