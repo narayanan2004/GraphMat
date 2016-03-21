@@ -305,6 +305,7 @@ class COOSIMD32Tile {
     this->ja = other.ja;
     this->num_partitions = other.num_partitions;
     this->partition_start = other.partition_start;
+    this->simd_nnz = other.simd_nnz;
   }
 
   void clear() {
