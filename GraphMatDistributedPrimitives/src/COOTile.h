@@ -108,6 +108,7 @@ class COOTile {
       {
         int start_row = p * rows_per_partition;
         int end_row = (p+1) * rows_per_partition;
+        if(start_row > m) start_row = m;
         if(end_row > m) end_row = m;
         int start_edge_id = l_binary_search(0, nnz, ia, start_row+1);
         int end_edge_id = l_binary_search(0, nnz, ia, end_row+1);

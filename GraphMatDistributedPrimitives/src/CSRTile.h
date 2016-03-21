@@ -97,6 +97,7 @@ class CSRTile {
       {
         int start_row = rows_per_partition * p;
         int end_row = rows_per_partition * (p+1);
+        if(start_row > m) start_row = m;
         if(end_row > m) end_row = m;
 
         // Find first 
