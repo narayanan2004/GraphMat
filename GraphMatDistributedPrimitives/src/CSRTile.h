@@ -146,16 +146,19 @@ class CSRTile {
   bool isEmpty() const { return nnz <= 0; }
 
   void get_edges(edge_t<T>* edges, int row_start, int col_start) {
-    int nnzcnt = 0;
-    #pragma omp parallel for
-    for (int i = 0; i < this->m; i++) {
-      for (int nz_id = ia[i]; nz_id < ia[i + 1]; nz_id++) {
-        edges[nz_id-1].src = i + row_start + 1;
-        edges[nz_id-1].dst = ja[nz_id - 1] + col_start;
-        edges[nz_id-1].val = a[nz_id - 1];
+    int nnzcnt = 0;\
+    if(this->nnz > 0)
+    {
+      #pragma omp parallel for
+      for (int i = 0; i < this->m; i++) {
+        for (int nz_id = ia[i]; nz_id < ia[i + 1]; nz_id++) {
+          edges[nz_id-1].src = i + row_start + 1;
+          edges[nz_id-1].dst = ja[nz_id - 1] + col_start;
+          edges[nz_id-1].val = a[nz_id - 1];
+        }
       }
+      //assert(nnzcnt == this->nnz);
     }
-    //assert(nnzcnt == this->nnz);
   }
 
   CSRTile& operator=(CSRTile other) {

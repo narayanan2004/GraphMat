@@ -114,6 +114,12 @@ void WriteEdgesTxt(const edgelist_t<T>& edgelist, const char* fname_in) {
   write_edgelist_txt(fname_in, global_myrank, global_nrank, edgelist);
 }
 
+template <typename T>
+void WriteEdgesBin(const edgelist_t<T>& edgelist, const char* fname_in) {
+  write_edgelist_bin(fname_in, global_myrank, global_nrank, edgelist);
+}
+
+
 template <template <typename> class SpTile, typename T>
 void AssignSpMat(edgelist_t<T> edgelist, SpMat<SpTile<T> >* mat, int ntx,
                  int nty, int (*pfn)(int, int, int, int, int)) {
