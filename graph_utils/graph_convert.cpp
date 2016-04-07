@@ -135,6 +135,7 @@ void printHelp(const char* argv0) {
 	printf("\t--edgeweighttype\n");
 	printf("\t\t0: int (default)\n");
 	printf("\t\t1: double\n");
+	printf("\t\t2: float\n");
 	
 	printf("\t--r [number] range of random edge weights created (use only with \"--outputedgeweights 3\")\n");
 
@@ -188,6 +189,19 @@ void sort_types(edge<double>*& edges, unsigned long int nnz)
 {
   __gnu_parallel::sort(edges, edges+nnz, compare_for_duplicates_double);
 }
+
+bool compare_for_duplicates_float(const edge<float>& e1, const edge<float>& e2) {
+	if (e1.src < e2.src) return true;
+	else if (e1.src > e2.src) return false;
+	if (e1.dst < e2.dst) return true;
+  else return false;
+}
+
+void sort_types(edge<float>*& edges, unsigned long int nnz)
+{
+  __gnu_parallel::sort(edges, edges+nnz, compare_for_duplicates_float);
+}
+
 
 template <typename T> void remove_duplicatededges(edge<T>*& edges, unsigned long int& nnz) {
 	//sort by src & dst
@@ -256,6 +270,21 @@ void readLine (FILE * ifile, int inputformat, int * src, int * dst, double * val
     fread(src, sizeof(int), 1, ifile);
     fread(dst, sizeof(int), 1, ifile);
     if (opt.inputedgeweights == 1) fread(val, sizeof(double), 1, ifile);
+  } else {
+    if (opt.inputedgeweights == 1) {
+      fscanf(ifile, "%d %d %lf", src, dst, val);
+    } else {
+      fscanf(ifile, "%d %d", src, dst);
+    }
+  }
+}
+
+void readLine (FILE * ifile, int inputformat, int * src, int * dst, float * val, struct myoptions opt)
+{
+  if(inputformat == 0) {	
+    fread(src, sizeof(int), 1, ifile);
+    fread(dst, sizeof(int), 1, ifile);
+    if (opt.inputedgeweights == 1) fread(val, sizeof(float), 1, ifile);
   } else {
     if (opt.inputedgeweights == 1) {
       fscanf(ifile, "%d %d %lf", src, dst, val);
@@ -566,6 +595,9 @@ int main(int argc, char* argv[]) {
       break;
     case 1:
       process_graph<double>(ifilename, ofilename, Opt);
+      break;
+    case 2:
+      process_graph<float>(ifilename, ofilename, Opt);
       break;
     default:
       printf("Invalid edge type: %d\n", Opt.edgeweighttype);
