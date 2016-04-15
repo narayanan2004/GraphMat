@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <parallel/algorithm>
 #include <utility>
+#include <numeric>
+#include <random>
 #include "assert.h"
 #include <getopt.h>
 
@@ -24,6 +26,7 @@ struct myoptions {
 	int nvertices;
 	int random_range;
 	int nsplits;
+        int randomizeID;
 }; 
 
 int validateOptions(struct myoptions opt) {
@@ -67,6 +70,7 @@ struct myoptions initOptions() {
 	opt.nvertices = 0;
 	opt.random_range = 128;
 	opt.nsplits = 1;
+        opt.randomizeID = 0;
 
 	return opt;
 }
@@ -87,6 +91,7 @@ void printOptions(struct myoptions opt) {
 	printf("Range of random edge weights = %d \n", opt.random_range);
 	printf("Number of vertices = %d \n", opt.nvertices);
 	printf("Number of splits = %d \n", opt.nsplits);
+	printf("Randomize vertex IDs = %d \n", opt.randomizeID);
   return;
 }
 
@@ -142,6 +147,7 @@ void printHelp(const char* argv0) {
 	printf("\t--nvertices [number] (use only with \"--inputheader 0\")\n");
 	
 	printf("\t--split [number] (default 1 i.e. no splitting, if specified then output file is split into n pieces each named as <outputfile>i_n for i from 0 to n-1)\n");
+	printf("\t--randomizeID\tUsing this flag would randomize the vertex IDs from the input file and also produce a <output>.permutation file with the random permutation used\n");
 }
 
 template <typename T> struct edge {
@@ -459,6 +465,30 @@ template<typename T> void process_graph(const char * ifilename, const char * ofi
 	if (Opt.duplicatededges == 0) {
 		remove_duplicatededges(edges, nnz);
 	}
+        if (Opt.randomizeID == 1) {
+          int* perm = new int[n];
+          std::iota(perm, perm+n, 1);
+          std::random_device d;
+          std::mt19937 g(d());
+          std::shuffle(perm, perm+n, g);
+ 
+          std::string permFile = ofilename + std::string(".permutation");
+          std::cout << "Writing permutation to file " << permFile << std::endl;
+          FILE* ofile = fopen(permFile.c_str(), "w");
+          assert(ofile != NULL);
+          for (int i = 0; i < n; i++) {
+            fprintf(ofile, "%d %d \n", i+1, perm[i]);
+          }
+          fclose(ofile);
+
+          #pragma omp parallel for
+          for (int i = 0; i < nnz; i++) {
+            edges[i].src = perm[edges[i].src - 1];
+            edges[i].dst = perm[edges[i].dst - 1];
+          }
+
+          delete [] perm;
+        }
 
 	if (Opt.nsplits == 1) {
 		writeFile(ofilename, edges, n, nnz, Opt);
@@ -514,6 +544,7 @@ int main(int argc, char* argv[]) {
       {"r", required_argument, 0, 'r'},
       {"nvertices", required_argument, 0, 'v'},
       {"split", required_argument, 0, 'p'},
+      {"randomizeID", no_argument, &Opt.randomizeID, 1},
       {"help", no_argument, 0, 'h'}
     };
 
