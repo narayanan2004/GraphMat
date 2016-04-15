@@ -153,6 +153,23 @@ void write_edgelist_txt(const char* dir, int myrank, int nrank,
   fclose(fp);
 }
 
+
+template <typename T>
+void write_edgelist_bin(const char* dir, int myrank, int nrank, 
+                       const edgelist_t<T> & edgelist)
+{
+  std::stringstream fname_ss;
+  fname_ss << dir << global_myrank;
+  printf("Opening file: %s\n", fname_ss.str().c_str());
+  FILE * fp = fopen(fname_ss.str().c_str(), "wb");
+  fwrite(&(edgelist.m), sizeof(int), 1, fp);
+  fwrite(&(edgelist.n), sizeof(int), 1, fp);
+  fwrite(&(edgelist.nnz), sizeof(int), 1, fp);
+  fwrite(edgelist.edges, sizeof(edge_t<T>), edgelist.nnz, fp);
+  fclose(fp);
+}
+
+
 template <typename T>
 void load_edgelist_txt(const char* dir, int myrank, int nrank,
                        edgelist_t<T>* edgelist) {

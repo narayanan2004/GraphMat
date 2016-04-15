@@ -252,7 +252,7 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
       double comp_time = 0;
       for (int j = 0; j < (end_k - start_k); j++) {
         comm_time +=
-            (compute_tstamps[i][1 + j * 4] - compute_tstamps[i][0 + j * 4]);
+            (compute_tstamps[i][2 + j * 4] - compute_tstamps[i][0 + j * 4]);
         comp_time +=
             (compute_tstamps[i][3 + j * 4] - compute_tstamps[i][2 + j * 4]);
       }
