@@ -77,6 +77,7 @@ class Graph {
     int nvertices;
     long long int nnz;
     int vertexpropertyowner;
+    int tiles_per_dim;
 
     //int *start_src_vertices; //start and end of transpose parts
     //int *end_src_vertices;
@@ -94,11 +95,14 @@ class Graph {
     void ReadMTX_sort(edge_t* edges, int m, int n, int nnz, int grid_size, int alloc=1); 
     void setAllActive();
     void setAllInactive();
+    int vertexToNative(int vertex, int nsegments, int len) const;
+    int nativeToVertex(int vertex, int nsegments, int len) const;
     void setActive(int v);
     void setInactive(int v);
     void setAllVertexproperty(const V& val);
     void setVertexproperty(int v, const V& val);
     V getVertexproperty(int v) const;
+    bool vertexNodeOwner(const int v) const;
     void saveVertexproperty(std::string fname) const;
     void reset();
     void shareVertexProperty(Graph<V,E>& g);
@@ -1009,6 +1013,38 @@ void Graph<V,E>::ReadMTX(const char* filename, int grid_size) {
 }
 
 template<class V, class E>
+int Graph<V,E>::vertexToNative(int vertex, int nsegments, int len) const
+{
+  int v = vertex-1;
+  int npartitions = omp_get_max_threads() * 16 * nsegments;
+  int height = len / npartitions;
+  int vmax = height * npartitions;
+  if(v >= vmax)
+  {
+    return v+1;
+  }
+  int col = v%npartitions;
+  int row = v/npartitions;
+  return row + col * height+ 1;
+}
+
+template<class V, class E>
+int Graph<V,E>::nativeToVertex(int vertex, int nsegments, int len) const
+{
+  int v = vertex-1;
+  int npartitions = omp_get_max_threads() * 16 * nsegments;
+  int height = len / npartitions;
+  int vmax = height * npartitions;
+  if(v >= vmax)
+  {
+    return v+1;
+  }
+  int col = v/height;
+  int row = v%height;
+  return col + row * npartitions+ 1;
+}
+
+template<class V, class E>
 void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
 
   struct timeval start, end;
@@ -1016,8 +1052,14 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
   {
     GraphPad::edgelist_t<E> A_edges;
     GraphPad::ReadEdgesBin(&A_edges, filename, false);
-
-    int tiles_per_dim = GraphPad::global_nrank;
+    tiles_per_dim = GraphPad::global_nrank;
+    
+    #pragma omp parallel for
+    for(int i = 0 ; i < A_edges.nnz ; i++)
+    {
+      A_edges.edges[i].src = vertexToNative(A_edges.edges[i].src, tiles_per_dim, A_edges.m);
+      A_edges.edges[i].dst = vertexToNative(A_edges.edges[i].dst, tiles_per_dim, A_edges.m);
+    }
 
     //int (*partition_fn)(int,int,int,int,int);
     //get_fn_and_tiles(3, GraphPad::global_nrank, &partition_fn, &tiles_per_dim);
@@ -1348,13 +1390,15 @@ void Graph<V,E>::setAllInactive() {
 template<class V, class E> 
 void Graph<V,E>::setActive(int v) {
   //active[v] = true;
-  active.set(v, true);
+  int v_new = vertexToNative(v, tiles_per_dim, nvertices);
+  active.set(v_new, true);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setInactive(int v) {
   //active[v] = false;
-  active.set(v, false);
+  int v_new = vertexToNative(v, tiles_per_dim, nvertices);
+  active.set(v_new, false);
 }
 template<class V, class E> 
 void Graph<V,E>::reset() {
@@ -1388,20 +1432,37 @@ void Graph<V,E>::setAllVertexproperty(const V& val) {
 template<class V, class E> 
 void Graph<V,E>::setVertexproperty(int v, const V& val) {
   //vertexproperty[v] = val;
-  vertexproperty.set(v, val);
+  int v_new = vertexToNative(v, tiles_per_dim, nvertices);
+  vertexproperty.set(v_new, val);
 }
 
 template<class V, class E> 
 void Graph<V,E>::saveVertexproperty(std::string fname) const {
-  vertexproperty.save(fname);
+  GraphPad::edgelist_t<V> myedges;
+  vertexproperty.get_edges(&myedges);
+  for(unsigned int i = 0 ; i < myedges.nnz ; i++)
+  {
+    myedges.edges[i].src = nativeToVertex(myedges.edges[i].src, tiles_per_dim, nvertices);
+  }
+  GraphPad::SpVec<GraphPad::DenseSegment<V> > vertexproperty2;
+  vertexproperty2.AllocatePartitioned(nvertices, tiles_per_dim, GraphPad::vector_partition_fn);
+  vertexproperty2.ingestEdgelist(myedges);
+  _mm_free(myedges.edges);
+  vertexproperty2.save(fname);
 }
 
+template<class V, class E>
+bool Graph<V,E>::vertexNodeOwner(const int v) const {
+  int v_new = vertexToNative(v, tiles_per_dim, nvertices);
+  return vertexproperty.node_owner(v_new);
+}
 
 template<class V, class E> 
 V Graph<V,E>::getVertexproperty(const int v) const {
   //return vertexproperty[v];
   V vp ;
-  vertexproperty.get(v, &vp);
+  int v_new = vertexToNative(v, tiles_per_dim, nvertices);
+  vertexproperty.get(v_new, &vp);
   return vp;
 }
 

@@ -261,7 +261,7 @@ void run_bfs(char* filename, int nthreads, int v) {
 
   int reachable_vertices = 0;
   for (int i = 1; i <= G.getNumberOfVertices(); i++) {
-    if (G.vertexproperty.node_owner(i) && G.getVertexproperty(i).depth < 255) {
+    if (G.vertexNodeOwner(i) && G.getVertexproperty(i).depth < 255) {
       reachable_vertices++;
     }
   }
@@ -270,7 +270,7 @@ void run_bfs(char* filename, int nthreads, int v) {
   if (GraphPad::global_myrank == 0) printf("Reachable vertices = %d \n", reachable_vertices);
 
   for (int i = 1; i <= std::min(10, G.nvertices); i++) {
-    if (G.vertexproperty.node_owner(i))
+    if (G.vertexNodeOwner(i))
     if (G.getVertexproperty(i).depth < 255) {
       //printf("Depth %d : %d \n", i, G.vertexproperty[i].depth);
       printf("Depth %d : %d parent: %d\n", i, G.getVertexproperty(i).depth, G.getVertexproperty(i).parent);
