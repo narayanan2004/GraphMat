@@ -62,11 +62,14 @@ class segment_props
 
     void alloc(int capacity, int num_ints)
     {
-      value = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + num_ints*sizeof(int), 64));
-      bit_vector = reinterpret_cast<int*>( value + capacity);
-      compressed_data = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + capacity*sizeof(int), 64));
-      allocated = true;
-      uninitialized = true;
+      if(!allocated)
+      {
+        value = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + num_ints*sizeof(int), 64));
+        bit_vector = reinterpret_cast<int*>( value + capacity);
+        compressed_data = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + capacity*sizeof(int), 64));
+        allocated = true;
+        uninitialized = true;
+      }
     }
 };
 
