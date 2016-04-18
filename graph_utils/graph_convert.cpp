@@ -293,7 +293,7 @@ void readLine (FILE * ifile, int inputformat, int * src, int * dst, float * val,
     if (opt.inputedgeweights == 1) fread(val, sizeof(float), 1, ifile);
   } else {
     if (opt.inputedgeweights == 1) {
-      fscanf(ifile, "%d %d %lf", src, dst, val);
+      fscanf(ifile, "%d %d %f", src, dst, val);
     } else {
       fscanf(ifile, "%d %d", src, dst);
     }
@@ -381,6 +381,11 @@ void writeLine (FILE * ofile, int src, int dst, unsigned int val)
 void writeLine (FILE * ofile, int src, int dst, double val)
 {
   fprintf(ofile, "%d %d %1.16e\n", src, dst, val);
+}
+
+void writeLine (FILE * ofile, int src, int dst, float val)
+{
+  fprintf(ofile, "%d %d %f\n", src, dst, val);
 }
 
 void writeLine (FILE * ofile, int src, int dst)
