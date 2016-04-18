@@ -78,6 +78,7 @@ class Graph {
     long long int nnz;
     int vertexpropertyowner;
     int tiles_per_dim;
+    bool vertexID_randomization;
 
     //int *start_src_vertices; //start and end of transpose parts
     //int *end_src_vertices;
@@ -1015,37 +1016,52 @@ void Graph<V,E>::ReadMTX(const char* filename, int grid_size) {
 template<class V, class E>
 int Graph<V,E>::vertexToNative(int vertex, int nsegments, int len) const
 {
-  int v = vertex-1;
-  int npartitions = omp_get_max_threads() * 16 * nsegments;
-  int height = len / npartitions;
-  int vmax = height * npartitions;
-  if(v >= vmax)
-  {
-    return v+1;
+  if (vertexID_randomization) {
+
+    int v = vertex-1;
+    int npartitions = omp_get_max_threads() * 16 * nsegments;
+    int height = len / npartitions;
+    int vmax = height * npartitions;
+    if(v >= vmax)
+    {
+      return v+1;
+    }
+    int col = v%npartitions;
+    int row = v/npartitions;
+    return row + col * height+ 1;
+  } else {
+    return vertex;
   }
-  int col = v%npartitions;
-  int row = v/npartitions;
-  return row + col * height+ 1;
 }
 
 template<class V, class E>
 int Graph<V,E>::nativeToVertex(int vertex, int nsegments, int len) const
 {
-  int v = vertex-1;
-  int npartitions = omp_get_max_threads() * 16 * nsegments;
-  int height = len / npartitions;
-  int vmax = height * npartitions;
-  if(v >= vmax)
-  {
-    return v+1;
+  if (vertexID_randomization) {
+    int v = vertex-1;
+    int npartitions = omp_get_max_threads() * 16 * nsegments;
+    int height = len / npartitions;
+    int vmax = height * npartitions;
+    if(v >= vmax)
+    {
+      return v+1;
+    }
+    int col = v/height;
+    int row = v%height;
+    return col + row * npartitions+ 1;
+  } else {
+    return vertex;
   }
-  int col = v/height;
-  int row = v%height;
-  return col + row * npartitions+ 1;
 }
 
 template<class V, class E>
 void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
+
+  if (GraphPad::global_nrank == 1) {
+    vertexID_randomization = false;
+  } else {
+    vertexID_randomization = true;
+  }
 
   struct timeval start, end;
   gettimeofday(&start, 0);
