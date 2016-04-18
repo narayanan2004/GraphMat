@@ -253,7 +253,7 @@ void run_sssp(const char* filename, int nthreads, int v) {
 
   for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.nvertices); i++) {
   //for (int i = 1; i <= G.nvertices; i++) {
-    if (G.vertexproperty.node_owner(i)) {
+    if (G.vertexNodeOwner(i)) {
     printf("%d : ", i);
     //G.vertexproperty[i].print();
     G.getVertexproperty(i).print();

@@ -123,10 +123,13 @@ void run_pagerank(const char* filename, int nthreads) {
 
   //graph_program_clear(pr_tmp);
 
+  MPI_Barrier(MPI_COMM_WORLD);
   for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.getNumberOfVertices()); i++) { 
-    if (G.vertexproperty.node_owner(i)) {
+    if (G.vertexNodeOwner(i)) {
       printf("%d : %d %f\n", i, G.getVertexproperty(i).degree, G.getVertexproperty(i).pagerank);
     }
+    fflush(stdout);
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 
   //G.saveVertexproperty("vp.mtx");

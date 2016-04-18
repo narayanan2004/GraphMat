@@ -62,11 +62,14 @@ class segment_props
 
     void alloc(int capacity, int num_ints)
     {
-      value = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + num_ints*sizeof(int), 64));
-      bit_vector = reinterpret_cast<int*>( value + capacity);
-      compressed_data = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + capacity*sizeof(int), 64));
-      allocated = true;
-      uninitialized = true;
+      if(!allocated)
+      {
+        value = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + num_ints*sizeof(int), 64));
+        bit_vector = reinterpret_cast<int*>( value + capacity);
+        compressed_data = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + capacity*sizeof(int), 64));
+        allocated = true;
+        uninitialized = true;
+      }
     }
 };
 
@@ -473,6 +476,20 @@ class DenseSegment {
       }
     }
     fout.close();
+  }
+
+  void get_edges(edge_t<T> * edges, unsigned int start_nz)
+  {
+    unsigned int mycnt = 0;
+    for(int i = 0 ; i < capacity ; i++)
+    {
+      if(get_bitvector(i, properties.bit_vector))
+      {
+        edges[mycnt].src = start_nz + mycnt + 1;
+        edges[mycnt].val = properties.value[i];
+        mycnt++;
+      }
+    }
   }
 };
 #endif  // SRC_DENSESEGMENT_H_

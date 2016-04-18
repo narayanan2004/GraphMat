@@ -85,6 +85,35 @@ class SpVec {
   }
 
   template <typename T>
+  void get_edges(edgelist_t<T> * blob) const
+  {
+    blob->nnz = 0;
+    blob->m = n;
+    blob->n = 1;
+    for(int segment = 0 ; segment < nsegments ; segment++)
+    {
+      if(nodeIds[segment] == global_myrank)
+      {
+        blob->nnz += segments[segment].compute_nnz();
+      }
+    }
+    if(blob->nnz > 0)
+    {
+      blob->edges = reinterpret_cast<edge_t<T>*>(
+        _mm_malloc((uint64_t)blob->nnz * (uint64_t)sizeof(edge_t<T>), 64));
+      unsigned int nnzs = 0;
+      for(int segment = 0 ; segment < nsegments ; segment++)
+      {
+        if(nodeIds[segment] == global_myrank)
+        {
+          segments[segment].get_edges(blob->edges + nnzs, start_id[segment]);
+          nnzs += segments[segment].compute_nnz();
+        }
+      }
+    }
+  }
+
+  template <typename T>
   void ingestEdgelist(edgelist_t<T> blob) {
     int nnz_l = blob.nnz;
     edge_t<T>* edge_list = blob.edges;
