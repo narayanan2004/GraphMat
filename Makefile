@@ -4,7 +4,7 @@ include $(DIST_PRIMITIVES_PATH)/Make.inc
 
 #CXX=icpc
 CXX=mpiicpc
-CXX_OPTIONS=-openmp -std=c++11 -I./src/ -I$(DIST_PRIMITIVES_PATH)
+CXX_OPTIONS=-qopenmp -std=c++11 -Isrc -I$(DIST_PRIMITIVES_PATH)
 
 
 ifeq (${debug}, 1)
