@@ -146,7 +146,7 @@ class CSRTile {
   bool isEmpty() const { return nnz <= 0; }
 
   void get_edges(edge_t<T>* edges, int row_start, int col_start) {
-    int nnzcnt = 0;\
+    int nnzcnt = 0;
     if(this->nnz > 0)
     {
       #pragma omp parallel for
