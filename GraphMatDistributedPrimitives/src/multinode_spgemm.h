@@ -78,6 +78,7 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
 
   MPI_Barrier(MPI_COMM_WORLD);
   start = MPI_Wtime();
+  MPI_Barrier(MPI_COMM_WORLD);
 
   // Calculate row_ranks and col_ranks
   std::vector<std::set<int> > c_row_ranks;
@@ -93,6 +94,7 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
   double total_time = 0.0;
   uint64_t total_recv_bytes = 0;
   for (int k = start_k; k < end_k; k++) {
+    MPI_Barrier(MPI_COMM_WORLD);
     compute_tstamp[0 + (k - start_k) * 4] = MPI_Wtime();
     MPI_Barrier(MPI_COMM_WORLD);
     if (global_myrank == output_rank) {
@@ -158,7 +160,6 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
 
     compute_tstamp[1 + (k - start_k) * 4] = MPI_Wtime();
     MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
-    MPI_Barrier(MPI_COMM_WORLD);
     compute_tstamp[2 + (k - start_k) * 4] = MPI_Wtime();
 
     for (int i = start_m; i < end_m; i++) {
@@ -184,7 +185,6 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
         gridb.tiles[k][j].clear();
       }
     }
-    MPI_Barrier(MPI_COMM_WORLD);
     compute_tstamp[3 + (k - start_k) * 4] = MPI_Wtime();
     double comp_end = MPI_Wtime();
   }
