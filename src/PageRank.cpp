@@ -34,7 +34,7 @@
 
 class PR {
   public:
-    double pagerank;
+    float pagerank;
     int degree;
   public:
     PR() {
@@ -42,7 +42,7 @@ class PR {
       degree = 0;
     }
     int operator!=(const PR& p) {
-      return (fabs(p.pagerank-pagerank)>1e-8);
+      return (fabs(p.pagerank-pagerank)>1e-5);
     }
     friend std::ostream &operator<<(std::ostream &outstream, const PR & val)
     {
@@ -52,32 +52,32 @@ class PR {
 };
 
 template <class E>
-class PageRank : public GraphProgram<double, double, PR, E> {
+class PageRank : public GraphProgram<float, float, PR, E> {
   public:
-    double alpha;
+    float alpha;
 
   public:
 
-  PageRank(double a=0.3) {
+  PageRank(float a=0.3) {
     alpha = a;
     this->activity = ALL_VERTICES;
   }
 
-  void reduce_function(double& a, const double& b) const {
+  void reduce_function(float& a, const float& b) const {
     a += b;
   }
-  void process_message(const double& message, const E edge_val, const PR& vertexprop, double& res) const {
+  void process_message(const float& message, const E edge_val, const PR& vertexprop, float& res) const {
     res = message;
   }
-  bool send_message(const PR& vertexprop, double& message) const {
+  bool send_message(const PR& vertexprop, float& message) const {
     if (vertexprop.degree == 0) {
       message = 0.0;
     } else {
-      message = vertexprop.pagerank/(double)vertexprop.degree;
+      message = vertexprop.pagerank/(float)vertexprop.degree;
     }
     return true;
   }
-  void apply(const double& message_out, PR& vertexprop) {
+  void apply(const float& message_out, PR& vertexprop) {
     vertexprop.pagerank = alpha + (1.0-alpha)*message_out; //non-delta update
   }
 
