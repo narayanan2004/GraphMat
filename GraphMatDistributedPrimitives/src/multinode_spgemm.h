@@ -76,6 +76,8 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
 
   double* compute_tstamp = new double[(end_k - start_k) * 4];
 
+  MPI_Pcontrol(1, "spgemm");
+
   MPI_Barrier(MPI_COMM_WORLD);
   start = MPI_Wtime();
   MPI_Barrier(MPI_COMM_WORLD);
@@ -217,6 +219,7 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
 
   MPI_Barrier(MPI_COMM_WORLD);
   end = MPI_Wtime();
+  MPI_Pcontrol(-1, "spgemm") ;
 
   // Instrumentation
   double* starts = new double[global_nrank];
