@@ -137,15 +137,18 @@ class DCSRTile {
 
 #ifdef __DEBUG
       unsigned long int nzcnt = 0;
-      for(int _row = 0 ; _row < num_rows ; _row++)
+      for(int p = 0 ; p < num_partitions ; p++)
       {
-        int row = row_ids[_row];
-        for(int j = ia[_row] ; j < ia[_row+1] ; j++)
+        for(int _row = partition_ptrs[p] ; _row < partition_ptrs[p+1]; _row++)
         {
-          assert(edges[nzcnt].src == (row + row_start + 1) );
-          assert(edges[nzcnt].dst == (ja[j] + col_start + 1));
-          assert(edges[nzcnt].val == (a[j]));
-          nzcnt++;
+          int row = row_ids[_row];
+          for(int j = ia[_row] ; j < ia[_row+1] ; j++)
+          {
+            assert(edges[nzcnt].src == (row + row_start + 1) );
+            assert(edges[nzcnt].dst == (ja[j] + col_start + 1));
+            assert(edges[nzcnt].val == (a[j]));
+            nzcnt++;
+          }
         }
       }
       assert(nzcnt == nnz);
