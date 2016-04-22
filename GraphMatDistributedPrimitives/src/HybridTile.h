@@ -128,11 +128,6 @@ class HybridTile {
         memcpy(edges_lt16 + ia_lt16[i], edges + ia[i] - 1, nnz_row * sizeof(edge_t<T>));
       }
       else {
-        if(ia_gte16[i] + nnz_row > nnz1)
-        {
-          std::cout << ia_gte16[i] << "\t" << nnz_row << "\t" << nnz2 << std::endl;
-          std::cout << i << "\t" << ia[i] << "\t" << ia[i+1] << std::endl;
-        }
         assert(ia_gte16[i] + nnz_row <= nnz1);
         memcpy(edges_gte16 + ia_gte16[i], edges + ia[i] - 1, nnz_row * sizeof(edge_t<T>));
       }
