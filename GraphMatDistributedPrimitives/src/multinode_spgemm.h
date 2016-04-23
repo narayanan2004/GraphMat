@@ -76,8 +76,11 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
 
   double* compute_tstamp = new double[(end_k - start_k) * 4];
 
+  MPI_Pcontrol(1, "spgemm");
+
   MPI_Barrier(MPI_COMM_WORLD);
   start = MPI_Wtime();
+  MPI_Barrier(MPI_COMM_WORLD);
 
   // Calculate row_ranks and col_ranks
   std::vector<std::set<int> > c_row_ranks;
@@ -93,6 +96,7 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
   double total_time = 0.0;
   uint64_t total_recv_bytes = 0;
   for (int k = start_k; k < end_k; k++) {
+    MPI_Barrier(MPI_COMM_WORLD);
     compute_tstamp[0 + (k - start_k) * 4] = MPI_Wtime();
     MPI_Barrier(MPI_COMM_WORLD);
     if (global_myrank == output_rank) {
@@ -106,24 +110,16 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
       for (std::set<int>::iterator it = row_ranks.begin();
            it != row_ranks.end(); it++) {
         int dst_rank = *it;
-        if (global_myrank == grida.nodeIds[i + k * grida.ntiles_y] &&
-            global_myrank != dst_rank) {
-          grida.tiles[i][k]
-              .send_tile_metadata(global_myrank, dst_rank, output_rank);
-          grida.tiles[i][k]
-              .send_tile(global_myrank, dst_rank, output_rank, block, &requests);
-        }
         if (global_myrank == dst_rank &&
             global_myrank != grida.nodeIds[i + k * grida.ntiles_y]) {
           grida.tiles[i][k].recv_tile_metadata(
               global_myrank, grida.nodeIds[i + k * grida.ntiles_y],
               output_rank);
-          grida.tiles[i][k].recv_tile(global_myrank,
-                                      grida.nodeIds[i + k * grida.ntiles_y],
-                                      output_rank, block, &requests);
-          total_recv_bytes +=
-              (grida.tiles[i][k].nnz) * (sizeof(Ta) + sizeof(int)) +
-              grida.tiles[i][k].m * sizeof(int);
+        }
+        if (global_myrank == grida.nodeIds[i + k * grida.ntiles_y] &&
+            global_myrank != dst_rank) {
+          grida.tiles[i][k]
+              .send_tile_metadata(global_myrank, dst_rank, output_rank);
         }
       }
     }
@@ -134,31 +130,64 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
       for (std::set<int>::iterator it = col_ranks.begin();
            it != col_ranks.end(); it++) {
         int dst_rank = *it;
-        if (global_myrank == gridb.nodeIds[k + j * gridb.ntiles_y] &&
-            global_myrank != dst_rank) {
-          gridb.tiles[k][j]
-              .send_tile_metadata(global_myrank, dst_rank, output_rank);
-          gridb.tiles[k][j]
-              .send_tile(global_myrank, dst_rank, output_rank, block, &requests);
-        }
         if (global_myrank == dst_rank &&
             global_myrank != gridb.nodeIds[k + j * gridb.ntiles_y]) {
           gridb.tiles[k][j].recv_tile_metadata(
               global_myrank, gridb.nodeIds[k + j * gridb.ntiles_y],
               output_rank);
-          gridb.tiles[k][j].recv_tile(global_myrank,
-                                      gridb.nodeIds[k + j * gridb.ntiles_y],
-                                      output_rank, block, &requests);
-          total_recv_bytes +=
-              (gridb.tiles[k][j].nnz) * (sizeof(Tb) + sizeof(int)) +
-              gridb.tiles[k][j].m * sizeof(int);
+        }
+        if (global_myrank == gridb.nodeIds[k + j * gridb.ntiles_y] &&
+            global_myrank != dst_rank) {
+          gridb.tiles[k][j]
+              .send_tile_metadata(global_myrank, dst_rank, output_rank);
         }
       }
     }
 
+    // For each tile in A col, send/recv
+    for (int i = start_m; i < end_m; i++) {
+      std::set<int> row_ranks = c_row_ranks[i];
+      for (std::set<int>::iterator it = row_ranks.begin();
+           it != row_ranks.end(); it++) {
+        int dst_rank = *it;
+        if (global_myrank == dst_rank &&
+            global_myrank != grida.nodeIds[i + k * grida.ntiles_y]) {
+          grida.tiles[i][k].recv_tile(global_myrank,
+                                      grida.nodeIds[i + k * grida.ntiles_y],
+                                      output_rank, block, &requests);
+        }
+        if (global_myrank == grida.nodeIds[i + k * grida.ntiles_y] &&
+            global_myrank != dst_rank) {
+          grida.tiles[i][k]
+              .send_tile(global_myrank, dst_rank, output_rank, block, &requests);
+        }
+      }
+    }
+
+    // For each tile in B row, send/recv
+    for (int j = start_n; j < end_n; j++) {
+      std::set<int> col_ranks = c_col_ranks[j];
+      for (std::set<int>::iterator it = col_ranks.begin();
+           it != col_ranks.end(); it++) {
+        int dst_rank = *it;
+        if (global_myrank == dst_rank &&
+            global_myrank != gridb.nodeIds[k + j * gridb.ntiles_y]) {
+          gridb.tiles[k][j].recv_tile(global_myrank,
+                                      gridb.nodeIds[k + j * gridb.ntiles_y],
+                                      output_rank, block, &requests);
+        }
+        if (global_myrank == gridb.nodeIds[k + j * gridb.ntiles_y] &&
+            global_myrank != dst_rank) {
+          gridb.tiles[k][j]
+              .send_tile(global_myrank, dst_rank, output_rank, block, &requests);
+        }
+      }
+    }
+
+
+
     compute_tstamp[1 + (k - start_k) * 4] = MPI_Wtime();
     MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
-    MPI_Barrier(MPI_COMM_WORLD);
     compute_tstamp[2 + (k - start_k) * 4] = MPI_Wtime();
 
     for (int i = start_m; i < end_m; i++) {
@@ -184,13 +213,13 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
         gridb.tiles[k][j].clear();
       }
     }
-    MPI_Barrier(MPI_COMM_WORLD);
     compute_tstamp[3 + (k - start_k) * 4] = MPI_Wtime();
     double comp_end = MPI_Wtime();
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
   end = MPI_Wtime();
+  MPI_Pcontrol(-1, "spgemm") ;
 
   // Instrumentation
   double* starts = new double[global_nrank];

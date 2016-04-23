@@ -103,9 +103,20 @@ class CSRTile {
         // Find first 
         int nz_start = -1;
         int row = start_row ;
-        while(row < m && nz_start == -1)
+        while((row < m) && (nz_start == -1))
         {
-          nz_start = binary_search_left_border(jia, row+1, 0, nnz, nnz);
+          if(row+1 < jia[0])
+          {
+            nz_start = 0;
+          }
+          else if(row+1 > jia[nnz-1])
+          {
+            nz_start = nnz;
+          }
+          else
+          {
+            nz_start = binary_search_left_border(jia, row+1, 0, nnz, nnz);
+          }
           row++;
         }
         if(nz_start == -1)
@@ -128,6 +139,25 @@ class CSRTile {
         }
       }
       ia[m] = nnz+1;
+
+/*
+      std::stringstream ss;
+      ss << "tile" << row_start << "_" << col_start;
+      FILE * f = fopen(ss.str().c_str(), "w");
+      unsigned long int total_nz_gt16 = 0;
+      unsigned long int total_nz = 0;
+      for(int i = 0 ; i < m ; i++)
+      {
+        int nz_per_row = ia[i+1] - ia[i];
+        total_nz += nz_per_row;
+        if(nz_per_row > 16)
+        {
+          total_nz_gt16 += nz_per_row;
+        }
+      }
+      fprintf(f, "ratio: %f\n", ((double)total_nz_gt16) / ((double)total_nz));
+      fclose(f);
+      */
 /*
       int cnt = 0;
       for(int row = 0 ; row < m ; row++)

@@ -33,6 +33,7 @@
 #ifndef SRC_TILEOPS_H_
 #define SRC_TILEOPS_H_
 
+#include "src/HybridTile.h"
 #include "src/CSRTile.h"
 #include "src/COOTile.h"
 #include "src/COOSIMD32Tile.h"
@@ -214,6 +215,34 @@ void mult_segment3(const DCSCTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
             mul_fp, add_fp);
 }
 
+template <typename Ta, typename Tx, typename Ty>
+void mult_segment(const HybridTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
+                  DenseSegment<Ty>* segmenty, int output_rank,
+                  void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+  segmenty->alloc();
+  segmenty->initialize();
+  int nnz = 0;
+  if(tile.t1->nnz > 0)
+  {
+    my_dcsrspmspv(tile.t1->a, tile.t1->ia, tile.t1->ja, tile.t1->row_ids, tile.t1->num_rows, tile.t1->partition_ptrs, tile.t1->num_partitions, segmentx.properties.value, segmentx.properties.bit_vector,
+                 segmenty->properties.value, segmenty->properties.bit_vector, tile.t1->m, tile.t1->n, (&nnz),
+                 mul_fp, add_fp, vsp);
+     /*
+    my_csrspmspv(tile.t1->a, tile.t1->ia, tile.t1->ja, segmentx.properties.value, segmentx.properties.bit_vector,
+                 segmenty->properties.value, segmenty->properties.bit_vector, tile.t1->m, tile.t1->n, (&nnz),
+                 mul_fp, add_fp, vsp);
+                 */
+  }
+  if(tile.t2->nnz > 0)
+  {
+    my_coospmspv(tile.t2->a, tile.t2->ia, tile.t2->ja, tile.t2->num_partitions, tile.t2->partition_start,
+                 segmentx.properties.value, segmentx.properties.bit_vector,
+                 segmenty->properties.value, segmenty->properties.bit_vector, tile.t2->m, tile.t2->n, (&nnz),
+                 mul_fp, add_fp, vsp);
+  }
+  segmenty->properties.nnz = segmenty->compute_nnz();
+}
+
 
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const CSRTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
@@ -222,9 +251,12 @@ void mult_segment(const CSRTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
   segmenty->alloc();
   segmenty->initialize();
   int nnz = 0;
-  my_csrspmspv(tile.a, tile.ia, tile.ja, segmentx.properties.value, segmentx.properties.bit_vector,
-               segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
-               mul_fp, add_fp, vsp);
+  if(tile.nnz > 0)
+  {
+    my_csrspmspv(tile.a, tile.ia, tile.ja, segmentx.properties.value, segmentx.properties.bit_vector,
+                 segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
+                 mul_fp, add_fp, vsp);
+  }
   segmenty->properties.nnz = segmenty->compute_nnz();
 }
 

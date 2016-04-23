@@ -92,7 +92,7 @@ class COOSIMD32Tile {
           _mm_malloc((uint64_t)nnz * (uint64_t)sizeof(int), 64));
       ia = reinterpret_cast<int*>(
           _mm_malloc((uint64_t)nnz * (uint64_t)sizeof(int), 64));
-      tedge_t<T> * tmpedges = new tedge_t<T>[nnz];
+      tedge_t<T> * tmpedges = reinterpret_cast<tedge_t<T> *>( _mm_malloc(((uint64_t)nnz) * (uint64_t)sizeof(tedge_t<T>), 64));
       num_partitions = omp_get_max_threads() * 4;
 
       // Set partition IDs
@@ -106,7 +106,7 @@ class COOSIMD32Tile {
       }
 
       // Sort
-      __gnu_parallel::sort(tmpedges, tmpedges+nnz, compare_notrans_coosimd32<T>);
+      __gnu_parallel::sort(tmpedges, tmpedges+((uint64_t)nnz), compare_notrans_coosimd32<T>);
 
       #pragma omp parallel for
       for(int edge_id = 0 ; edge_id < nnz ; edge_id++)
@@ -241,7 +241,14 @@ class COOSIMD32Tile {
 
         delete [] borders;
       }
+
 #ifdef __DEBUG
+      unsigned int total_nnz_simd = 0;
+      for(int p = 0 ; p < num_partitions; p++)
+      {
+        total_nnz_simd += simd_nnz[p];
+      }
+      std::cout << "COOSIMD32 SIMD precentage: " << ((double) total_nnz_simd) / ((double)nnz) << std::endl;
       // Check against edgelist
       tedge_t<T> * check_edges = new tedge_t<T>[nnz];
       for(int nzid = 0 ; nzid < nnz ; nzid++)
@@ -258,7 +265,7 @@ class COOSIMD32Tile {
       {
         assert(tmpedges[i].dst == check_edges[i].dst);
         assert(tmpedges[i].src == check_edges[i].src);
-        assert(tmpedges[i].val == check_edges[i].val);
+        //assert(tmpedges[i].val == check_edges[i].val); // commented now in case of duplicate edges
       }
 
       delete [] check_edges;
@@ -279,7 +286,8 @@ class COOSIMD32Tile {
       }
 #endif // __DEBUG
 
-      delete [] tmpedges;
+      //delete [] tmpedges;
+      _mm_free(tmpedges);
     }
   }
 
