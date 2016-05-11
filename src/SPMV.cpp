@@ -73,8 +73,8 @@ void BlockingHypersparse_GEMV(const MatrixDC<E>* A_DCSC, const V* Vertexproperty
 
 
 
-template <class T, class U, class V, class E>
-void SpMSpV(const Graph<V>& G, const GraphProgram<T,U,V,E>* gp, const SparseInVector<T>& x, SparseOutVector<U>& y) {
+template <class T, class U, class V, class E=int>
+void SpMSpV(const Graph<V, E>& G, const GraphProgram<T,U,V,E>* gp, const SparseInVector<T>& x, SparseOutVector<U>& y) {
     unsigned long long int start = __rdtsc();
     #pragma omp parallel for num_threads(nthreads) schedule(dynamic, 1)
     for (int i = 0; i < G.nparts; i++) { // loop over blocks
@@ -86,7 +86,7 @@ void SpMSpV(const Graph<V>& G, const GraphProgram<T,U,V,E>* gp, const SparseInVe
     #endif
 }
 
-template <class T, class U, class V, class E>
+template <class T, class U, class V, class E=int>
 void SpMTSpV(const Graph<V, E>& G, const GraphProgram<T,U,V,E>* gp, const SparseInVector<T>& x, SparseOutVector<U>& y) {
 
   unsigned long long int start = __rdtsc();
