@@ -46,7 +46,8 @@ class PR {
     }
 };
 
-class PageRank : public GraphProgram<double, double, PR> {
+template <class E>
+class PageRank : public GraphProgram<double, double, PR, E> {
   public:
     double alpha;
 
@@ -60,7 +61,7 @@ class PageRank : public GraphProgram<double, double, PR> {
   void reduce_function(double& a, const double& b) const {
     a += b;
   }
-  void process_message(const double& message, const int edge_val, const PR& vertexprop, double& res) const {
+  void process_message(const double& message, const E edge_val, const PR& vertexprop, double& res) const {
     res = message;
   }
   bool send_message(const PR& vertexprop, double& message) const {
@@ -78,11 +79,12 @@ class PageRank : public GraphProgram<double, double, PR> {
 };
 
 
+template <class edge>
 void run_pagerank(const char* filename, int nthreads) {
 
-  Graph<PR> G;
-  PageRank pr;
-  Degree<PR> dg;
+  Graph<PR, edge> G;
+  PageRank<edge> pr;
+  Degree<PR, edge> dg;
 
  
   G.ReadMTX(filename, nthreads*4); //nthread pieces of matrix
@@ -137,7 +139,7 @@ int main(int argc, char* argv[]) {
     }
   }
   
-  run_pagerank(input_filename, nthreads);
+  run_pagerank<int>(input_filename, nthreads);
 
   
 }

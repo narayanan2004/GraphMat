@@ -55,8 +55,8 @@ struct run_graph_program_temp_structure {
   SparseOutVector<U>* py;
 };
 
-template<class T, class U, class V>
-struct run_graph_program_temp_structure<T,U,V> graph_program_init(const GraphProgram<T,U,V>& gp, const Graph<V>& g) {
+template<class T, class U, class V, class E>
+struct run_graph_program_temp_structure<T,U,V> graph_program_init(const GraphProgram<T,U,V,E>& gp, const Graph<V, E>& g) {
 
   struct run_graph_program_temp_structure<T,U,V> rgpts;
   rgpts.px = new SparseInVector<T>(g.nvertices);
@@ -70,8 +70,8 @@ void graph_program_clear(struct run_graph_program_temp_structure<T,U,V>& rgpts) 
   delete rgpts.py;
 }
 
-template <class T, class U, class V>
-void run_graph_program(GraphProgram<T,U,V>* gp, Graph<V>& g, int iterations=1, struct run_graph_program_temp_structure<T,U,V>* rgpts=NULL) { //iterations = -1 ==> until convergence
+template <class T, class U, class V, class E>
+void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V, E>& g, int iterations=1, struct run_graph_program_temp_structure<T,U,V>* rgpts=NULL) { //iterations = -1 ==> until convergence
   int it = 0;
   int converged = 1;
 
