@@ -55,6 +55,13 @@ struct __attribute__((aligned(16))) edge_t
   int partition_id;
 };
 
+template <typename edge_value_type=int>
+struct edge_io_t
+{
+  int src;
+  int dst;
+  edge_value_type val;
+};
 
 extern int nthreads;
 
@@ -530,7 +537,7 @@ void write_edges_binary(edge_t<E> * edges, char * fname, int m, int n, int nnz)
     {
       outfile.write((char*) &(edges[edge_id].src), sizeof(int));
       outfile.write((char*) &(edges[edge_id].dst), sizeof(int));
-      outfile.write((char*) &(edges[edge_id].val), sizeof(int));
+      outfile.write((char*) &(edges[edge_id].val), sizeof(E));
     }
   }
   else
@@ -616,8 +623,8 @@ void read_from_binary(const char * fname, int &m, int &n, int &nnz, edge_t<E> * 
     std::cout << "Got graph with m=" << m << "\tn=" << n << "\tnnz=" << nnz << std::endl;
 
     // Create edge list
-    int * edge_blob = (int*) _mm_malloc(3*(long int)nnz*sizeof(edge_t<E>), 64);
-    fin.read((char*)edge_blob, 3*(long int)nnz*sizeof(int));
+    edge_io_t<E> * edge_blob = (edge_io_t<E>*) _mm_malloc((long int)nnz*sizeof(edge_io_t<E>), 64);
+    fin.read((char*)edge_blob, (long int)nnz*sizeof(edge_io_t<E>));
 
     //printf("First line %d %d %d \n", edge_blob[0], edge_blob[1], edge_blob[2]);
 
@@ -625,9 +632,9 @@ void read_from_binary(const char * fname, int &m, int &n, int &nnz, edge_t<E> * 
     #pragma omp parallel for
     for(unsigned long int edge_id = 0 ; edge_id < nnz ; edge_id++)
     {
-      edges[edge_id].src = edge_blob[3*edge_id+0] - 1; //move to 0-based
-      edges[edge_id].dst = edge_blob[3*edge_id+1] - 1; //move to 0-based
-      edges[edge_id].val = edge_blob[3*edge_id+2];
+      edges[edge_id].src = edge_blob[edge_id].src - 1; //move to 0-based
+      edges[edge_id].dst = edge_blob[edge_id].dst - 1; //move to 0-based
+      edges[edge_id].val = edge_blob[edge_id].val;
     }
     _mm_free(edge_blob);
   }
@@ -817,7 +824,7 @@ void build_dcsc(E ** &vals, int ** &row_inds, int ** &col_ptrs, int ** &col_indi
   for(int p = 0 ; p < num_partitions ; p++)
   {
     int nnz_partition = nnzs[p] = edge_pointers[p+1] - edge_pointers[p];
-    vals[p] = (E*) _mm_malloc(nnz_partition * sizeof(int), 64);
+    vals[p] = (E*) _mm_malloc(nnz_partition * sizeof(E), 64);
     row_inds[p] = (int*) _mm_malloc(nnz_partition * sizeof(int), 64);
     E * val = vals[p];
     int * row_ind = row_inds[p];
