@@ -29,6 +29,7 @@
 /* Narayanan Sundaram (Intel Corp.), Michael Anderson (Intel Corp.)
  * ******************************************************************************/
 
+#include <cstdalign>
 #include <cstring>
 #include <iostream>
 #include <fstream>
@@ -45,13 +46,14 @@ inline double sec(struct timeval start, struct timeval end)
     return ((double)(((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec))))/1.0e6;
 }
 
-typedef __declspec(align(16)) struct EDGE_T
+template <typename edge_value_type=int>
+struct __attribute__((aligned(16))) edge_t
 {
   int src;
   int dst;
-  int val;
+  edge_value_type val;
   int partition_id;
-} edge_t;
+};
 
 
 extern int nthreads;
@@ -85,7 +87,7 @@ class Graph {
     void ReadMTX(const char* filename, int grid_size); 
     //void ReadMTX_old(const char* filename, int grid_size); 
     void ReadMTX_sort(const char* filename, int grid_size); 
-    void ReadMTX_sort(edge_t* edges, int m, int n, int nnz, int grid_size, int alloc=1); 
+    void ReadMTX_sort(edge_t<E>* edges, int m, int n, int nnz, int grid_size, int alloc=1); 
     void setAllActive();
     void setAllInactive();
     void setActive(int v);
@@ -506,7 +508,8 @@ class Graph {
   // return m;
 // }
 
-void print_edges(edge_t * edges, int nedges)
+template <typename E=int>
+void print_edges(edge_t<E> * edges, int nedges)
 {
   for(int edge_id = 0 ; edge_id < nedges ; edge_id++)
   {
@@ -514,7 +517,8 @@ void print_edges(edge_t * edges, int nedges)
   }
 }
 
-void write_edges_binary(edge_t * edges, char * fname, int m, int n, int nnz)
+template <typename E=int>
+void write_edges_binary(edge_t<E> * edges, char * fname, int m, int n, int nnz)
 {
   std::ofstream outfile(fname, std::ios::out | std::ios::binary);
   if(outfile.is_open())
@@ -537,15 +541,16 @@ void write_edges_binary(edge_t * edges, char * fname, int m, int n, int nnz)
   outfile.close();
 }
 
-void dcsc_to_edges(int ** &vals, int ** &row_inds, int ** &col_ptrs, int ** col_indices, 
+template <typename E=int>
+void dcsc_to_edges(edge_t<E> ** &vals, int ** &row_inds, int ** &col_ptrs, int ** col_indices, 
                 int * &nnzs, int * ncols,
-                int num_partitions, edge_t * edges, int * row_pointers, 
+                int num_partitions, edge_t<E> * edges, int * row_pointers, 
 		int * edge_pointers, int n)
 {
   int edge_id = 0;
   for(int p = 0 ; p < num_partitions ; p++)
   {
-    int * val = vals[p];
+    E * val = vals[p];
     int * row_ind = row_inds[p];
     int * col_ptr = col_ptrs[p];
     int * col_index = col_indices[p];
@@ -568,7 +573,8 @@ void dcsc_to_edges(int ** &vals, int ** &row_inds, int ** &col_ptrs, int ** col_
   }
 }
 
-bool compare_notrans(const edge_t & a, const edge_t & b)
+template <typename E=int>
+bool compare_notrans(const edge_t<E> & a, const edge_t<E> & b)
 {
   if(a.partition_id < b.partition_id) return true;
   else if(a.partition_id > b.partition_id) return false;
@@ -581,7 +587,8 @@ bool compare_notrans(const edge_t & a, const edge_t & b)
   return false;
 }
 
-bool compare_trans(const edge_t & a, const edge_t & b)
+template <typename E=int>
+bool compare_trans(const edge_t<E> & a, const edge_t<E> & b)
 {
   // sort by partition id, dst id, src id
   bool res = a.partition_id < b.partition_id;
@@ -596,7 +603,8 @@ bool compare_trans(const edge_t & a, const edge_t & b)
   return res;
 }
 
-void read_from_binary(const char * fname, int &m, int &n, int &nnz, edge_t * &edges)
+template <typename E=int>
+void read_from_binary(const char * fname, int &m, int &n, int &nnz, edge_t<E> * &edges)
 {
   std::ifstream fin(fname, std::ios::binary);
   if(fin.is_open())
@@ -608,12 +616,12 @@ void read_from_binary(const char * fname, int &m, int &n, int &nnz, edge_t * &ed
     std::cout << "Got graph with m=" << m << "\tn=" << n << "\tnnz=" << nnz << std::endl;
 
     // Create edge list
-    int * edge_blob = (int*) _mm_malloc(3*(long int)nnz*sizeof(edge_t), 64);
+    int * edge_blob = (int*) _mm_malloc(3*(long int)nnz*sizeof(edge_t<E>), 64);
     fin.read((char*)edge_blob, 3*(long int)nnz*sizeof(int));
 
     //printf("First line %d %d %d \n", edge_blob[0], edge_blob[1], edge_blob[2]);
 
-    edges = (edge_t*) _mm_malloc((long int)nnz * sizeof(edge_t), 64);
+    edges = (edge_t<E>*) _mm_malloc((long int)nnz * sizeof(edge_t<E>), 64);
     #pragma omp parallel for
     for(unsigned long int edge_id = 0 ; edge_id < nnz ; edge_id++)
     {
@@ -631,7 +639,8 @@ void read_from_binary(const char * fname, int &m, int &n, int &nnz, edge_t * &ed
   fin.close();
 }
 
-void read_from_txt(char * fname, int &m, int &n, int &nnz, edge_t * &edges)
+template <typename E=int>
+void read_from_txt(char * fname, int &m, int &n, int &nnz, edge_t<E> * &edges)
 {
   std::ifstream fin(fname);
   if(fin.is_open())
@@ -647,7 +656,7 @@ void read_from_txt(char * fname, int &m, int &n, int &nnz, edge_t * &edges)
     std::cout << "Got graph with m=" << m << "\tn=" << n << "\tnnz=" << nnz << std::endl;
 
     // Create edge list
-    edges = (edge_t*) _mm_malloc((long int)nnz * sizeof(edge_t), 64);
+    edges = (edge_t<E>*) _mm_malloc((long int)nnz * sizeof(edge_t<E>), 64);
     int edge_id = 0;
     int max_src = 0;
     while(getline(fin, ln))
@@ -717,7 +726,8 @@ void static_partition(int * &row_pointers, int m, int num_partitions, int round)
   printf("\n");*/
 }
 
-void set_edge_pointers(edge_t * edges, int * row_pointers, int * &edge_pointers, 
+template <typename E=int>
+void set_edge_pointers(edge_t<E> * edges, int * row_pointers, int * &edge_pointers, 
                        int nnz, int num_partitions)
 {
   // Figure out edge pointers
@@ -790,12 +800,13 @@ void set_edge_pointers(edge_t * edges, int * row_pointers, int * &edge_pointers,
 #endif
 }
 
-void build_dcsc(int ** &vals, int ** &row_inds, int ** &col_ptrs, int ** &col_indices,
+template <typename E=int>
+void build_dcsc(E ** &vals, int ** &row_inds, int ** &col_ptrs, int ** &col_indices,
                 int * &nnzs, int * &ncols,
-                int num_partitions, edge_t * edges, int * row_pointers, 
+                int num_partitions, edge_t<E> * edges, int * row_pointers, 
 		int * edge_pointers, int n)
 {
-  vals = new int*[num_partitions];
+  vals = new E*[num_partitions];
   row_inds = new int*[num_partitions];
   col_ptrs = new int*[num_partitions];
   col_indices = new int*[num_partitions];
@@ -806,9 +817,9 @@ void build_dcsc(int ** &vals, int ** &row_inds, int ** &col_ptrs, int ** &col_in
   for(int p = 0 ; p < num_partitions ; p++)
   {
     int nnz_partition = nnzs[p] = edge_pointers[p+1] - edge_pointers[p];
-    vals[p] = (int*) _mm_malloc(nnz_partition * sizeof(int), 64);
+    vals[p] = (E*) _mm_malloc(nnz_partition * sizeof(int), 64);
     row_inds[p] = (int*) _mm_malloc(nnz_partition * sizeof(int), 64);
-    int * val = vals[p];
+    E * val = vals[p];
     int * row_ind = row_inds[p];
 
     int current_column = -1;
@@ -845,15 +856,16 @@ void build_dcsc(int ** &vals, int ** &row_inds, int ** &col_ptrs, int ** &col_in
   }
 }
 
+template <typename E=int>
 void partition_and_build_dcsc(int * &row_pointers,
                               int * &edge_pointers,
-  			      int ** &vals,
+  			      E ** &vals,
 			      int ** &row_inds,
 			      int ** &col_ptrs,
 			      int ** &col_indices,
 			      int * &nnzs, 
 			      int * &ncols, 
-			      edge_t * edges,
+			      edge_t<E> * edges,
 			      int m, 
 			      int n,
 			      int num_partitions,
@@ -920,7 +932,7 @@ void partition_and_build_dcsc(int * &row_pointers,
   // Sort edge list
   std::cout << "Starting sort" << std::endl;
   gettimeofday(&start, NULL);
-  __gnu_parallel::sort(edges, edges+nnz_l, compare_notrans);
+  __gnu_parallel::sort(edges, edges+nnz_l, compare_notrans<E>);
   gettimeofday(&end, NULL);
   std::cout << "Finished sort, time: " << sec(start,end)  << std::endl;
 
@@ -929,7 +941,7 @@ void partition_and_build_dcsc(int * &row_pointers,
   //std::cout << "Sorted graph end" << std::endl;
 
   gettimeofday(&start, NULL);
-  set_edge_pointers(edges, row_pointers, edge_pointers, nnz, num_partitions);
+  set_edge_pointers<E>(edges, row_pointers, edge_pointers, nnz, num_partitions);
   gettimeofday(&end, NULL);
   std::cout << "Finished setting edge pointers, time: " << sec(start,end)  << std::endl;
 
@@ -941,7 +953,7 @@ void partition_and_build_dcsc(int * &row_pointers,
   // build DCSC
   std::cout << "Starting build_dcsc" << std::endl;
   gettimeofday(&start, NULL);
-  build_dcsc(vals, row_inds, col_ptrs, col_indices, nnzs, ncols, num_partitions, edges, row_pointers, edge_pointers, n);
+  build_dcsc<E>(vals, row_inds, col_ptrs, col_indices, nnzs, ncols, num_partitions, edges, row_pointers, edge_pointers, n);
   gettimeofday(&end, NULL);
   std::cout << "Finished build_dcsc, time: " << sec(start,end)  << std::endl;
 
@@ -1042,10 +1054,10 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size) {
   int m_, n_, nnz_;
 
   // Insert my code here
-  edge_t * edges;
+  edge_t<E> * edges;
   std::cout << "Starting file read of " << filename << std::endl;
   gettimeofday(&start, NULL);
-  read_from_binary(filename, m_, n_, nnz_, edges);
+  read_from_binary<E>(filename, m_, n_, nnz_, edges);
   gettimeofday(&end, NULL);
   std::cout << "Finished file read of " << filename << ", time: " << sec(start,end)  << std::endl;
 
@@ -1059,14 +1071,14 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size) {
 }
 
 template<class V, class E>
-void Graph<V,E>::ReadMTX_sort(edge_t* edges, int m_, int n_, int nnz_, int grid_size, int alloc) {
+void Graph<V,E>::ReadMTX_sort(edge_t<E>* edges, int m_, int n_, int nnz_, int grid_size, int alloc) {
 
   struct timeval start, end;
   gettimeofday(&start, 0);
 
   int * row_pointers_notrans;
   int * edge_pointers_notrans;
-  int ** vals_notrans;
+  E ** vals_notrans;
   int ** row_inds_notrans;
   int ** col_ptrs_notrans;
   int ** col_indices_notrans;
@@ -1075,7 +1087,7 @@ void Graph<V,E>::ReadMTX_sort(edge_t* edges, int m_, int n_, int nnz_, int grid_
 
   int * row_pointers_trans;
   int * edge_pointers_trans;
-  int ** vals_trans;
+  E ** vals_trans;
   int ** row_inds_trans;
   int ** col_ptrs_trans;
   int ** col_indices_trans;
@@ -1102,7 +1114,7 @@ void Graph<V,E>::ReadMTX_sort(edge_t* edges, int m_, int n_, int nnz_, int grid_
   grid_size = std::min((n_+round-1)/round, grid_size);
   
 
-  partition_and_build_dcsc(row_pointers_notrans,
+  partition_and_build_dcsc<E>(row_pointers_notrans,
                            edge_pointers_notrans,
 			   vals_notrans,
 			   row_inds_notrans,
@@ -1126,7 +1138,7 @@ void Graph<V,E>::ReadMTX_sort(edge_t* edges, int m_, int n_, int nnz_, int grid_
     edges[edge_id].dst = tmp;
   }
 
-  partition_and_build_dcsc(row_pointers_trans,
+  partition_and_build_dcsc<E>(row_pointers_trans,
                            edge_pointers_trans,
 			   vals_trans,
 			   row_inds_trans,
