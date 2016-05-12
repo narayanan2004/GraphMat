@@ -75,8 +75,8 @@ class SparseVector {
   const T& getValue(int i) const ;
   void resize(const int n);
   void clear();
-  template<class U, class V>
-  void reduce(const int idx, const T& v, const GraphProgram<U, T, V>* gp );
+  template<class U, class V, class E=int>
+  void reduce(const int idx, const T& v, const GraphProgram<U, T, V, E>* gp );
   void print();
   int nnz() const;
   ~SparseVector();
@@ -178,8 +178,8 @@ int SparseVector<T>::nnz() const {
 }
 
 template <class T>
-template <class U, class V>
-void SparseVector<T>::reduce(int idx, const T& v, const GraphProgram<U, T, V>* gp ) {
+template <class U, class V, class E=int>
+void SparseVector<T>::reduce(int idx, const T& v, const GraphProgram<U, T, V, E>* gp ) {
 
   if (get_bitvector(idx, bitvector)) {
     gp->reduce_function(value[idx], v);
