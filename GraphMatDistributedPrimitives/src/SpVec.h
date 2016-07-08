@@ -375,16 +375,25 @@ class SpVec {
     return v;
   }
 
-  void save(std::string fname) const {
+  void save(std::string fname, bool includeHeader ) const {
     for(int segment = 0 ; segment < nsegments ; segment++)
     {
       if(nodeIds[segment] == global_myrank)
       {
-        segments[segment].save(fname + std::to_string(segment), start_id[segment], n);
+        segments[segment].save(fname + std::to_string(segment), start_id[segment], n, includeHeader);
       }
     }
   }
 
+  void saveBinHdfs(std::string fname) const {
+    for(int segment = 0 ; segment < nsegments ; segment++)
+    {
+      if(nodeIds[segment] == global_myrank)
+      {
+        segments[segment].saveBinHdfs(fname + std::to_string(segment), start_id[segment], n);
+      }
+    }
+  }
 
   void printStatus() const {
     if(global_myrank == 0)
