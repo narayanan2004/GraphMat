@@ -502,7 +502,7 @@ class DenseSegment {
         int vid = i + start_id;
         _buf2[cnt] = vid;
         _buf3[cnt] = properties.value[i];
-    cnt++;
+        cnt++;
       }
     }
     hdfsWrite(handle, f, (void*)buf, 2 * sizeof(int) + nnz * (sizeof(int) + sizeof(T)));

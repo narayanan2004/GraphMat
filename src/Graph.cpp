@@ -92,6 +92,7 @@ class Graph {
 
   public:
     void MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges, int grid_size, int alloc=1);
+    void getVertexEdgelist(GraphPad::edgelist_t<V> & myedges);
     void ReadMTX(const char* filename, int grid_size); 
     void ReadMTX_sort(const char* filename, int grid_size, int alloc=1); 
     void ReadMTX_sort(edge_t* edges, int m, int n, int nnz, int grid_size, int alloc=1); 
@@ -1063,7 +1064,7 @@ void Graph<V,E>::MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges, int grid_size,
   if (GraphPad::global_nrank == 1) {
     vertexID_randomization = false;
   } else {
-    vertexID_randomization = true;
+    vertexID_randomization = false;
   }
 
   struct timeval start, end;
@@ -1111,7 +1112,7 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
   if (GraphPad::global_nrank == 1) {
     vertexID_randomization = false;
   } else {
-    vertexID_randomization = true;
+    vertexID_randomization = false;
   }
 
   struct timeval start, end;
@@ -1501,6 +1502,15 @@ void Graph<V,E>::setVertexproperty(int v, const V& val) {
   //vertexproperty[v] = val;
   int v_new = vertexToNative(v, tiles_per_dim, nvertices);
   vertexproperty.set(v_new, val);
+}
+
+template<class V, class E> 
+void Graph<V,E>::getVertexEdgelist(GraphPad::edgelist_t<V> & myedges) {
+  vertexproperty.get_edges(&myedges);
+  for(unsigned int i = 0 ; i < myedges.nnz ; i++)
+  {
+    myedges.edges[i].src = nativeToVertex(myedges.edges[i].src, tiles_per_dim, nvertices);
+  }
 }
 
 template<class V, class E> 
