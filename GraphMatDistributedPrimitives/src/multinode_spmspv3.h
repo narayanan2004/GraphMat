@@ -37,43 +37,24 @@
 #include "src/TileOps.h"
 #include "src/SpVec.h"
 
-template <template <typename> class SpTile, typename T>
-void get_row_ranks_spmspv3(const SpMat<SpTile<T> >& mat,
-                          std::vector<std::set<int> >* row_ranks_out,
-                          std::vector<std::set<int> >* col_ranks_out) {
-  for (int i = 0; i < mat.ntiles_y; i++) {
-    // Create set of row nodeIDs
-    std::set<int> row_ranks;
-    for (int j = 0; j < mat.ntiles_x; j++) {
-      row_ranks.insert(mat.nodeIds[i + j * mat.ntiles_y]);
-    }
-    row_ranks_out->push_back(row_ranks);
-  }
-
-  for (int j = 0; j < mat.ntiles_x; j++) {
-    // Create set of col nodeIDs
-    std::set<int> col_ranks;
-    for (int i = 0; i < mat.ntiles_y; i++) {
-      col_ranks.insert(mat.nodeIds[i + j * mat.ntiles_y]);
-    }
-    col_ranks_out->push_back(col_ranks);
-  }
-}
-
-template <template <typename> class SpTile, typename Ta, typename Tx, 
-          typename Tvp, typename Ty>
-void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<Tx>& vecx,
-                 const SpVec<Tvp>& vecvp,
-                 SpVec<Ty>* vecy, int start_m, int start_n, int end_m,
-                 int end_n, Ty (*mul_fp)(Ta, Tx, Tvp), Ty (*add_fp)(Ty, Ty)) {
+template <template <typename> class SpTile, template<typename> class SpSegment, typename Ta, typename Tx,
+          typename Tvp,
+          typename Ty>
+void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<SpSegment<Tx> >& vecx,
+                 const SpVec<SpSegment<Tvp> >& vecvp,
+                 SpVec<SpSegment<Ty> >* vecy, int start_m, int start_n, int end_m,
+                 int end_n, void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
   int output_rank = 0;
 
   // Build list of row/column partners
   std::vector<std::set<int> > row_ranks;
   std::vector<std::set<int> > col_ranks;
   get_row_ranks(grida, &row_ranks, &col_ranks);
-
   std::vector<MPI_Request> requests;
+
+
+
+  double tmp_time = MPI_Wtime();
 
   // Broadcast input to all nodes in column
   for (int j = start_n; j < end_n; j++) {
@@ -81,95 +62,204 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<Tx>& vecx,
          it != col_ranks[j].end(); it++) {
       int dst_rank = *it;
       if (global_myrank == vecx.nodeIds[j] && global_myrank != dst_rank) {
-        vecx.segments[j].send_tile(global_myrank, dst_rank, output_rank);
-      }
-      if (global_myrank == dst_rank && global_myrank != vecx.nodeIds[j]) {
-        vecx.segments[j]
-            .recv_tile(global_myrank, vecx.nodeIds[j], output_rank, &requests);
+        vecx.segments[j].compress();
       }
     }
   }
 
-  // Broadcast vertex properties to all nodes in row
-  for (int i = start_m; i < end_m; i++) {
-    for (std::set<int>::iterator it = row_ranks[i].begin();
-         it != row_ranks[i].end(); it++) {
+  // Broadcast 3rd operand to all nodes in row
+  for (int j = start_m; j < end_m; j++) {
+    for (std::set<int>::iterator it = row_ranks[j].begin();
+         it != row_ranks[j].end(); it++) {
       int dst_rank = *it;
-      if (global_myrank == vecvp.nodeIds[i] && global_myrank != dst_rank) {
-        vecvp.segments[i].send_tile(global_myrank, dst_rank, output_rank);
-      }
-      if (global_myrank == dst_rank && global_myrank != vecvp.nodeIds[i]) {
-        vecvp.segments[i]
-            .recv_tile(global_myrank, vecvp.nodeIds[i], output_rank, &requests);
+      if (global_myrank == vecvp.nodeIds[j] && global_myrank != dst_rank) {
+        vecvp.segments[j].compress();
       }
     }
   }
+
+  for (int j = start_n; j < end_n; j++) {
+    for (std::set<int>::iterator it = col_ranks[j].begin();
+         it != col_ranks[j].end(); it++) {
+      int dst_rank = *it;
+      if (global_myrank == vecx.nodeIds[j] && global_myrank != dst_rank) {
+        vecx.segments[j].send_tile_metadata(global_myrank, dst_rank, output_rank, &requests);
+      }
+      if (global_myrank == dst_rank && global_myrank != vecx.nodeIds[j]) {
+        vecx.segments[j]
+            .recv_tile_metadata(global_myrank, vecx.nodeIds[j], output_rank, &requests);
+      }
+    }
+  }
+
+  // Broadcast 3rd operand to all nodes in row
+  for (int j = start_m; j < end_m; j++) {
+    for (std::set<int>::iterator it = row_ranks[j].begin();
+         it != row_ranks[j].end(); it++) {
+      int dst_rank = *it;
+      if (global_myrank == vecvp.nodeIds[j] && global_myrank != dst_rank) {
+        vecvp.segments[j].send_tile_metadata(global_myrank, dst_rank, output_rank, &requests);
+      }
+      if (global_myrank == dst_rank && global_myrank != vecvp.nodeIds[j]) {
+        vecvp.segments[j]
+            .recv_tile_metadata(global_myrank, vecvp.nodeIds[j], output_rank, &requests);
+      }
+    }
+  }
+
+
+  // Broadcast input to all nodes in column
+  for (int j = start_n; j < end_n; j++) {
+    for (std::set<int>::iterator it = col_ranks[j].begin();
+         it != col_ranks[j].end(); it++) {
+      int dst_rank = *it;
+      if (global_myrank == vecx.nodeIds[j] && global_myrank != dst_rank) {
+        vecx.segments[j].send_tile_compressed(global_myrank, dst_rank, output_rank, &requests);
+      }
+      if (global_myrank == dst_rank && global_myrank != vecx.nodeIds[j]) {
+        vecx.segments[j]
+            .recv_tile_compressed(global_myrank, vecx.nodeIds[j], output_rank, &requests);
+      }
+    }
+  }
+
+  // Broadcast 3rd operand to all nodes in row
+  for (int j = start_m; j < end_m; j++) {
+    for (std::set<int>::iterator it = row_ranks[j].begin();
+         it != row_ranks[j].end(); it++) {
+      int dst_rank = *it;
+      if (global_myrank == vecvp.nodeIds[j] && global_myrank != dst_rank) {
+        vecvp.segments[j].send_tile_compressed(global_myrank, dst_rank, output_rank, &requests);
+      }
+      if (global_myrank == dst_rank && global_myrank != vecvp.nodeIds[j]) {
+        vecvp.segments[j]
+            .recv_tile_compressed(global_myrank, vecvp.nodeIds[j], output_rank, &requests);
+      }
+    }
+  }
+
 
   // Wait_all
   MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
   requests.clear();
-  //MPI_Barrier(MPI_COMM_WORLD);
+
+  for (int j = start_n; j < end_n; j++) {
+    for (std::set<int>::iterator it = col_ranks[j].begin();
+         it != col_ranks[j].end(); it++) {
+      int dst_rank = *it;
+      if (global_myrank == dst_rank && global_myrank != vecx.nodeIds[j]) {
+        vecx.segments[j]
+            .decompress();
+      }
+    }
+  }
+
+  for (int j = start_m; j < end_m; j++) {
+    for (std::set<int>::iterator it = row_ranks[j].begin();
+         it != row_ranks[j].end(); it++) {
+      int dst_rank = *it;
+      if (global_myrank == dst_rank && global_myrank != vecvp.nodeIds[j]) {
+        vecvp.segments[j]
+            .decompress();
+      }
+    }
+  }
+
+  spmspv_send_time += MPI_Wtime() - tmp_time;
+  tmp_time = MPI_Wtime();
 
   // Multiply all tiles
   for (int i = start_m; i < end_m; i++) {
     for (int j = start_n; j < end_n; j++) {
       if (global_myrank == grida.nodeIds[i + j * grida.ntiles_y]) {
         mult_segment3(grida.tiles[i][j], vecx.segments[j], vecvp.segments[i], &(vecy->segments[i]),
-                     output_rank, mul_fp, add_fp);
+                     output_rank, mul_fp, add_fp, vsp);
       }
     }
   }
+
+  spmspv_mult_time += MPI_Wtime() - tmp_time;
+  tmp_time = MPI_Wtime();
 
   // Free input vectors allocated during computation
   for (int j = start_n; j < end_n; j++) {
     if (global_myrank != vecx.nodeIds[j]) {
-//      vecx.segments[j].clear();
+      vecx.segments[j].set_uninitialized();
     }
   }
 
-  for (int i = start_m; i < end_m; i++) {
-    if (global_myrank != vecvp.nodeIds[i]) {
-//      vecvp.segments[i].clear();
+  // Free input vectors allocated during computation
+  for (int j = start_m; j < end_m; j++) {
+    if (global_myrank != vecvp.nodeIds[j]) {
+      vecvp.segments[j].set_uninitialized();
     }
   }
 
   // Reduce across rows
-  std::vector<std::vector<DenseSegment<Ty> > > received_vectors;
   for (int i = start_m; i < end_m; i++) {
-    std::vector<DenseSegment<Ty> > row_segments;
+    for (std::set<int>::iterator it = row_ranks[i].begin();
+         it != row_ranks[i].end(); it++) {
+      int src_rank = *it;
+      if (global_myrank != vecy->nodeIds[i] && global_myrank == src_rank) {
+        vecy->segments[i]
+            .compress();
+      }
+    }
+  }
+
+
+  // Reduce across rows
+  for (int i = start_m; i < end_m; i++) {
     for (std::set<int>::iterator it = row_ranks[i].begin();
          it != row_ranks[i].end(); it++) {
       int src_rank = *it;
       if (global_myrank == vecy->nodeIds[i] && global_myrank != src_rank) {
-        DenseSegment<Ty> tmp;
-        tmp.recv_tile(global_myrank, src_rank, output_rank, &requests);
-        row_segments.push_back(tmp);
+	vecy->segments[i].recv_tile_metadata(global_myrank, src_rank, output_rank, &requests);
       }
       if (global_myrank != vecy->nodeIds[i] && global_myrank == src_rank) {
         vecy->segments[i]
-            .send_tile(global_myrank, vecy->nodeIds[i], output_rank);
+            .send_tile_metadata(global_myrank, vecy->nodeIds[i], output_rank, &requests);
       }
     }
-    received_vectors.push_back(row_segments);
   }
+
+  // Reduce across rows
+  for (int i = start_m; i < end_m; i++) {
+    for (std::set<int>::iterator it = row_ranks[i].begin();
+         it != row_ranks[i].end(); it++) {
+      int src_rank = *it;
+      if (global_myrank == vecy->nodeIds[i] && global_myrank != src_rank) {
+	vecy->segments[i].recv_tile_compressed(global_myrank, src_rank, output_rank, &requests);
+      }
+      if (global_myrank != vecy->nodeIds[i] && global_myrank == src_rank) {
+        vecy->segments[i]
+            .send_tile_compressed(global_myrank, vecy->nodeIds[i], output_rank, &requests);
+      }
+    }
+  }
+
+  MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
+  requests.clear();
+
+  spmspv_reduce_send_time += MPI_Wtime() - tmp_time;
+  tmp_time = MPI_Wtime();
 
   // Free any output vectors allocated during computation
   for (int i = start_m; i < end_m; i++) {
     if (global_myrank != vecy->nodeIds[i]) {
-      vecy->segments[i].clear();
+      vecy->segments[i].set_uninitialized();
     }
   }
 
   // Sum received tiles
   for (int i = start_m; i < end_m; i++) {
     if (global_myrank == vecy->nodeIds[i]) {
-      for (auto it = received_vectors[i].begin();
-           it != received_vectors[i].end(); it++) {
-        add_segment(*it, &(vecy->segments[i]), add_fp);
-        (*it).clear();
-      }
+      union_compress_segment(&(vecy->segments[i]), add_fp, vsp);
+      vecy->segments[i].set_uninitialized_received();
     }
   }
+
+  spmspv_reduce_time += MPI_Wtime() - tmp_time;
 }
 
 #endif  // SRC_MULTINODE_SPMSPV3_H_

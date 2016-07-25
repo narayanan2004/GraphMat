@@ -338,6 +338,7 @@ class DenseSegment {
     {
       set_bitvector(idx, properties.bit_vector);
     }
+    properties.nnz = capacity;
 
     #pragma omp parallel for
     for(int i = 0 ; i < capacity ; i++)
