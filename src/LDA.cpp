@@ -254,18 +254,22 @@ void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations
   //graph_program_clear(ldap_tmp);
 
   for (int i = 1; i <= std::min(5, ndoc); i++) { 
-    printf("%d : ", i) ;
-    G.getVertexproperty(i).print();
-    printf("\n");
+    if (G.vertexNodeOwner(i)) {
+      printf("%d : ", i) ;
+      G.getVertexproperty(i).print();
+      printf("\n");
+    }
   }
   for (int i = 1; i <= std::min(5, nterms); i++) { 
-    printf("%d : ", i+ndoc) ;
-    G.getVertexproperty(i+ndoc).print();
-    printf("\n");
+    if(G.vertexNodeOwner(i)) {
+      printf("%d : ", i+ndoc) ;
+      G.getVertexproperty(i+ndoc).print();
+      printf("\n");
+    }
   }
 
   //Calculate topic-word distributions
-  double *phi = new double[k*nterms];
+  /*double *phi = new double[k*nterms];
   for (int i = 0; i < nterms; i++){
     assert(G.getVertexproperty(i+ndoc+1).type == 'w');
     for (int j = 0; j < k; j++) { 
@@ -295,7 +299,7 @@ void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations
     }
   }
 
-  delete [] phi;
+  delete [] phi;*/
 }
 
 int main(int argc, char* argv[]) {
