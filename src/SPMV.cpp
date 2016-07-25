@@ -37,9 +37,15 @@
 #include <cstring>
 
 template <class T, class U, class V, class E>
+void Mulfn(E a, T b, U * c, void* gpv) { 
+  GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
+  V dummy;
+  gp->process_message(b, a, dummy, *c); 
+}
+
+template <class T, class U, class V, class E>
 void Mulfn(E a, T b, V v, U * c, void* gpv) { 
   GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
-  //V dummy;
   gp->process_message(b, a, v, *c); 
 }
 
@@ -71,7 +77,7 @@ void SpMTSpV(const Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, const GraphPa
   gettimeofday(&start, 0);
 
   //GraphPad::SpMSpV(G.AT, x, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
-  GraphPad::SpMSpV3(G.A, x, G.vertexproperty, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  GraphPad::SpMSpV3(G.AT, x, G.vertexproperty, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
 
   #ifdef __TIMING
   gettimeofday(&end, 0);

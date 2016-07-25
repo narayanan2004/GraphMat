@@ -27,7 +27,7 @@ SOURCES=$(SRCDIR)/PageRank.cpp $(SRCDIR)/Degree.cpp $(SRCDIR)/BFS.cpp $(SRCDIR)/
 
 DEPS=$(SRCDIR)/SPMV.cpp $(SRCDIR)/Graph.cpp $(SRCDIR)/GraphProgram.cpp $(SRCDIR)/SparseVector.cpp $(SRCDIR)/GraphMatRuntime.cpp $(DIST_PRIMITIVES_PATH)/src/layouts.h $(DIST_PRIMITIVES_PATH)/src/graphpad.h
 
-EXE=$(BINDIR)/PageRank $(BINDIR)/IncrementalPageRank $(BINDIR)/BFS $(BINDIR)/SSSP #$(BINDIR)/TriangleCounting $(BINDIR)/SGD $(BINDIR)/DS
+EXE=$(BINDIR)/PageRank $(BINDIR)/IncrementalPageRank $(BINDIR)/BFS $(BINDIR)/SSSP $(BINDIR)/LDA #$(BINDIR)/TriangleCounting $(BINDIR)/SGD $(BINDIR)/DS
 
 
 all: $(EXE) graph_converter
@@ -52,6 +52,9 @@ $(BINDIR)/TriangleCounting: $(DEPS) $(SRCDIR)/TriangleCounting.cpp
 
 $(BINDIR)/SSSP: $(DEPS) $(MULTINODEDEPS) $(SRCDIR)/SSSP.cpp 
 	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/SSSP $(SRCDIR)/SSSP.cpp 
+
+$(BINDIR)/LDA: $(DEPS) $(MULTINODEDEPS) $(SRCDIR)/LDA.cpp 
+	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/LDA $(SRCDIR)/LDA.cpp 
 
 $(BINDIR)/DS: $(DEPS) $(SRCDIR)/Delta.cpp
 	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/DS $(SRCDIR)/Delta.cpp
