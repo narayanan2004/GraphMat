@@ -338,6 +338,7 @@ class DenseSegment {
     {
       set_bitvector(idx, properties.bit_vector);
     }
+    properties.nnz = capacity;
 
     #pragma omp parallel for
     for(int i = 0 ; i < capacity ; i++)
@@ -462,12 +463,15 @@ class DenseSegment {
     }
   }
 
-  void save(std::string fname, int start_id, int _m)
+  void save(std::string fname, int start_id, int _m, bool includeHeader)
   {
     int nnz = compute_nnz();
     std::ofstream fout;
     fout.open(fname);
-    fout << _m << " " << nnz << std::endl;
+    if(includeHeader)
+    {
+      fout << _m << " " << nnz << std::endl;
+    }
     for(int i = 0 ; i < capacity ; i++)
     {
       if(get_bitvector(i, properties.bit_vector))

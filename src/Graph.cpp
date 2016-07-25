@@ -104,7 +104,7 @@ class Graph {
     void setVertexproperty(int v, const V& val);
     V getVertexproperty(int v) const;
     bool vertexNodeOwner(const int v) const;
-    void saveVertexproperty(std::string fname) const;
+    void saveVertexproperty(std::string fname, bool) const;
     void reset();
     void shareVertexProperty(Graph<V,E>& g);
     int getBlockIdBySrc(int vertexid) const;
@@ -1453,7 +1453,7 @@ void Graph<V,E>::setVertexproperty(int v, const V& val) {
 }
 
 template<class V, class E> 
-void Graph<V,E>::saveVertexproperty(std::string fname) const {
+void Graph<V,E>::saveVertexproperty(std::string fname, bool includeHeader=true) const {
   GraphPad::edgelist_t<V> myedges;
   vertexproperty.get_edges(&myedges);
   for(unsigned int i = 0 ; i < myedges.nnz ; i++)
@@ -1464,7 +1464,7 @@ void Graph<V,E>::saveVertexproperty(std::string fname) const {
   vertexproperty2.AllocatePartitioned(nvertices, tiles_per_dim, GraphPad::vector_partition_fn);
   vertexproperty2.ingestEdgelist(myedges);
   _mm_free(myedges.edges);
-  vertexproperty2.save(fname);
+  vertexproperty2.save(fname, includeHeader);
 }
 
 template<class V, class E>

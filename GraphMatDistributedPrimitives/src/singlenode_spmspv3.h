@@ -41,8 +41,8 @@ void my_spmspv3(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
                int* edge_pointers, Tx* xvalue, int * xbit_vector, 
 	       Tvp * vpvalue, int * vpbit_vector, Ty * yvalue,
                int * ybit_vector, 
-	       int m, int n, int* nnz, Ty (*op_mul)(Ta, Tx, Tvp),
-               Ty (*op_add)(Ty, Ty)) {
+	       int m, int n, int* nnz, void (*op_mul)(Ta, Tx, Tvp, Ty*, void*),
+               void (*op_add)(Ty, Ty, Ty*, void*), void* vsp) {
 
 #pragma omp parallel for schedule(dynamic, 1)
   for (int p = 0; p < num_partitions; p++) {
@@ -55,21 +55,27 @@ void my_spmspv3(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
       int col_index = col_indices[col_starts[p] + j];
       if(get_bitvector(col_index, xbit_vector)) {
         Tx Xval = xvalue[col_index];
-	Tvp VPVal = vpvalue[col_index];
-	assert(get_bitvector(col_index, vpbit_vector));
         _mm_prefetch((char*)(xvalue + column_offset[j + 4]), _MM_HINT_T0);
 
         int nz_idx = col_ptrs_cur[j];
         for (; nz_idx < col_ptrs_cur[j + 1]; nz_idx++) {
           int row_ind = partitioned_row_offset[nz_idx];
+	      Tvp VPVal = vpvalue[row_ind];
+	      assert(get_bitvector(row_ind, vpbit_vector));
           Ta Aval = partitioned_val_offset[nz_idx];
           if(get_bitvector(row_ind, ybit_vector))
 	  {
-            yvalue[row_ind] = op_add(yvalue[row_ind], op_mul(Aval, Xval, VPVal));
+            Ty tmp_mul;
+            Ty tmp_add;
+            op_mul(Aval, Xval, VPVal, &tmp_mul, vsp);
+            op_add(yvalue[row_ind], tmp_mul, &tmp_add, vsp);
+            yvalue[row_ind] = tmp_add;
 	  }
 	  else
 	  {
-            yvalue[row_ind] = op_mul(Aval, Xval, VPVal);
+            Ty tmp_mul;
+            op_mul(Aval, Xval, VPVal, &tmp_mul, vsp);
+            yvalue[row_ind] = tmp_mul;
             set_bitvector(row_ind, ybit_vector);
 	  }
         }

@@ -295,13 +295,13 @@ void SpMSpV(const SpMat<SpTile<Ta> >& mata, const SpVec<SpSegment<Tx> >& vecx,
               add_fp, vsp);
 }
 
-template <template <typename> class SpTile, typename Ta, typename Tx,
+template <template <typename> class SpTile, template <typename> class SpSegment, typename Ta, typename Tx,
           typename Tvp, typename Ty>
-void SpMSpV3(const SpMat<SpTile<Ta> >& mata, const SpVec<Tx>& vecx,
-            const SpVec<Tvp> & vecvp, 
-	    SpVec<Ty>* vecy, Ty (*mul_fp)(Ta, Tx, Tvp), Ty (*add_fp)(Ty, Ty)) {
+void SpMSpV3(const SpMat<SpTile<Ta> >& mata, const SpVec<SpSegment<Tx> >& vecx,
+            const SpVec<SpSegment<Tvp> > & vecvp, 
+	    SpVec<SpSegment<Ty> >* vecy, void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
   SpMSpV3_tile(mata, vecx, vecvp, vecy, 0, 0, mata.ntiles_y, mata.ntiles_x, mul_fp,
-              add_fp);
+              add_fp, vsp);
 }
 
 template <template<typename> class SpSegment, typename T>
