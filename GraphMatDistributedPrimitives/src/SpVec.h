@@ -385,16 +385,6 @@ class SpVec {
     }
   }
 
-  void saveBinHdfs(std::string fname) const {
-    for(int segment = 0 ; segment < nsegments ; segment++)
-    {
-      if(nodeIds[segment] == global_myrank)
-      {
-        segments[segment].saveBinHdfs(fname + std::to_string(segment), start_id[segment], n);
-      }
-    }
-  }
-
   void printStatus() const {
     if(global_myrank == 0)
     {

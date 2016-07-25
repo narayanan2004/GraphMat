@@ -482,36 +482,6 @@ class DenseSegment {
     fout.close();
   }
 
-  void saveBinHdfs(std::string fname, int start_id, int _m)
-  {
-    hdfsFS handle = hdfsConnect("default", 0);
-    hdfsFile f = hdfsOpenFile(handle, fname.c_str(), O_WRONLY | O_CREAT, 0, 0, 0);
-    assert(f);
-
-    int nnz = compute_nnz();
-    char * buf = (char*)_mm_malloc(2 * sizeof(int) + nnz * (sizeof(int) + sizeof(T)), 64);
-    int * _buf1 = (int*) buf;
-    int * _buf2 = (int*) buf + 2 * sizeof(int);
-    T * _buf3 = (T*) (buf + 2 * sizeof(int) + nnz * sizeof(int));
-    _buf1[0] = _m;
-    _buf1[1] = nnz;
-    int cnt = 0;
-    for(int i = 0 ; i < capacity ; i++)
-    {
-      if(get_bitvector(i, properties.bit_vector))
-      {
-        int vid = i + start_id;
-        _buf2[cnt] = vid;
-        _buf3[cnt] = properties.value[i];
-        cnt++;
-      }
-    }
-    hdfsWrite(handle, f, (void*)buf, 2 * sizeof(int) + nnz * (sizeof(int) + sizeof(T)));
-    assert(!hdfsFlush(handle, f));
-    _mm_free(buf);
-  }
-
-
   void get_edges(edge_t<T> * edges, unsigned int start_nz)
   {
     unsigned int mycnt = 0;
