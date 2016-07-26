@@ -62,8 +62,11 @@ void SpMSpV(const Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, const GraphPad
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  //GraphPad::SpMSpV(G.A, x, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
-  GraphPad::SpMSpV3(G.A, x, G.vertexproperty, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  if (gp->getProcessMessageRequiresVertexprop()) {
+    GraphPad::SpMSpV3(G.A, x, G.vertexproperty, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  } else {
+    GraphPad::SpMSpV(G.A, x, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  }
 
   #ifdef __TIMING
   gettimeofday(&end, 0);
@@ -76,8 +79,11 @@ void SpMTSpV(const Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, const GraphPa
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  //GraphPad::SpMSpV(G.AT, x, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
-  GraphPad::SpMSpV3(G.AT, x, G.vertexproperty, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  if (gp->getProcessMessageRequiresVertexprop()) {
+    GraphPad::SpMSpV3(G.AT, x, G.vertexproperty, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  } else {
+    GraphPad::SpMSpV(G.AT, x, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  }
 
   #ifdef __TIMING
   gettimeofday(&end, 0);

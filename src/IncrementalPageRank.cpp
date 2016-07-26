@@ -64,6 +64,7 @@ class DeltaPageRank : public GraphProgram<double, double, dPR> {
     iter = 0;
     this->order = OUT_EDGES;
     this->activity=ACTIVE_ONLY;
+    this->process_message_requires_vertexprop = false;
   }
 
   void reduce_function(double& a, const double& b) const {

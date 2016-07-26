@@ -36,6 +36,7 @@ class Degree : public GraphProgram<int, int, V, E> {
 
   Degree() {
     this->order = IN_EDGES;
+    this->process_message_requires_vertexprop = false;
   }
 
   bool send_message(const V& vertexprop, int& message) const {

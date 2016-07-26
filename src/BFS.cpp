@@ -61,6 +61,7 @@ class BFS : public GraphProgram<depth_type, depth_type, BFSD> {
   BFS() {
     current_depth = 0;
     this->order = ALL_EDGES;
+    this->process_message_requires_vertexprop = false;
   }
 
   void reduce_function(depth_type& a, const depth_type& b) const {
@@ -124,6 +125,7 @@ class BFS2 : public GraphProgram<unsigned long long int, unsigned long long int,
     current_depth = 1;
     //this->order = ALL_EDGES;
     this->order = OUT_EDGES;
+    this->process_message_requires_vertexprop = false;
   }
 
   //void reduce_function(depth_type& a, const depth_type& b) const {

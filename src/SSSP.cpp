@@ -106,6 +106,7 @@ class SSSP : public GraphProgram<distance_type, distance_type, BFSD2, edge_type>
   SSSP() {
     //current_depth = 1;
     this->order = OUT_EDGES;
+    this->process_message_requires_vertexprop = false;
     //async = true;
   }
 

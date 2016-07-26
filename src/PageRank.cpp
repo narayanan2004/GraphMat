@@ -61,6 +61,7 @@ class PageRank : public GraphProgram<float, float, PR, E> {
   PageRank(float a=0.3) {
     alpha = a;
     this->activity = ALL_VERTICES;
+    this->process_message_requires_vertexprop = false;
   }
 
   void reduce_function(float& a, const float& b) const {

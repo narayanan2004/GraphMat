@@ -73,6 +73,7 @@ class LDAInitProgram : public GraphProgram<LatentVector<K>, LatentVector<K>, Lat
     LDAInitProgram() {
       this->order = ALL_EDGES;// check
       this->activity = ALL_VERTICES;
+      this->process_message_requires_vertexprop = false;
     }
 
 
@@ -261,7 +262,7 @@ void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations
     }
   }
   for (int i = 1; i <= std::min(5, nterms); i++) { 
-    if(G.vertexNodeOwner(i)) {
+    if(G.vertexNodeOwner(i+ndoc)) {
       printf("%d : ", i+ndoc) ;
       G.getVertexproperty(i+ndoc).print();
       printf("\n");

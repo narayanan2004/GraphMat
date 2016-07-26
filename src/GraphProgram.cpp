@@ -40,12 +40,18 @@ class GraphProgram {
 //    execution_direction push_or_pull;
     activity_type activity;
 
+    /* Strictly for optimization only */
+    bool process_message_requires_edge_value;
+    bool process_message_requires_vertexprop;
+
   public:
 
   GraphProgram() {
     order = OUT_EDGES;
 //    push_or_pull = PUSH;
     activity = ACTIVE_ONLY;
+    process_message_requires_edge_value = true;
+    process_message_requires_vertexprop = true;
   }
 
   edge_direction getOrder() const {
@@ -56,6 +62,10 @@ class GraphProgram {
   // }
   activity_type getActivity() const {
     return activity;
+  }
+
+  bool getProcessMessageRequiresVertexprop() const {
+    return process_message_requires_vertexprop;
   }
 
   virtual void reduce_function(U& v, const U& w) const {
