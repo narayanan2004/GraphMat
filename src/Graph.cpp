@@ -91,6 +91,8 @@ class Graph {
 //    int end_dst_vertices[MAX_PARTS];
 
   public:
+    void MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges, int grid_size, int alloc=1);
+    void getVertexEdgelist(GraphPad::edgelist_t<V> & myedges);
     void ReadMTX(const char* filename, int grid_size); 
     void ReadMTX_sort(const char* filename, int grid_size, int alloc=1); 
     void ReadMTX_sort(edge_t* edges, int m, int n, int nnz, int grid_size, int alloc=1); 
@@ -1055,7 +1057,7 @@ int Graph<V,E>::nativeToVertex(int vertex, int nsegments, int len) const
 }
 
 template<class V, class E>
-void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
+void Graph<V,E>::MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges, int grid_size, int alloc) {
 
   if (GraphPad::global_nrank == 1) {
     vertexID_randomization = false;
@@ -1066,8 +1068,6 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
   struct timeval start, end;
   gettimeofday(&start, 0);
   {
-    GraphPad::edgelist_t<E> A_edges;
-    GraphPad::ReadEdgesBin(&A_edges, filename, false);
     tiles_per_dim = GraphPad::global_nrank;
     
     #pragma omp parallel for
@@ -1123,6 +1123,14 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
   std::cout << "Finished GraphPad read + construction, time: " << sec(start,end)  << std::endl;
 
 
+}
+
+template<class V, class E>
+void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
+  GraphPad::edgelist_t<E> A_edges;
+  GraphPad::ReadEdgesBin(&A_edges, filename, false);
+  MTXFromEdgelist(A_edges, grid_size, alloc);
+  _mm_free(A_edges.edges);
 }
 
 template<class V, class E>
@@ -1450,6 +1458,15 @@ void Graph<V,E>::setVertexproperty(int v, const V& val) {
   //vertexproperty[v] = val;
   int v_new = vertexToNative(v, tiles_per_dim, nvertices);
   vertexproperty.set(v_new, val);
+}
+
+template<class V, class E> 
+void Graph<V,E>::getVertexEdgelist(GraphPad::edgelist_t<V> & myedges) {
+  vertexproperty.get_edges(&myedges);
+  for(unsigned int i = 0 ; i < myedges.nnz ; i++)
+  {
+    myedges.edges[i].src = nativeToVertex(myedges.edges[i].src, tiles_per_dim, nvertices);
+  }
 }
 
 template<class V, class E> 
