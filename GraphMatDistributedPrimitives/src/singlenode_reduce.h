@@ -130,16 +130,50 @@ template <typename VT, typename T>
 void mapreduce_dense_segment(VT* value, int * bitvector, int nnz, T* result, bool* res_set,
                           void (*op_map)(VT*, T*, void*), void (*op_fp)(T, T, T*, void*), void* vsp) {
 
-  for(int i = 0 ; i < nnz ; i++)
+  int nthreads = omp_get_max_threads();
+  T * local_reduced = new T[nthreads];
+  bool * firstSet = new bool[nthreads];
+  #pragma omp parallel for
+  for(int p = 0 ; p < nthreads ; p++)
   {
-    if(get_bitvector(i, bitvector))
+    firstSet[p] = false;
+    int nnz_per_thread = (nnz + nthreads - 1) / nthreads;
+    int start = nnz_per_thread * p;
+    int end = nnz_per_thread * (p+1);
+    if(start > nnz) start = nnz;
+    if(end > nnz) end  = nnz;
+
+    for(int i = start ; i < end ; i++)
     {
-      T temp_result = *result;
-      T temp_result2;
-      op_map(value + i, &temp_result2, vsp);
-	  op_fp(temp_result, temp_result2, result, vsp);
+      if(get_bitvector(i, bitvector))
+      {
+        T temp_result2;
+        op_map(value + i, &temp_result2, vsp);
+        if(firstSet[p])
+        {
+          T temp_result = local_reduced[p];
+  	      op_fp(temp_result, temp_result2, local_reduced + p, vsp);
+        } 
+        else
+        {
+          local_reduced[p] = temp_result2;
+          firstSet[p] = true;
+        }
+      }
     }
   }
+
+  // Reduce each thread's local result
+  for(int p = 0 ; p < nthreads ; p++)
+  {
+    if(firstSet[p])
+    {
+      T temp_result = *result;
+  	  op_fp(temp_result, local_reduced[p], result, vsp);
+    }
+  }
+  delete [] local_reduced;
+  delete [] firstSet;
 }
 
 
