@@ -202,7 +202,7 @@ int getnthelement(const double *arr_in, int n, int p) {
 }
 
 void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations=10) {
-  const int k = 2;
+  const int k = 20;
   Graph< LatentVector<k> > G;
   G.ReadMTX(filename, nthreads*8); //nthread pieces of matrix
   if (ndoc + nterms != G.getNumberOfVertices()) {
