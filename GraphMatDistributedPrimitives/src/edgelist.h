@@ -61,6 +61,7 @@ struct edgelist_t {
     nnz = _nnz;
     edges = (edge_t<T>*)_mm_malloc(nnz * sizeof(edge_t<T>), 64);
   }
+  edgelist_t(edge_t<T>* edges, int m, int n, int nnz) : edges(edges), m(m), n(n), nnz(nnz) {}
 };
 
 template <typename T>
@@ -323,6 +324,21 @@ void filter_edges_by_row(edgelist_t<T> * edges, int start_row, int end_row)
   edges->nnz = valid_edgecnt;
   edges->m = (end_row-start_row);
   std::cout << "New edges->m: " << edges->m << std::endl;
+}
+
+template<typename T>
+void get_dimensions(edge_t<T> * edges, int nnz, int &max_m, int &max_n)
+{ 
+  int local_max_m = 0;
+  int local_max_n = 0;
+  #pragma omp parallel for reduction(max:local_max_m, local_max_n)
+  for(int i = 0 ; i < nnz ; i++)
+  {
+    local_max_m = std::max(local_max_m, edges[i].src);
+    local_max_n = std::max(local_max_n, edges[i].dst);
+  }
+  MPI_Allreduce(&local_max_m, &max_m, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_max_n, &max_n, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 }
 
 #endif  // SRC_EDGELIST_H_
