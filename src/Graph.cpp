@@ -1059,11 +1059,11 @@ int Graph<V,E>::nativeToVertex(int vertex, int nsegments, int len) const
 template<class V, class E>
 void Graph<V,E>::MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges, int grid_size, int alloc) {
 
-  if (GraphPad::global_nrank == 1) {
-    vertexID_randomization = false;
-  } else {
-    vertexID_randomization = true;
-  }
+  //if (GraphPad::global_nrank == 1) {
+  //  vertexID_randomization = false;
+  //} else {
+  vertexID_randomization = true;
+  //}
 
   struct timeval start, end;
   gettimeofday(&start, 0);
