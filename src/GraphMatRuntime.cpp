@@ -320,7 +320,7 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
   }
 
   GraphPad::SpVec<GraphPad::DenseSegment<T> >& x = *px;
-  GraphPad::SpVec<GraphPad::DenseSegment<T> >& y = *py;
+  GraphPad::SpVec<GraphPad::DenseSegment<U> >& y = *py;
   //SparseInVector<T>&x = (rgpts==NULL)?(*px):*(rgpts->px);
   //SparseOutVector<U>& y = (rgpts==NULL)?(*py):*(rgpts->py);
 

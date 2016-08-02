@@ -181,7 +181,7 @@ class RMSEProgram : public GraphProgram<LatentVector<K>, double, LatentVector<K>
   }
 };
 
-template<unsigned int K>
+/*template<unsigned int K>
 class SGDInitProgram : public GraphProgram<bool, bool, LatentVector<K> > {
   
   public:
@@ -197,7 +197,12 @@ class SGDInitProgram : public GraphProgram<bool, bool, LatentVector<K> > {
     }
   }
 
-};
+};*/
+
+template<class V>
+void return_sqerr(V* vertexprop, double* out, void* params) {
+  *out = vertexprop->sqerr;
+}
 
 void run_sgd(char* filename, int nthreads) {
   const int k = 20;
@@ -211,19 +216,30 @@ void run_sgd(char* filename, int nthreads) {
   double err = 0.0;
 
   SGDProgram<k> sgdp(0.001, 0.00000035);
-  SGDInitProgram<k> sgdip;
+  //SGDInitProgram<k> sgdip;
   RMSEProgram<k> rmsep;
 
-  auto sgdp_tmp = graph_program_init(sgdp, G);
-  auto rmsep_tmp = graph_program_init(rmsep, G);
+  //auto sgdp_tmp = graph_program_init(sgdp, G);
+  //auto rmsep_tmp = graph_program_init(rmsep, G);
 
-  G.setAllActive();
-  run_graph_program(&sgdip, G);
+  //G.setAllActive();
+  //run_graph_program(&sgdip, G);
+  for (int i = 1; i <= G.getNumberOfVertices(); i++) {
+    LatentVector<k> v;
+    v.sqerr = 0.0;
+    unsigned int r = i;
+    for (int j = 0; j < k; j++) {
+      v.lv[j] = ((double)rand_r(&r)/(double)RAND_MAX);
+    }
+    G.setVertexproperty(i, v);
+  }
   
   G.setAllActive();
-  run_graph_program(&rmsep, G, 1, &rmsep_tmp);
+  run_graph_program(&rmsep, G, 1);
 
-  for (int i = 0; i < G.nvertices; i++) err += G.getVertexproperty(i).sqerr;
+  //for (int i = 0; i < G.nvertices; i++) err += G.getVertexproperty(i).sqerr;
+  err = 0.0;
+  G.applyReduceAllVertices(&err, return_sqerr, AddFn);
   printf("RMSE error = %lf per edge \n", sqrt(err/(G.nnz)));
 
   printf("SGD Init over\n");
@@ -233,7 +249,8 @@ void run_sgd(char* filename, int nthreads) {
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  run_graph_program(&sgdp, G, 10, &sgdp_tmp);
+  //run_graph_program(&sgdp, G, 10, &sgdp_tmp);
+  run_graph_program(&sgdp, G, 10);
 
   /*
   for (int it = 0; it < 10; it ++) {
@@ -256,19 +273,18 @@ void run_sgd(char* filename, int nthreads) {
   printf("Time = %.3f ms \n", time);
 
   G.setAllActive();
-  run_graph_program(&rmsep, G, 1, &rmsep_tmp);
-
-  graph_program_clear(sgdp_tmp);
-  graph_program_clear(rmsep_tmp);
+  run_graph_program(&rmsep, G, 1);
 
   err = 0.0;
-  for (int i = 0; i < G.nvertices; i++) err += G.getVertexproperty(i).sqerr;
+  G.applyReduceAllVertices(&err, return_sqerr, AddFn);
   printf("RMSE error = %lf per edge \n", sqrt(err/(G.nnz)));
 
-  for (int i = 0; i <= std::min(10, G.nvertices); i++) { 
-    printf("%d : ", i) ;
-    G.getVertexproperty(i).print();
-    printf("\n");
+  for (int i = 1; i <= std::min(10, G.getNumberOfVertices()); i++) { 
+    if (G.vertexNodeOwner(i)) {
+      printf("%d : ", i) ;
+      G.getVertexproperty(i).print();
+      printf("\n");
+    }
   }
 }
 
@@ -277,6 +293,8 @@ int main(int argc, char* argv[]) {
     printf("Correct format: %s A.mtx \n", argv[0]);
     return 0;
   }
+  MPI_Init(&argc, &argv);
+  GraphPad::GB_Init();
 
 #ifdef __ASSERT
   printf("\nASSERT***************************************************Asserts are on.*************\n\n");
@@ -300,6 +318,6 @@ int main(int argc, char* argv[]) {
   //run_triangle_counting(argv[1], nthreads); 
   run_sgd(argv[1], nthreads); 
   //run_graph_coloring(argv[1], nthreads); 
-  
+  MPI_Finalize(); 
 }
 
