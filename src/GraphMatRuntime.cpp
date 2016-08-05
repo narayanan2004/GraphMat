@@ -324,6 +324,9 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
   //SparseInVector<T>&x = (rgpts==NULL)?(*px):*(rgpts->px);
   //SparseOutVector<U>& y = (rgpts==NULL)?(*py):*(rgpts->py);
 
+  if (act == ALL_VERTICES) {
+    g.setAllActive();
+  }
   #ifdef __TIMING
   printf("Nvertices = %d \n", g.getNumberOfVertices());
   #endif
@@ -513,9 +516,6 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
     }
     
     }*/
-    if (act == ALL_VERTICES) {
-      g.setAllActive();
-    }
 
 
     //end = __rdtsc();
@@ -536,6 +536,10 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
     //printf("Number of vertices that changed state = %d \n", g.active.getNNZ());
     printf("Iteration %d :: %f msec :: updated %d vertices :: changed %d vertices \n", it, time, y.getNNZ(), g.active.getNNZ());
     #endif
+
+    if (act == ALL_VERTICES) {
+      g.setAllActive();
+    }
 
     it++;
     if (it == iterations) {
