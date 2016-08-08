@@ -2,18 +2,34 @@
 DIST_PRIMITIVES_PATH=GraphMatDistributedPrimitives
 include $(DIST_PRIMITIVES_PATH)/Make.inc
 
-#CXX=icpc
 CXX=mpiicpc
-CXX_OPTIONS=-qopenmp -std=c++11 -Isrc -I$(DIST_PRIMITIVES_PATH)
+
+ifeq (${CXX}, mpiicpc)
+  CXX_OPTIONS=-qopenmp -std=c++11 
+else
+  CXX_OPTIONS=-fopenmp --std=c++11
+endif
+
+CXX_OPTIONS+=-Isrc -I$(DIST_PRIMITIVES_PATH)
 
 
 ifeq (${debug}, 1)
-  CXX_OPTIONS += -O0 -g -D__DEBUG $(GPFLAGS)
+  CXX_OPTIONS += -O0 -g -D__DEBUG 
 else
-  CXX_OPTIONS += -O3 -ipo $(GPFLAGS)
+  ifeq (${CXX}, mpiicpc)
+    CXX_OPTIONS += -O3 -ipo 
+  else
+    CXX_OPTIONS += -O3 -flto -fwhole-program
+  endif
 endif
 
-CXX_OPTIONS += -xHost
+CXX_OPTIONS += $(GPFLAGS)
+
+ifeq (${CXX}, mpiicpc)
+  CXX_OPTIONS += -xHost
+else
+  CXX_OPTIONS += -march=native
+endif
 
 ifeq (${timing}, 1)
   CXX_OPTIONS += -D__TIMING

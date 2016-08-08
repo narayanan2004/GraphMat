@@ -47,7 +47,13 @@ inline double sec(struct timeval start, struct timeval end)
     return ((double)(((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec))))/1.0e6;
 }
 
-typedef __declspec(align(16)) struct EDGE_T
+typedef 
+#ifdef __INTEL_COMPILER
+__declspec(align(16)) 
+#else
+__attribute__((aligned(16)))
+#endif
+struct EDGE_T
 {
   int src;
   int dst;
@@ -95,7 +101,7 @@ class Graph {
     void getVertexEdgelist(GraphPad::edgelist_t<V> & myedges);
     void ReadMTX(const char* filename, int grid_size); 
     void ReadMTX_sort(const char* filename, int grid_size, int alloc=1); 
-    void ReadMTX_sort(edge_t* edges, int m, int n, int nnz, int grid_size, int alloc=1); 
+    //void ReadMTX_sort(edge_t* edges, int m, int n, int nnz, int grid_size, int alloc=1); 
     void setAllActive();
     void setAllInactive();
     int vertexToNative(int vertex, int nsegments, int len) const;
@@ -109,8 +115,8 @@ class Graph {
     void saveVertexproperty(std::string fname, bool) const;
     void reset();
     void shareVertexProperty(Graph<V,E>& g);
-    int getBlockIdBySrc(int vertexid) const;
-    int getBlockIdByDst(int vertexid) const;
+    //int getBlockIdBySrc(int vertexid) const;
+    //int getBlockIdByDst(int vertexid) const;
     int getNumberOfVertices() const;
     void applyToAllVertices(void (*ApplyFn)(V, V*, void*), void* param=nullptr);
     template<class T> void applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*)=AddFn<T>, void* param=nullptr);
@@ -1133,7 +1139,7 @@ void Graph<V,E>::ReadMTX_sort(const char* filename, int grid_size, int alloc) {
   _mm_free(A_edges.edges);
 }
 
-template<class V, class E>
+/*template<class V, class E>
 void Graph<V,E>::ReadMTX_sort(edge_t* edges, int m_, int n_, int nnz_, int grid_size, int alloc) {
 
   struct timeval start, end;
@@ -1160,14 +1166,14 @@ void Graph<V,E>::ReadMTX_sort(edge_t* edges, int m_, int n_, int nnz_, int grid_
 
 
   // Insert my code here
-/*
-  edge_t * edges;
-  std::cout << "Starting file read" << std::endl;
-  gettimeofday(&start, NULL);
-  read_from_binary(filename, m_, n_, nnz_, edges);
-  gettimeofday(&end, NULL);
-  std::cout << "Finished file read, time: " << sec(start,end)  << std::endl;
-  */
+
+  //edge_t * edges;
+  //std::cout << "Starting file read" << std::endl;
+  //gettimeofday(&start, NULL);
+  //read_from_binary(filename, m_, n_, nnz_, edges);
+  //gettimeofday(&end, NULL);
+  //std::cout << "Finished file read, time: " << sec(start,end)  << std::endl;
+  
   if(grid_size > m_) grid_size = m_;
   if(grid_size > n_) grid_size = n_;
 
@@ -1278,7 +1284,7 @@ void Graph<V,E>::ReadMTX_sort(edge_t* edges, int m_, int n_, int nnz_, int grid_
   double time = (end.tv_sec-start.tv_sec)+(end.tv_usec-start.tv_usec)*1e-6;
   printf("Completed reading A from memory in %lf seconds.\n", time);
 }
-
+*/
 
 
 // template<class V, class E>
@@ -1505,16 +1511,6 @@ int getId(const int i, const int* start, const int* end, const int n) {
       return j;
     }
   }
-}
-
-template<class V, class E> 
-int Graph<V,E>::getBlockIdBySrc(int vertexId) const {
-  return getId(vertexId, start_src_vertices, end_src_vertices, nparts);
-}
-
-template<class V, class E> 
-int Graph<V,E>::getBlockIdByDst(int vertexId) const {
-  return getId(vertexId, start_dst_vertices, end_dst_vertices, nparts);
 }
 
 template<class V, class E> 

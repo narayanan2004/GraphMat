@@ -182,7 +182,7 @@ void reduce_tile(const DCSCTile<T>& tile, DenseSegment<T> * result,
     result->initialize();
     reduce_dcsc(tile.row_inds, tile.col_ptrs, tile.col_indices,
                      tile.vals, tile.num_partitions, tile.row_pointers,
-                     tile.col_starts, tilea.edge_pointers, result->properties.value,
+                     tile.col_starts, tile.edge_pointers, result->properties.value,
                      result->properties.bit_vector, op_fp, vsp);
 }
 

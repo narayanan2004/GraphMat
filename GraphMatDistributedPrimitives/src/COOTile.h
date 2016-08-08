@@ -191,7 +191,7 @@ class COOTile {
                  0, MPI_COMM_WORLD);
         MPI_Send(this->ja, (uint64_t)(this->nnz), MPI_INT, dst_rank, 0,
                  MPI_COMM_WORLD);
-        MPI_Send(this->ia, ((uint64_t)(this->nnz), MPI_INT, dst_rank, 0,
+        MPI_Send(this->ia, (uint64_t)(this->nnz), MPI_INT, dst_rank, 0,
                  MPI_COMM_WORLD);
         MPI_Send(this->partition_start, ((this->num_partitions) + 1), MPI_INT, dst_rank, 0,
                  MPI_COMM_WORLD);

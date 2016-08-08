@@ -84,7 +84,7 @@ void reduce_dcsc(int* row_inds, int* col_ptrs, int* col_indices, T* vals,
     // For each column
     const int* column_offset = col_indices + col_starts[p];
     const int* partitioned_row_offset = row_inds + edge_pointers[p];
-    const Ta* partitioned_val_offset = vals + edge_pointers[p];
+    const T* partitioned_val_offset = vals + edge_pointers[p];
     const int* col_ptrs_cur = col_ptrs + col_starts[p];
     for (int j = 0; j < (col_starts[p + 1] - col_starts[p]) - 1 ; j++) {
       int col_index = col_indices[col_starts[p] + j];
@@ -92,11 +92,11 @@ void reduce_dcsc(int* row_inds, int* col_ptrs, int* col_indices, T* vals,
         int nz_idx = col_ptrs_cur[j];
         for (; nz_idx < col_ptrs_cur[j + 1]; nz_idx++) {
           int row_ind = partitioned_row_offset[nz_idx];
-          Ta Aval = partitioned_val_offset[nz_idx];
-	  Ty temp_mul_result;
+          T Aval = partitioned_val_offset[nz_idx];
+	  T temp_mul_result;
           if(get_bitvector(row_ind, ybit_vector))
 	  {
-	    Ty temp_y_copy = yvalue[row_ind];
+	    T temp_y_copy = yvalue[row_ind];
             op_add(Aval, temp_y_copy, &(yvalue[row_ind]));
 	  }
 	  else
