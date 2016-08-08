@@ -235,7 +235,7 @@ void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations
 
   LDAProgram<k> ldap(G, 1, 1, nterms);
   ldap.calcGlobalN();
-  //auto ldap_tmp = graph_program_init(ldap, G);
+  auto ldap_tmp = graph_program_init(ldap, G);
 
   printf("LDA Init over\n");
   
@@ -244,15 +244,15 @@ void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  //run_graph_program(&ldap, G, niterations, &ldap_tmp);
-  run_graph_program(&ldap, G, niterations);
+  run_graph_program(&ldap, G, niterations, &ldap_tmp);
+  //run_graph_program(&ldap, G, niterations);
 
   gettimeofday(&end, 0);
   
   double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
   printf("Time = %.3f ms \n", time);
 
-  //graph_program_clear(ldap_tmp);
+  graph_program_clear(ldap_tmp);
 
   for (int i = 1; i <= std::min(5, ndoc); i++) { 
     if (G.vertexNodeOwner(i)) {

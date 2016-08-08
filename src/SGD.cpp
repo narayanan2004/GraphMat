@@ -219,8 +219,8 @@ void run_sgd(char* filename, int nthreads) {
   //SGDInitProgram<k> sgdip;
   RMSEProgram<k> rmsep;
 
-  //auto sgdp_tmp = graph_program_init(sgdp, G);
-  //auto rmsep_tmp = graph_program_init(rmsep, G);
+  auto sgdp_tmp = graph_program_init(sgdp, G);
+  auto rmsep_tmp = graph_program_init(rmsep, G);
 
   //G.setAllActive();
   //run_graph_program(&sgdip, G);
@@ -235,7 +235,7 @@ void run_sgd(char* filename, int nthreads) {
   }
   
   G.setAllActive();
-  run_graph_program(&rmsep, G, 1);
+  run_graph_program(&rmsep, G, 1, &rmsep_tmp);
 
   //for (int i = 0; i < G.nvertices; i++) err += G.getVertexproperty(i).sqerr;
   err = 0.0;
@@ -249,8 +249,8 @@ void run_sgd(char* filename, int nthreads) {
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  //run_graph_program(&sgdp, G, 10, &sgdp_tmp);
-  run_graph_program(&sgdp, G, 10);
+  run_graph_program(&sgdp, G, 10, &sgdp_tmp);
+  //run_graph_program(&sgdp, G, 10);
 
   /*
   for (int it = 0; it < 10; it ++) {
@@ -273,7 +273,10 @@ void run_sgd(char* filename, int nthreads) {
   printf("Time = %.3f ms \n", time);
 
   G.setAllActive();
-  run_graph_program(&rmsep, G, 1);
+  run_graph_program(&rmsep, G, 1, &rmsep_tmp);
+
+  graph_program_clear(rmsep_tmp);
+  graph_program_clear(sgdp_tmp);
 
   err = 0.0;
   G.applyReduceAllVertices(&err, return_sqerr, AddFn);

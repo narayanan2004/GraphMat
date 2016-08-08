@@ -229,8 +229,8 @@ void run_sssp(const char* filename, int nthreads, int v) {
 
   //__itt_resume();
 
-  run_graph_program(&b, G, -1);
-  //run_graph_program(&b, G, -1, &tmp_ds);
+  //run_graph_program(&b, G, -1);
+  run_graph_program(&b, G, -1, &tmp_ds);
   //run_dense_graph_program(b, G, -1);
 
   //__itt_pause();

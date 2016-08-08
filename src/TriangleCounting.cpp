@@ -37,7 +37,7 @@
 #include <memory>
 #include <array>
 
-typedef std::array<int, 128> int128;
+typedef std::array<int, 256> int256;
 
 void set_bit(unsigned int idx, int* bitvec) {
     unsigned int neighbor_id = idx;
@@ -54,7 +54,7 @@ class TC {
   public:
     int id;
     int triangles;
-    int128 neighbors_subset;
+    int256 neighbors_subset;
     //std::vector<int> neighbors;
     //int* bitvector;
 
@@ -78,39 +78,34 @@ class TC {
     }
 };
 
-class GetNeighbors : public GraphProgram<int, int128, TC> {
+class GetNeighbors : public GraphProgram<int, int256, TC> {
 
   public:
-      int BVLENGTH;
-      int iteration;
-      Graph<TC>& G;
 
-  GetNeighbors(Graph<TC> &_G, int maxvertices) : G(_G) {
+  GetNeighbors() {
     //this->activity = ALL_VERTICES;
     this->order = IN_EDGES;
-    BVLENGTH = (maxvertices+31)/32 + 32; //32 for safety
-    iteration = 0;
     this->process_message_requires_vertexprop = false;
   }
 
-  void reduce_function(int128& a, const int128& b) const {
+  void reduce_function(int256& a, const int256& b) const {
     //a.push_back(b[0]);
     //assert(b[0] > 0);
-    //for (int i = 0; i < 128; i++) {
+    //for (int i = 0; i < 256; i++) {
     //  if (a[i] == -1) {
     //    a[i] = b[0];
     //    break;
     //  }
     //}
-    for(int i = 0; i < 128; i++) a[i] |= b[i];
+    for(int i = 0; i < 256; i++) a[i] |= b[i];
   }
 
-  void process_message(const int& message, const int edge_val, const TC& vertexprop, int128& res) const {
+  void process_message(const int& message, const int edge_val, const TC& vertexprop, int256& res) const {
     //res.clear(); 
     //res.push_back(message);
     res.fill(0);
     //res[0] = message;
-    set_bit(message%(128*32), res.data());
+    set_bit(message%(256*32), res.data());
   }
 
   bool send_message(const TC& vertexprop, int& message) const {
@@ -118,8 +113,8 @@ class GetNeighbors : public GraphProgram<int, int128, TC> {
     return true;
   }
 
-  void apply(const int128& message_out, TC& vertexprop) {
-    /*for (int i = 0; i < 128; i++) {
+  void apply(const int256& message_out, TC& vertexprop) {
+    /*for (int i = 0; i < 256; i++) {
       if (message_out[i] != -1) {
         vertexprop.neighbors.push_back(message_out[i]);
       }
@@ -141,7 +136,7 @@ class GetNeighbors : public GraphProgram<int, int128, TC> {
   /*void do_every_iteration(int it_num) {
     iteration++;
     G.setAllInactive();
-    for (int i = iteration*128+1; i <= std::min((iteration+1)*128,G.getNumberOfVertices()); i++) {
+    for (int i = iteration*256+1; i <= std::min((iteration+1)*256,G.getNumberOfVertices()); i++) {
       G.setActive(i);
     }
   }*/
@@ -149,24 +144,20 @@ class GetNeighbors : public GraphProgram<int, int128, TC> {
 };
 
 
-class CountTriangles: public GraphProgram<int128, int, TC> {
+class CountTriangles: public GraphProgram<int256, int, TC> {
 
   public:
-    int BVLENGTH;
-    int iteration;
 
-  CountTriangles(int maxvertices) {
+  CountTriangles() {
     this->activity = ALL_VERTICES;
     this->order = OUT_EDGES;
-    BVLENGTH = (maxvertices+31)/32 + 32; //32 for safety
-    iteration = 0;
   }
 
   void reduce_function(int& v, const int& w) const {
     v += w;
   }
 
-  void process_message(const int128& message, const int edge_val, const TC& vertexprop, int& res) const {
+  void process_message(const int256& message, const int edge_val, const TC& vertexprop, int& res) const {
     res = 0;
     /*const TC& message = *(message_ptr.ptr);
     //assume sorted
@@ -208,10 +199,10 @@ class CountTriangles: public GraphProgram<int128, int, TC> {
       }
     }*/
     
-    /*for (int i = 0; i < 128; i++) {
+    /*for (int i = 0; i < 256; i++) {
       if (message[i] > 0) {
         //bool b = std::binary_search(vertexprop.neighbors.begin(), vertexprop.neighbors.end(), message[i]);
-        for (int j = 0; j < 128; j++) {
+        for (int j = 0; j < 256; j++) {
           if (message[i] == vertexprop.neighbors_subset[j]) {
             res++;
             break;
@@ -219,20 +210,20 @@ class CountTriangles: public GraphProgram<int128, int, TC> {
         }
       }
     }*/
-    for (int i = 0; i < 128; i++) {
+    for (int i = 0; i < 256; i++) {
       unsigned int r = message[i] & vertexprop.neighbors_subset[i];
       res += __builtin_popcount(r);
     }
-    assert(res>=0 and res<=128*32);
+    assert(res>=0 and res<=256*32);
 
   }
 
-  bool send_message(const TC& vertexprop, int128& message) const {
+  bool send_message(const TC& vertexprop, int256& message) const {
     //message.ptr = &vertexprop;
     /*message.fill(-1);
     int j = 0;
     for (auto i : vertexprop.neighbors) {
-      if (i >= iteration*128+1 && i <= (iteration+1)*128) {
+      if (i >= iteration*256+1 && i <= (iteration+1)*256) {
         message[j++] = i;
       }
     }*/
@@ -244,9 +235,6 @@ class CountTriangles: public GraphProgram<int128, int, TC> {
     vertexprop.triangles += message_out;
   }
 
-  void do_every_iteration(int it_num) {
-    iteration++;
-  }
 
 };
 
@@ -259,11 +247,11 @@ void run_triangle_counting(char* filename, int nthreads) {
   G.ReadMTX(filename, nthreads*4); //nthread pieces of matrix
   
   int numberOfVertices = G.getNumberOfVertices();
-  GetNeighbors gn(G, numberOfVertices);
-  CountTriangles ct(numberOfVertices);
+  GetNeighbors gn;
+  CountTriangles ct;
 
-  //auto gn_tmp = graph_program_init(gn, G);
-  //auto ct_tmp = graph_program_init(ct, G);
+  auto gn_tmp = graph_program_init(gn, G);
+  auto ct_tmp = graph_program_init(ct, G);
   
   struct timeval start, end;
 
@@ -274,25 +262,27 @@ void run_triangle_counting(char* filename, int nthreads) {
   }
   gettimeofday(&start, 0);
 
-  for (int it = 0; it < numberOfVertices/(128*32) + 1; it++) {
+  for (int it = 0; it < numberOfVertices/(256*32) + 1; it++) {
+
+  int minv = std::min(numberOfVertices, it*256*32+1);
+  int maxv = std::min(numberOfVertices, (it+1)*256*32);
+  printf("Processing %d to %d vertices\n", minv, maxv);
 
   G.setAllInactive();
-  int minv = std::min(numberOfVertices, it*128*32+1);
-  int maxv = std::min(numberOfVertices, (it+1)*128*32);
   for (int i = minv; i <= maxv; i++) {
     G.setActive(i);
   }
-  run_graph_program(&gn, G, 1);
+  run_graph_program(&gn, G, 1, &gn_tmp);
 
   G.setAllActive();
-  run_graph_program(&ct, G, 1);
+  run_graph_program(&ct, G, 1, &ct_tmp);
   }
   
   gettimeofday(&end, 0);
   printf("Time = %.3f ms \n", (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3);
 
-  //graph_program_clear(gn_tmp);
-  //graph_program_clear(ct_tmp);  
+  graph_program_clear(gn_tmp);
+  graph_program_clear(ct_tmp);  
 
   unsigned long int ntriangles = 0;
   //for (int i = 1; i <= numberOfVertices; i++) ntriangles += G.getVertexproperty(i).triangles;

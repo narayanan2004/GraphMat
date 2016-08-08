@@ -54,6 +54,8 @@ template<class T, class U, class V>
 struct run_graph_program_temp_structure {
   //SparseInVector<T>* px;
   //SparseOutVector<U>* py;
+   GraphPad::SpVec<GraphPad::DenseSegment<T> >* px;
+   GraphPad::SpVec<GraphPad::DenseSegment<U> >* py;
 };
 
 template<class T, class U, class V, class E>
@@ -62,13 +64,21 @@ struct run_graph_program_temp_structure<T,U,V> graph_program_init(const GraphPro
   struct run_graph_program_temp_structure<T,U,V> rgpts;
   //rgpts.px = new SparseInVector<T>(g.nvertices);
   //rgpts.py = new SparseOutVector<U>(g.nvertices);
+    rgpts.px  = new GraphPad::SpVec<GraphPad::DenseSegment<T> >();
+    rgpts.px->AllocatePartitioned(g.nvertices, GraphPad::global_nrank, GraphPad::vector_partition_fn);
+    T _t;
+    rgpts.px->setAll(_t);
+    rgpts.py  = new GraphPad::SpVec<GraphPad::DenseSegment<U> >();
+    rgpts.py->AllocatePartitioned(g.nvertices, GraphPad::global_nrank, GraphPad::vector_partition_fn);
+    U _u;
+    rgpts.py->setAll(_u);
   return rgpts;
 }
 
 template<class T, class U, class V>
 void graph_program_clear(struct run_graph_program_temp_structure<T,U,V>& rgpts) {
-  //delete rgpts.px;
-  //delete rgpts.py;
+  delete rgpts.px;
+  delete rgpts.py;
 }
 /*
 template <class T, class U, class V>
@@ -319,8 +329,8 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
     py->setAll(_u);
   }
 
-  GraphPad::SpVec<GraphPad::DenseSegment<T> >& x = *px;
-  GraphPad::SpVec<GraphPad::DenseSegment<U> >& y = *py;
+  GraphPad::SpVec<GraphPad::DenseSegment<T> >& x = (rgpts==NULL)?(*px):*(rgpts->px);//*px;
+  GraphPad::SpVec<GraphPad::DenseSegment<U> >& y = (rgpts==NULL)?(*py):*(rgpts->py);//*py;
   //SparseInVector<T>&x = (rgpts==NULL)?(*px):*(rgpts->px);
   //SparseOutVector<U>& y = (rgpts==NULL)?(*py):*(rgpts->py);
 

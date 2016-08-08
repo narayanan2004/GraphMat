@@ -249,8 +249,8 @@ void run_bfs(char* filename, int nthreads, int v) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  //run_graph_program(&b, G, -1, &b_tmp);
-  run_graph_program(&b, G, -1);
+  run_graph_program(&b, G, -1, &b_tmp);
+  //run_graph_program(&b, G, -1);
   //G.setAllActive();
   //run_graph_program(pc, G, 1, &pc_tmp);
   //run_dense_graph_program(b, G, -1);

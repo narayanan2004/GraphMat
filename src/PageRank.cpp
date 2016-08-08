@@ -95,34 +95,34 @@ void run_pagerank(const char* filename, int nthreads) {
  
   G.ReadMTX(filename, nthreads*8); //nthread pieces of matrix
 
-  //auto dg_tmp = graph_program_init(dg, G);
+  auto dg_tmp = graph_program_init(dg, G);
 
   struct timeval start, end;
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  //run_graph_program(&dg, G, 1, &dg_tmp);
-  run_graph_program(&dg, G, 1);
+  run_graph_program(&dg, G, 1, &dg_tmp);
+  //run_graph_program(&dg, G, 1);
 
   gettimeofday(&end, 0);
   double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
   printf("Degree Time = %.3f ms \n", time);
 
-  //graph_program_clear(dg_tmp);
+  graph_program_clear(dg_tmp);
   
-  //auto pr_tmp = graph_program_init(pr, G);
+  auto pr_tmp = graph_program_init(pr, G);
 
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  //run_graph_program(&pr, G, -1, &pr_tmp);
-  run_graph_program(&pr, G, -1);
+  run_graph_program(&pr, G, -1, &pr_tmp);
+  //run_graph_program(&pr, G, -1);
   
   gettimeofday(&end, 0);
   time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
   printf("PR Time = %.3f ms \n", time);
 
-  //graph_program_clear(pr_tmp);
+  graph_program_clear(pr_tmp);
 
   MPI_Barrier(MPI_COMM_WORLD);
   for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.getNumberOfVertices()); i++) { 
