@@ -2,11 +2,17 @@
 
 Requirements:
 
-- Intel compiler (icpc)
+- Intel compiler (icpc) + Intel MPI 
+(or)
+- GCC + MPICH (Other MPI libraries not tested)
 
-To compile:
+To compile with Intel compiler + Intel MPI :
 
     make
+
+To compile with gcc + MPICH:
+
+    make CXX=mpic++
 
 To run:
 
@@ -33,11 +39,16 @@ You can remove selfloops and duplicatededges (when multiple edges with
 same src and dst are found, only one is retained) by changing their
 values in the command line from 1 to 0.
 
-If you use GraphMat in your work, please cite the following paper:
+If you use GraphMat in your work, please cite the following papers:
 
-Narayanan Sundaram, Nadathur Satish, Md Mostofa Ali Patwary, Subramanya R Dulloor, Michael J. Anderson, Satya Gautam Vadlamudi, Dipankar Das, Pradeep Dubey:
-GraphMat: High performance graph analytics made productive. Proceedings of VLDB 2015, volume 8, pages 1214 - 1225.
+- Narayanan Sundaram, Nadathur Satish, Md Mostofa Ali Patwary, Subramanya R Dulloor, Michael J. Anderson, Satya Gautam Vadlamudi, Dipankar Das, Pradeep Dubey, 
+"GraphMat: High performance graph analytics made productive", Proceedings of VLDB 2015, volume 8, pages 1214 - 1225.
 
-Paper PDF: www.vldb.org/pvldb/vol8/p1214-sundaram.pdf
+- Michael J. Anderson, Narayanan Sundaram, Nadathur Satish, Md Mostofa Ali Patwary, Theodore L. Willke and Pradeep Dubey, "GraphPad: Optimized Graph Primitives for Parallel and Distributed Platforms," 2016 IEEE International Parallel and Distributed Processing Symposium (IPDPS), Chicago, IL, USA, 2016, pp. 313-322.
+
+Paper URL: 
+- www.vldb.org/pvldb/vol8/p1214-sundaram.pdf
+- http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=7516027
+
 
 More documentation coming soon. For questions, please email narayanan.sundaram@intel.com
