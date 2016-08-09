@@ -2,8 +2,10 @@
 
 Requirements:
 
-- Intel compiler (icpc) + Intel MPI 
+- Intel compiler (icpc) + Intel MPI (mpiicpc + mpi libraries)
+
 (or)
+
 - GCC + MPICH (Other MPI libraries not tested)
 
 To compile with Intel compiler + Intel MPI :
@@ -21,10 +23,10 @@ Set the following environment variables:
     export OMP_NUM_THREADS=[ number of cores in system ]
     export KMP_AFFINITY=scatter
 
-Use `numactl` for NUMA (multi-socket) systems e.g.
+Use `numactl` for NUMA (multi-socket) systems if you are running 1 MPI rank on all the sockets e.g.
 
-    numactl -i all bin/PageRank < graph file >
-    numactl -i all bin/BFS < graph file > < start vertex >
+    mpirun -np <NRANKS> numactl -i all bin/PageRank < graph file >
+    mpirun -np <NRANKS> numactl -i all bin/BFS < graph file > < start vertex >
 
 You can convert an edge list file to GraphMat compatible format using
 the `graph_converter` utility. GraphMat works on a binary graph
