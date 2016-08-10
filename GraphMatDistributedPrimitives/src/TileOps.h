@@ -217,6 +217,24 @@ void mult_segment3(const DCSCTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
   segmenty->properties.nnz = segmenty->compute_nnz();
 }
 
+template <typename Ta, typename Tx, typename Tvp, typename Ty>
+void mult_segment3(const COOTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
+                  const DenseSegment<Tvp> & segmentvp,
+                  DenseSegment<Ty>* segmenty, int output_rank,
+                  void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+  segmenty->alloc();
+  segmenty->initialize();
+  int nnz = 0;
+  my_coospmspv3(tile.a, tile.ia, tile.ja, tile.num_partitions, tile.partition_start,
+               segmentx.properties.value, segmentx.properties.bit_vector,
+     	       segmentvp.properties.value, segmentvp.properties.bit_vector,
+               segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
+               mul_fp, add_fp, vsp);
+  segmenty->properties.nnz = segmenty->compute_nnz();
+}
+
+
+
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const HybridTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
                   DenseSegment<Ty>* segmenty, int output_rank,
