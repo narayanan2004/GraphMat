@@ -15,6 +15,7 @@ before_install:
  - sudo apt-get install -y mpich
  - test -n $CC  && unset CC
  - test -n $CXX && unset CXX
+ - locate mpi.h
 # Build steps
 script:
 # - source ~/.bashrc
