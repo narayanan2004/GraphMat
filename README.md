@@ -1,7 +1,11 @@
-# GraphMat graph analytics framework
+GraphMat graph analytics framework
+=====================================
 
+.. image:: https://travis-ci.org/narayanan2004/GraphMat.svg?branch=distributed_primitives_integration
+    :target: https://travis-ci.org/narayanan2004/GraphMat
+    
 Requirements:
-
+------------
 - Intel compiler (icpc) + Intel MPI (mpiicpc + mpi libraries)
 
 (or)
@@ -9,14 +13,15 @@ Requirements:
 - GCC + MPICH (Other MPI libraries not tested)
 
 To compile with Intel compiler + Intel MPI :
-
+--------------------------------------------
     make
 
 To compile with gcc + MPICH:
-
+----------------------------
     make CXX=mpic++
 
 To run:
+-------
 
 Set the following environment variables:
 
