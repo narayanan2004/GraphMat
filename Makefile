@@ -7,7 +7,7 @@ CXX=mpiicpc
 ifeq (${CXX}, mpiicpc)
   CXX_OPTIONS=-qopenmp -std=c++11 
 else
-  CXX_OPTIONS=-fopenmp --std=c++11 -I/usr/include/
+  CXX_OPTIONS=-fopenmp --std=c++11 -I/usr/include/mpi/
 endif
 
 CXX_OPTIONS+=-Isrc -I$(DIST_PRIMITIVES_PATH)
