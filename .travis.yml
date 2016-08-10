@@ -18,7 +18,7 @@ before_install:
 # Build steps
 script:
 # - source ~/.bashrc
- - make CXX="mpicxx -cxx=g++"
+ - make MPICXX=mpic++ CXX=g++
 #Uninstall intel tools
 #after_script:
 #  - '[[ ! -z "${INTEL_INSTALL_PATH}" ]] && uninstall_intel_software'

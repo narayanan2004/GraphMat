@@ -17,7 +17,7 @@ To compile with Intel compiler + Intel MPI :
 
 To compile with gcc + MPICH:
 ----------------------------
-    make CXX=mpic++
+    make MPICXX=mpic++ CXX=g++
 
 To run:
 -------
