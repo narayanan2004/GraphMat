@@ -242,6 +242,10 @@ void return_triangles(TC* v, unsigned long int* out, void* params) {
   *out = v->triangles;
 }
 
+void reset_neighbors(TC v, TC* mutable_v, void* params) {
+  mutable_v->neighbors_subset.fill(0);
+}
+
 void run_triangle_counting(char* filename, int nthreads) {
   Graph<TC> G;
   G.ReadMTX(filename, nthreads*4); //nthread pieces of matrix
@@ -272,6 +276,7 @@ void run_triangle_counting(char* filename, int nthreads) {
   for (int i = minv; i <= maxv; i++) {
     G.setActive(i);
   }
+  G.applyToAllVertices(reset_neighbors);
   run_graph_program(&gn, G, 1, &gn_tmp);
 
   G.setAllActive();
