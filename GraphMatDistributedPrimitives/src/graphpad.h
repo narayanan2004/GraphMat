@@ -38,7 +38,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <math.h>
-#include <mkl.h>
 #include <parallel/algorithm>
 
 #include <map>
