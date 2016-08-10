@@ -1,9 +1,8 @@
 GraphMat graph analytics framework
 =====================================
 
-.. image:: https://travis-ci.org/narayanan2004/GraphMat.svg?branch=distributed_primitives_integration
-    :target: https://travis-ci.org/narayanan2004/GraphMat
-    
+[![Build Status](https://travis-ci.org/narayanan2004/GraphMat.svg?branch=distributed_primitives_integration)](https://travis-ci.org/narayanan2004/GraphMat)
+
 Requirements:
 ------------
 - Intel compiler (icpc) + Intel MPI (mpiicpc + mpi libraries)
