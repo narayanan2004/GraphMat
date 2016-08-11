@@ -34,16 +34,17 @@
 #include <algorithm>
 #include <iomanip>
 
-const int MAX_THREADS = 128;
 
 template <unsigned int K>
 class LatentVector {
   public:
     double N[K];
     char type;
+    double token_loglik;
 
   public:
     LatentVector() {
+      token_loglik = 0.0;
     }
     ~LatentVector() {
     }
@@ -92,6 +93,7 @@ class LDAInitProgram : public GraphProgram<LatentVector<K>, LatentVector<K>, Lat
     unsigned int rstart = edge_value; 
     for (int i = 0; i < K; i++) {
       gamma_wjk[i] = (double)rand_r(&rstart)/RAND_MAX; //double(i+1)/K;
+      //gamma_wjk[i] = (double)(i+edge_value+0.3); //double(i+1)/K;
       sum += gamma_wjk[i];
     }
 
@@ -195,6 +197,64 @@ class LDAProgram : public GraphProgram<LatentVector<K>, LatentVector<K>, LatentV
   }
 };
 
+template<unsigned int K>
+class LDALLProgram : public GraphProgram<LatentVector<K>, double, LatentVector<K> > {
+
+  public:
+    LatentVector<K> N_k;
+    double eta;
+    int nterms;
+
+    LDALLProgram(LatentVector<K> _N_k, double _eta, int _nterms) : 
+    N_k(_N_k), eta(_eta), nterms(_nterms) {
+      this->activity = ALL_VERTICES;
+      this->order = OUT_EDGES;
+      assert(eta > 1.0);
+      //smoothed N_k
+      for (int i = 0; i < K; i++) {
+        N_k.N[i] = N_k.N[i] + nterms*(eta-1.0);
+      }
+    }
+
+
+  void reduce_function(double& v, const double& w) const {
+    v += w;
+  }
+
+  void process_message(const LatentVector<K>& message, const int edge_value, 
+                        const LatentVector<K>& vertexprop, double& res) const {
+    double phi_wk[K];
+    double theta_kj[K];
+
+    double sum = 0;
+
+    for (int i = 0; i < K; i++) {
+      phi_wk[i] = (vertexprop.N[i] + (eta - 1.0))/(N_k.N[i]);
+      theta_kj[i] = (message.N[i] + (eta - 1.0));
+      sum += theta_kj[i];
+    }
+    for (int i = 0; i < K; i++) {
+      theta_kj[i] /= sum;
+    }
+
+    double dot = 0.0;
+    for (int i = 0; i < K; i++) {
+      dot += phi_wk[i] * theta_kj[i];
+    }
+    res = edge_value * log(dot);
+  }
+
+  bool send_message(const LatentVector<K>& vertexprop, LatentVector<K>& message) const {
+    message = vertexprop;
+    return true;
+  }
+
+  void apply(const double& message_out, LatentVector<K>& vertexprop) {
+    vertexprop.token_loglik = message_out;
+  }
+};
+
+
 int getnthelement(const double *arr_in, int n, int p) {
   double* arr = new double[n];
   memcpy(arr, arr_in, sizeof(double)*n);
@@ -202,6 +262,12 @@ int getnthelement(const double *arr_in, int n, int p) {
   auto pos = std::search_n(arr_in, arr_in+n, 1, arr[p]);
   return std::distance(arr_in, pos);
 }
+
+template<unsigned int K>
+void return_ll(LatentVector<K>* v, double* out, void* param) {
+  *out = v->token_loglik;
+}
+
 
 void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations=10) {
   const int k = 20;
@@ -232,8 +298,9 @@ void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations
     printf("\n");
   }*/
 
-
-  LDAProgram<k> ldap(G, 1, 1, nterms);
+  double alpha = 1.0;
+  double eta = 5.0;
+  LDAProgram<k> ldap(G, alpha, eta, nterms);
   ldap.calcGlobalN();
   auto ldap_tmp = graph_program_init(ldap, G);
 
@@ -267,6 +334,20 @@ void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations
       G.getVertexproperty(i+ndoc).print();
       printf("\n");
     }
+  }
+
+  /** 
+  Calculate log likelihood
+  P(doc | words, topic distributions, alpha, eta)
+  */
+  auto Nk = ldap.global_N;
+  LDALLProgram<k> ldall(Nk, eta, nterms);
+  G.setAllActive();
+  run_graph_program(&ldall, G, 1);
+  double total_ll = 0.0;
+  G.applyReduceAllVertices(&total_ll, return_ll<k>);
+  if (GraphPad::global_myrank == 0) {
+    printf("Total Loglikelihood = %lf \n", total_ll);
   }
 
   //Calculate topic-word distributions
