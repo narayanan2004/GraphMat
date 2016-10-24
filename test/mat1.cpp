@@ -4,6 +4,7 @@
 #define CATCH_CONFIG_RUNNER
 #include "catch.hpp"
 #include "generator.hpp"
+#include <algorithm>
 
 int main(int argc, char * argv[])
 {
@@ -16,9 +17,24 @@ int main(int argc, char * argv[])
   return res;
 }
 
-template <typename TILE_T, typename EDGE_T>
-void identity_nnz_test(GraphPad::edgelist_t<EDGE_T> E)
+template<typename T>
+bool edge_compare(const GraphPad::edge_t<T> &e1,
+                  const GraphPad::edge_t<T> &e2)
 {
+        if( (e1.src < e2.src) ||
+            ((e1.src == e2.src) && (e1.dst < e2.dst)) ||
+            ((e1.src == e2.src) && (e1.dst == e2.dst) && (e1.val < e2.val)) )
+        {
+                return true;
+        }
+        return false;
+}
+
+template <typename TILE_T, typename EDGE_T>
+void matrix_test(GraphPad::edgelist_t<EDGE_T> E)
+{
+  std::sort(E.edges, E.edges + E.nnz, edge_compare<EDGE_T>);
+
   // Create identity matrix from generator
     GraphPad::SpMat<TILE_T> A;
     GraphPad::AssignSpMat(E, &A, 1, 1, GraphPad::partition_fn_1d);
@@ -31,6 +47,7 @@ void identity_nnz_test(GraphPad::edgelist_t<EDGE_T> E)
     // Get new edgelist from matrix
     GraphPad::edgelist_t<EDGE_T> OE;
     A.get_edges(&OE);
+    std::sort(OE.edges, OE.edges + OE.nnz, edge_compare<EDGE_T>);
 
     REQUIRE(E.nnz == OE.nnz);
     REQUIRE(E.m == OE.m);
@@ -59,6 +76,7 @@ void identity_nnz_test(GraphPad::edgelist_t<EDGE_T> E)
 
     GraphPad::edgelist_t<EDGE_T> OET;
     ATT.get_edges(&OET);
+    std::sort(OET.edges, OET.edges + OET.nnz, edge_compare<EDGE_T>);
 
     REQUIRE(E.nnz == OET.nnz);
     REQUIRE(E.m == OET.m);
@@ -72,23 +90,30 @@ void identity_nnz_test(GraphPad::edgelist_t<EDGE_T> E)
 }
 
 template <typename TILE_T, typename EDGE_T>
-void nnz_test(int N)
+void create_matrix_test(int N)
 {
   auto E = generate_identity_edgelist<EDGE_T>(N);
-  identity_nnz_test<TILE_T, EDGE_T>(E);
+  matrix_test<TILE_T, EDGE_T>(E);
+
+  auto R = generate_random_edgelist<EDGE_T>(N, 16);
+  matrix_test<TILE_T, EDGE_T>(R);
 }
 
 
 TEST_CASE("identity_nnz", "identity_nnz")
 {
   SECTION(" CSRTile basic tests ", "CSRTile basic tests") {
-        nnz_test<GraphPad::CSRTile<int>, int>(500);
+        create_matrix_test<GraphPad::CSRTile<int>, int>(500);
   }
   SECTION(" DCSCTile basic tests ", "CSRTile basic tests") {
-        nnz_test<GraphPad::DCSCTile<int>, int>(500);
+        create_matrix_test<GraphPad::DCSCTile<int>, int>(500);
   }
   SECTION(" COOTile basic tests ", "CSRTile basic tests") {
-        nnz_test<GraphPad::COOTile<int>, int>(500);
+        create_matrix_test<GraphPad::COOTile<int>, int>(500);
+  }
+
+  SECTION(" COOSIMD32Tile basic tests ", "CSRTile basic tests") {
+        create_matrix_test<GraphPad::COOSIMD32Tile<int>, int>(500);
   }
 }
 
