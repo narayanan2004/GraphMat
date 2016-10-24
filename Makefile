@@ -1,5 +1,8 @@
 
 DIST_PRIMITIVES_PATH=GraphMatDistributedPrimitives
+CATCHDIR=./test/Catch
+TESTDIR=./test
+TESTBINDIR=./testbin
 include $(DIST_PRIMITIVES_PATH)/Make.inc
 
 MPICXX=mpiicpc
@@ -76,5 +79,10 @@ $(BINDIR)/LDA: $(DEPS) $(MULTINODEDEPS) $(SRCDIR)/LDA.cpp
 $(BINDIR)/DS: $(DEPS) $(SRCDIR)/Delta.cpp
 	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/DS $(SRCDIR)/Delta.cpp
 
+test: $(TESTBINDIR)/first
+
+$(TESTBINDIR)/first: $(DEPS) $(TESTDIR)/first.cpp
+	$(MPICXX) -cxx=$(CXX) -I$(CATCHDIR)/include $(CXX_OPTIONS) -o $(TESTBINDIR)/first $(TESTDIR)/first.cpp 
+
 clean:
-	rm $(EXE) bin/graph_converter 
+	rm $(EXE) bin/graph_converter  $(TESTBINDIR)/*
