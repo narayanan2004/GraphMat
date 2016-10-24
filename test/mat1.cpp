@@ -17,18 +17,15 @@ int main(int argc, char * argv[])
 }
 
 template <typename TILE_T, typename EDGE_T>
-void identity_nnz_test(int N)
+void identity_nnz_test(GraphPad::edgelist_t<EDGE_T> E)
 {
   // Create identity matrix from generator
-  auto E = generate_identity_edgelist<EDGE_T>(N);
-
-
     GraphPad::SpMat<TILE_T> A;
     GraphPad::AssignSpMat(E, &A, 1, 1, GraphPad::partition_fn_1d);
 
-    REQUIRE(A.getNNZ() == N);
-    REQUIRE(A.m == N);
-    REQUIRE(A.n == N);
+    REQUIRE(A.getNNZ() == E.nnz);
+    REQUIRE(A.m == E.m);
+    REQUIRE(A.n == E.n);
     REQUIRE(A.empty == false);
 
     // Get new edgelist from matrix
@@ -48,16 +45,16 @@ void identity_nnz_test(int N)
     // Test transpose
     GraphPad::SpMat<TILE_T> AT;
     GraphPad::Transpose(A, &AT, 1, 1, GraphPad::partition_fn_1d);
-    REQUIRE(AT.getNNZ() == N);
-    REQUIRE(AT.m == N);
-    REQUIRE(AT.n == N);
+    REQUIRE(AT.getNNZ() == E.nnz);
+    REQUIRE(AT.m == E.n);
+    REQUIRE(AT.n == E.m);
     REQUIRE(AT.empty == false);
 
     GraphPad::SpMat<TILE_T> ATT;
     GraphPad::Transpose(AT, &ATT, 1, 1, GraphPad::partition_fn_1d);
-    REQUIRE(ATT.getNNZ() == N);
-    REQUIRE(ATT.m == N);
-    REQUIRE(ATT.n == N);
+    REQUIRE(ATT.getNNZ() == E.nnz);
+    REQUIRE(ATT.m == E.m);
+    REQUIRE(ATT.n == E.n);
     REQUIRE(ATT.empty == false);
 
     GraphPad::edgelist_t<EDGE_T> OET;
@@ -72,16 +69,26 @@ void identity_nnz_test(int N)
             REQUIRE(E.edges[i].dst == OET.edges[i].dst);
             REQUIRE(E.edges[i].val == OET.edges[i].val);
     }
-
 }
+
+template <typename TILE_T, typename EDGE_T>
+void nnz_test(int N)
+{
+  auto E = generate_identity_edgelist<EDGE_T>(N);
+  identity_nnz_test<TILE_T, EDGE_T>(E);
+}
+
 
 TEST_CASE("identity_nnz", "identity_nnz")
 {
   SECTION(" CSRTile basic tests ", "CSRTile basic tests") {
-        identity_nnz_test<GraphPad::CSRTile<int>, int>(50);
+        nnz_test<GraphPad::CSRTile<int>, int>(500);
   }
   SECTION(" DCSCTile basic tests ", "CSRTile basic tests") {
-        identity_nnz_test<GraphPad::DCSCTile<int>, int>(50);
+        nnz_test<GraphPad::DCSCTile<int>, int>(500);
+  }
+  SECTION(" COOTile basic tests ", "CSRTile basic tests") {
+        nnz_test<GraphPad::COOTile<int>, int>(500);
   }
 }
 
