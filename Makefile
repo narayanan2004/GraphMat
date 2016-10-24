@@ -79,10 +79,10 @@ $(BINDIR)/LDA: $(DEPS) $(MULTINODEDEPS) $(SRCDIR)/LDA.cpp
 $(BINDIR)/DS: $(DEPS) $(SRCDIR)/Delta.cpp
 	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/DS $(SRCDIR)/Delta.cpp
 
-test: $(TESTBINDIR)/first
+test: $(TESTBINDIR)/mat1
 
-$(TESTBINDIR)/first: $(DEPS) $(TESTDIR)/first.cpp
-	$(MPICXX) -cxx=$(CXX) -I$(CATCHDIR)/include $(CXX_OPTIONS) -o $(TESTBINDIR)/first $(TESTDIR)/first.cpp 
+$(TESTBINDIR)/mat1: $(DEPS) $(TESTDIR)/mat1.cpp
+	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include $(CXX_OPTIONS) -o $(TESTBINDIR)/mat1 $(TESTDIR)/mat1.cpp 
 
 clean:
 	rm $(EXE) bin/graph_converter  $(TESTBINDIR)/*
