@@ -36,11 +36,11 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include "graphpad.h"
+#include "src/graphpad.h"
 
 template <typename T=int>
-edgelist<T> generate_identity_edgelist(int n) {
-  edgelist_t<T> identity_edgelist(n, n, n); 
+GraphPad::edgelist_t<T> generate_identity_edgelist(int n) {
+        GraphPad::edgelist_t<T> identity_edgelist(n, n, n); 
   for (int i = 0 ;i < n; i++) {
     identity_edgelist.edges[i].src = i+1;
     identity_edgelist.edges[i].dst = i+1;
