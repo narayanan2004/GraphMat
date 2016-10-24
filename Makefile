@@ -85,4 +85,4 @@ $(TESTBINDIR)/mat1: $(DEPS) $(TESTDIR)/mat1.cpp
 	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include $(CXX_OPTIONS) -o $(TESTBINDIR)/mat1 $(TESTDIR)/mat1.cpp 
 
 clean:
-	rm $(EXE) bin/graph_converter  $(TESTBINDIR)/*
+	rm $(EXE) bin/graph_converter  $(TESTBINDIR)/mat1
