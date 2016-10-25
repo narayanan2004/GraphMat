@@ -1,21 +1,10 @@
 
 #include <iostream>
-
-#define CATCH_CONFIG_RUNNER
 #include "catch.hpp"
 #include "generator.hpp"
 #include <algorithm>
 
-int main(int argc, char * argv[])
-{
-  MPI_Init(NULL,NULL);
-  GraphPad::GB_Init();
 
-  int res =  Catch::Session().run(argc, argv);
-
-  MPI_Finalize();
-  return res;
-}
 
 template<typename T>
 bool edge_compare(const GraphPad::edge_t<T> &e1,
