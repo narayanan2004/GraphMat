@@ -100,9 +100,59 @@ TEST_CASE("identity_nnz", "identity_nnz")
   SECTION(" COOTile basic tests ", "CSRTile basic tests") {
         create_matrix_test<GraphPad::COOTile<int>, int>(500);
   }
-
   SECTION(" COOSIMD32Tile basic tests ", "CSRTile basic tests") {
         create_matrix_test<GraphPad::COOSIMD32Tile<int>, int>(500);
+  }
+}
+
+template <typename T>
+void mul(T a, T b, T * c, void* vsp) {*c = a*b;}
+
+template <typename T>
+void add(T a, T b, T * c, void* vsp) {*c = a+b;}
+
+template <typename TILE_T, typename EDGE_T>
+void spgemm_IxI_test(GraphPad::edgelist_t<EDGE_T> E, 
+                     GraphPad::edgelist_t<EDGE_T> R)
+{
+    GraphPad::SpMat<TILE_T> A;
+    GraphPad::AssignSpMat(E, &A, 1, 1, GraphPad::partition_fn_1d);
+
+    GraphPad::SpMat<TILE_T> B;
+    GraphPad::AssignSpMat(R, &B, 1, 1, GraphPad::partition_fn_1d);
+
+    GraphPad::SpMat<TILE_T> C;
+    GraphPad::SpGEMM(A, B, &C, mul, add);
+
+    GraphPad::edgelist_t<EDGE_T> OE;
+    C.get_edges(&OE);
+    REQUIRE(E.nnz == OE.nnz);
+    REQUIRE(E.m == OE.m);
+    REQUIRE(E.n == OE.n);
+
+    std::sort(OE.edges, OE.edges + OE.nnz, edge_compare<EDGE_T>);
+    std::sort(E.edges, E.edges + E.nnz, edge_compare<EDGE_T>);
+
+    for(int i = 0 ; i < OE.nnz ; i++)
+    {
+      REQUIRE(OE.edges[i].src == OE.edges[i].dst);
+      REQUIRE(OE.edges[i].val == Approx(E.edges[i].val * E.edges[i].val)); 
+    }
+}
+
+template <typename TILE_T, typename EDGE_T>
+void create_spgemm_test(int N)
+{
+  auto E1 = generate_identity_edgelist<EDGE_T>(N);
+  auto E2 = generate_identity_edgelist<EDGE_T>(N);
+  spgemm_IxI_test<TILE_T, EDGE_T>(E1, E2);
+
+}
+
+TEST_CASE("spgemm", "spgemm")
+{
+  SECTION(" CSR SpGEMM", "CSR SpGEMM") {
+    create_spgemm_test<GraphPad::CSRTile<double>, double>(50);
   }
 }
 
