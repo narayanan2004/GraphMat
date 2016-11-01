@@ -40,7 +40,7 @@
 template <template<typename> class SpSegment, typename T>
 void Clear_tile(SpVec<SpSegment<T> > * v1, int start, int end) {
   for (int i = start; i < end; i++) {
-    if (v1->nodeIds[i] == global_myrank) {
+    if (v1->nodeIds[i] == v1->global_myrank) {
       clear_segment(&(v1->segments[i]));
     }
   }
@@ -50,7 +50,7 @@ template <template < typename> class SpTile, typename T>
 void Clear_tile(SpMat<SpTile<T> > * v1, int startx, int starty, int endx, int endy) {
   for (int j = startx; j < endx; j++) {
   for (int i = starty; i < endy; i++) {
-    if (v1->nodeIds[i + v1->ntiles_y] == global_myrank) {
+    if (v1->nodeIds[i + v1->ntiles_y] == v1->global_myrank) {
       clear_tile(&(v1->tiles[i][j]));
     }
   }

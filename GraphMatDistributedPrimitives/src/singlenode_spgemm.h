@@ -153,7 +153,7 @@ void my_dcsrmultcsr(int m, int n, int k, Ta* a, int* ja, int* ia, Tb* b,
 #endif
 
 #ifdef SPGEMM_PARALLEL_SPA
-bool cmp_int(int i1, int i2) { return i1 < i2; }
+inline bool cmp_int(int i1, int i2) { return i1 < i2; }
 
 template <typename Ta, typename Tb, typename Tc>
 void my_dcsrmultcsr(int m, int n, int k, Ta* a, int* ja, int* ia, Tb* b,

@@ -64,8 +64,13 @@ class SpMat {
   int num_tiles_x;
   int num_tiles_y;
   int (*pfn)(int, int, int, int, int);
+  int global_nrank, global_myrank;
 
-  SpMat() { empty = true; }
+  SpMat() { 
+    empty = true; 
+    global_nrank = get_global_nrank();
+    global_myrank = get_global_myrank();
+  }
 
   void set(int _m, int _n, int _ntiles_x, int _ntiles_y, int* _nodeIds,
            int* _start_idx, int* _start_idy) {
@@ -242,7 +247,7 @@ if(global_myrank == 0)
         recv_positions[i+1] = new_nnz;
       }
 
-      printf("Rank %d: After shuffle %d edges\n", global_myrank, new_nnz);
+      printf("Rank %d: After shuffle %ld edges\n", global_myrank, new_nnz);
   
       MPI_Datatype MPI_EDGE_T;
       MPI_Type_contiguous(sizeof(edge_t<T>), MPI_CHAR, &MPI_EDGE_T);
@@ -262,7 +267,7 @@ if(global_myrank == 0)
       MPI_Barrier(MPI_COMM_WORLD);
     }
 
-    printf("Rank %d: After shuffle %d edges\n", global_myrank, new_nnz);
+    printf("Rank %d: After shuffle %ld edges\n", global_myrank, new_nnz);
 
     tedge_t<T> * tedges2 = new tedge_t<T>[new_nnz];
     #pragma omp parallel for
@@ -329,6 +334,7 @@ if(global_myrank == 0)
   }
 
   void print_tiles(std::string msg, int output_rank) {
+
     MPI_Barrier(MPI_COMM_WORLD);
     {
       if (global_myrank == output_rank) {
@@ -362,6 +368,9 @@ if(global_myrank == 0)
         reinterpret_cast<int*>(_mm_malloc((num_tiles_x + 1) * sizeof(int), 64));
     int* starty =
         reinterpret_cast<int*>(_mm_malloc((num_tiles_y + 1) * sizeof(int), 64));
+
+    int global_nrank = get_global_nrank();
+    int global_myrank = get_global_myrank();
 
     for (int i = 0; i < num_tiles_y; i++) {
       for (int j = 0; j < num_tiles_x; j++) {
@@ -410,6 +419,9 @@ if(global_myrank == 0)
 
   template <typename T>
   void get_edges(edgelist_t<T>* edgelist) const {
+    int global_nrank = get_global_nrank();
+    int global_myrank = get_global_myrank();
+
     // Get nnz
     int nnzs = 0;
     for (int i = 0; i < ntiles_y; i++) {
@@ -442,6 +454,7 @@ if(global_myrank == 0)
 
   uint64_t getNNZ()
   {
+    int global_myrank = get_global_myrank();
     uint64_t total_nnz = 0;
     for(int i = 0 ; i < ntiles_y ; i++)
     {

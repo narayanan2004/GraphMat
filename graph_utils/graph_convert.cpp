@@ -362,7 +362,7 @@ template <typename T> void readFile(const char* ifilename, edge<T>*& edges, int&
 	//} else {
 		for (unsigned long int i = 0; i < nnz; i++) {
 			if (feof(ifile)) {
-				printf("FEOF reached when reading edge id %lld\n", i);
+				printf("FEOF reached when reading edge id %ld\n", i);
 			}
 		        assert(!feof(ifile));
 		        readLine(ifile, opt.inputformat, &edges[i].src, &edges[i].dst, &edges[i].val, opt);

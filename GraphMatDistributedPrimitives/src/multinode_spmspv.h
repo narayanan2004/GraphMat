@@ -74,6 +74,8 @@ void SpMSpV_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<SpSegment<Tx> >& v
   std::vector<MPI_Request> requests;
 
 
+  int global_nrank = get_global_nrank();
+  int global_myrank = get_global_myrank();
 
   double tmp_time = MPI_Wtime();
 
@@ -134,7 +136,7 @@ void SpMSpV_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<SpSegment<Tx> >& v
     }
   }
 
-  spmspv_send_time += MPI_Wtime() - tmp_time;
+  //spmspv_send_time += MPI_Wtime() - tmp_time;
   tmp_time = MPI_Wtime();
 
   // Multiply all tiles
@@ -147,7 +149,7 @@ void SpMSpV_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<SpSegment<Tx> >& v
     }
   }
 
-  spmspv_mult_time += MPI_Wtime() - tmp_time;
+  //spmspv_mult_time += MPI_Wtime() - tmp_time;
   tmp_time = MPI_Wtime();
 
   // Free input vectors allocated during computation
@@ -203,7 +205,7 @@ void SpMSpV_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<SpSegment<Tx> >& v
   MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
   requests.clear();
 
-  spmspv_reduce_send_time += MPI_Wtime() - tmp_time;
+  //spmspv_reduce_send_time += MPI_Wtime() - tmp_time;
   tmp_time = MPI_Wtime();
 
   // Free any output vectors allocated during computation
@@ -221,7 +223,7 @@ void SpMSpV_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<SpSegment<Tx> >& v
     }
   }
 
-  spmspv_reduce_time += MPI_Wtime() - tmp_time;
+  //spmspv_reduce_time += MPI_Wtime() - tmp_time;
 }
 
 #endif  // SRC_MULTINODE_SPMSPV_H_

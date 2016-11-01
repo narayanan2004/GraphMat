@@ -72,9 +72,24 @@ struct tedge_t {
   T val;
 };
 
+inline int get_global_nrank() {
+  int global_nrank;
+  MPI_Comm_size(MPI_COMM_WORLD, &global_nrank);
+  return global_nrank;
+}
+
+inline int get_global_myrank() {
+  int global_myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &global_myrank);
+  return global_myrank;
+}
+
 template <typename T>
 void load_edgelist(const char* dir, int myrank, int nrank,
                    edgelist_t<T>* edgelist) {
+
+  int global_nrank = get_global_nrank();
+  int global_myrank = get_global_myrank();
 
   edgelist->nnz = 0;
   for(int i = global_myrank ; ; i += global_nrank)
@@ -142,6 +157,8 @@ template <typename T>
 void write_edgelist_txt(const char* dir, int myrank, int nrank, 
                        const edgelist_t<T> & edgelist)
 {
+  int global_nrank = get_global_nrank();
+  int global_myrank = get_global_myrank();
   std::stringstream fname_ss;
   fname_ss << dir << global_myrank;
   printf("Opening file: %s\n", fname_ss.str().c_str());
@@ -159,6 +176,8 @@ template <typename T>
 void write_edgelist_bin(const char* dir, int myrank, int nrank, 
                        const edgelist_t<T> & edgelist)
 {
+  int global_nrank = get_global_nrank();
+  int global_myrank = get_global_myrank();
   std::stringstream fname_ss;
   fname_ss << dir << global_myrank;
   printf("Opening file: %s\n", fname_ss.str().c_str());
@@ -174,6 +193,8 @@ void write_edgelist_bin(const char* dir, int myrank, int nrank,
 template <typename T>
 void load_edgelist_txt(const char* dir, int myrank, int nrank,
                        edgelist_t<T>* edgelist) {
+  int global_nrank = get_global_nrank();
+  int global_myrank = get_global_myrank();
   edgelist->nnz = 0;
   for(int i = global_myrank ; ; i += global_nrank)
   {
@@ -238,6 +259,7 @@ void randomize_edgelist_square(edgelist_t<T>* edgelist, int nrank) {
   unsigned int* mapping = new unsigned int[edgelist->m];
   unsigned int* rval = new unsigned int[edgelist->m];
 
+  int global_myrank = get_global_myrank();
   if (global_myrank == 0) {
     srand(5);
     // #pragma omp parallel for

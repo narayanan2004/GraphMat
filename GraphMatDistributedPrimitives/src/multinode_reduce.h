@@ -53,6 +53,7 @@ template <template <typename> class SpTile, template<typename> class SpSegment, 
 void Reduce_tile(const SpMat<SpTile<T> >& mat, SpVec<SpSegment<T> > * vecy, int start_x, int start_y,
                  int end_x, int end_y, void (*op_fp)(T, T, T*, void*), void* vsp) {
   int output_rank = 0;
+  int global_myrank = get_global_myrank();
 
   // Build list of row/column partners
   std::vector<std::set<int> > row_ranks;
@@ -124,6 +125,8 @@ void Reduce_tile(const SpMat<SpTile<T> >& mat, SpVec<SpSegment<T> > * vecy, int 
 template <template <typename> class SpTile, typename T>
 void Reduce_tile(const SpMat<SpTile<T> >& mat, T* res, int start_x, int start_y,
                  int end_x, int end_y, void (*op_fp)(T, T, T*, void*), void* vsp) {
+  int global_myrank = get_global_myrank();
+  int global_nrank = get_global_nrank();
   bool res_set = false;
 
   // Count triangles
@@ -163,6 +166,8 @@ void Reduce_tile(const SpMat<SpTile<T> >& mat, T* res, int start_x, int start_y,
 template <template<typename> class SpSegment, typename T>
 void Reduce_tile(const SpVec<SpSegment<T> >& vec, T* res, int start, int end,
                  void (*op_fp)(T, T, T*, void*), void* vsp) {
+  int global_myrank = get_global_myrank();
+  int global_nrank = get_global_nrank();
   bool res_set = false;
 
   for (int i = start; i < end; i++) {
@@ -197,6 +202,8 @@ void Reduce_tile(const SpVec<SpSegment<T> >& vec, T* res, int start, int end,
 template <template<typename> class SpSegment, typename T, typename VT>
 void MapReduce_tile(SpVec<SpSegment<VT> > * vec, T* res, int start, int end,
                  void (*op_map)(VT*, T*, void*), void (*op_fp)(T, T, T*, void*), void* vsp) {
+  int global_myrank = get_global_myrank();
+  int global_nrank = get_global_nrank();
   bool res_set = false;
 
   for (int i = start; i < end; i++) {

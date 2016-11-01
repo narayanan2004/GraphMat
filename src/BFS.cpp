@@ -269,13 +269,13 @@ void run_bfs(char* filename, int nthreads, int v) {
   }
   MPI_Allreduce(MPI_IN_PLACE, &reachable_vertices, 1,  MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-  if (GraphPad::global_myrank == 0) printf("Reachable vertices = %d \n", reachable_vertices);
+  if (GraphPad::get_global_myrank() == 0) printf("Reachable vertices = %d \n", reachable_vertices);
 
   for (int i = 1; i <= std::min(10, G.nvertices); i++) {
     if (G.vertexNodeOwner(i))
     if (G.getVertexproperty(i).depth < 255) {
       //printf("Depth %d : %d \n", i, G.vertexproperty[i].depth);
-      printf("Depth %d : %d parent: %d\n", i, G.getVertexproperty(i).depth, G.getVertexproperty(i).parent);
+      printf("Depth %d : %d parent: %lld\n", i, G.getVertexproperty(i).depth, G.getVertexproperty(i).parent);
     }
     else {
       printf("Depth %d : INF \n", i);

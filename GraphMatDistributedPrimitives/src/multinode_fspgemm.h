@@ -81,6 +81,9 @@ void FSpGEMM_tile(const SpMat<SpTile<Ta> >& grida,
   std::vector<std::set<int> > c_row_ranks;
   std::vector<std::set<int> > c_col_ranks;
   get_row_ranks_fspgemm(gridc, &c_row_ranks, &c_col_ranks);
+  
+  int global_nrank = get_global_nrank();
+  int global_myrank = get_global_myrank();
 
   bool block = false;
   bool comm_barrier = false;

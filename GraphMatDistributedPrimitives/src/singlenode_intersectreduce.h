@@ -313,7 +313,7 @@ void my_dintersect(int m, int n, Ta *a, int *ja, int *ia, Tb *b, int *jb,
 
 #ifdef INTERSECT_PARALLEL_SPA
 
-bool cmp_int_intersect_parallel(int i1, int i2) { return i1 < i2; }
+inline bool cmp_int_intersect_parallel(int i1, int i2) { return i1 < i2; }
 
 template <typename Ta, typename Tb, typename Tc>
 void my_dintersect(int m, int n, Ta *a, int *ja, int *ia, Tb *b, int *jb,

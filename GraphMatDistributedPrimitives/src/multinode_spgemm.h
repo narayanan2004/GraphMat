@@ -87,6 +87,9 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
   std::vector<std::set<int> > c_col_ranks;
   get_row_ranks((*gridc), &c_row_ranks, &c_col_ranks);
 
+  int global_nrank = get_global_nrank();
+  int global_myrank = get_global_myrank();
+
   bool block = false;
   bool comm_barrier = false;
 
@@ -221,6 +224,7 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
   end = MPI_Wtime();
   MPI_Pcontrol(-1, "spgemm") ;
 
+  #if 0
   // Instrumentation
   double* starts = new double[global_nrank];
   double* ends = new double[global_nrank];
@@ -293,6 +297,7 @@ void SpGEMM_tile_outerproduct(const SpMat<ATile<Ta> >& grida,
       std::cout << "Comp time: " << comp_time << std::endl;
     }
   }
+  #endif
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -319,6 +324,9 @@ void SpGEMM_tile_innerproduct(const SpMat<ATile<Ta> >& grida,
   std::vector<std::set<int> > a_row_ranks;
   std::vector<std::set<int> > a_col_ranks;
   get_row_ranks(grida, &a_row_ranks, &a_col_ranks);
+  
+  int global_nrank = get_global_nrank();
+  int global_myrank = get_global_myrank();
 
   bool block = true;
 

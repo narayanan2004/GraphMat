@@ -66,8 +66,6 @@ void AddFn(T a, T b, T* c, void* vsp) {
   *c = a + b ;
 }
 
-extern int nthreads;
-
 //const int MAX_PARTS = 512; 
 
 template <class V, class E=int>
@@ -1074,7 +1072,7 @@ void Graph<V,E>::MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges, int grid_size,
   struct timeval start, end;
   gettimeofday(&start, 0);
   {
-    tiles_per_dim = GraphPad::global_nrank;
+    tiles_per_dim = GraphPad::get_global_nrank();
     
     #pragma omp parallel for
     for(int i = 0 ; i < A_edges.nnz ; i++)
@@ -1406,10 +1404,11 @@ void Graph<V,E>::setAllInactive() {
   //memset(active, 0x0, sizeof(bool)*(nvertices));
   //GraphPad::Apply(active, &active, set_all_false);
   active.setAll(false);
+  int global_myrank = GraphPad::get_global_myrank();
   //GraphPad::Clear(&active);
   for(int segmentId = 0 ; segmentId < active.nsegments ; segmentId++)
   {
-    if(active.nodeIds[segmentId] == GraphPad::global_myrank)
+    if(active.nodeIds[segmentId] == global_myrank)
     {
       GraphPad::DenseSegment<bool>* s1 = &(active.segments[segmentId]);
       GraphPad::clear_dense_segment(s1->properties.value, s1->properties.bit_vector, s1->num_ints);
