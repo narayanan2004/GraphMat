@@ -19,16 +19,54 @@ bool edge_compare(const GraphPad::edge_t<T> &e1,
         return false;
 }
 
+template <typename EDGE_T>
+void collect_edges(const GraphPad::edgelist_t<EDGE_T>& in_edges, GraphPad::edgelist_t<EDGE_T>& out_edges) {
+
+    REQUIRE(sizeof(EDGE_T)%sizeof(int) == 0);
+    int T_by_int = sizeof(in_edges.edges[0])/sizeof(int);
+
+    int* OERecvCount = new int[GraphPad::get_global_nrank()];
+    MPI_Allgather(&in_edges.nnz, 1, MPI_INT, OERecvCount, 1, MPI_INT, MPI_COMM_WORLD);
+
+    int* OERecvOffset = new int[GraphPad::get_global_nrank()];
+    int* OERecvCountInt = new int[GraphPad::get_global_nrank()];
+    OERecvOffset[0] = 0;
+    for (int i = 1; i < GraphPad::get_global_nrank(); i++) {
+      OERecvOffset[i] = OERecvOffset[i-1] + T_by_int*OERecvCount[i-1];      
+    }
+    for (int i = 0; i < GraphPad::get_global_nrank(); i++) {
+      OERecvCountInt[i] = T_by_int*OERecvCount[i];
+    }
+
+    int nnz = 0;
+    for (int i = 0; i < GraphPad::get_global_nrank(); i++) {
+      nnz += OERecvCount[i];
+    }
+    out_edges = GraphPad::edgelist_t<EDGE_T>(in_edges.m, in_edges.n, nnz);
+
+    MPI_Allgatherv(in_edges.edges, in_edges.nnz*T_by_int, MPI_INT, out_edges.edges, OERecvCountInt, OERecvOffset, MPI_INT, MPI_COMM_WORLD);
+
+    delete [] OERecvCount;
+    delete [] OERecvCountInt;
+    delete [] OERecvOffset;
+}
+
 template <typename TILE_T, typename EDGE_T>
 void matrix_test(GraphPad::edgelist_t<EDGE_T> E)
 {
-  std::sort(E.edges, E.edges + E.nnz, edge_compare<EDGE_T>);
+    std::sort(E.edges, E.edges + E.nnz, edge_compare<EDGE_T>);
 
   // Create identity matrix from generator
     GraphPad::SpMat<TILE_T> A;
-    GraphPad::AssignSpMat(E, &A, 1, 1, GraphPad::partition_fn_1d);
+    //GraphPad::AssignSpMat(E, &A, 1, 1, GraphPad::partition_fn_1d);
+    GraphPad::AssignSpMat(E, &A, GraphPad::get_global_nrank(), GraphPad::get_global_nrank(), GraphPad::partition_fn_1d);
 
-    REQUIRE(A.getNNZ() == E.nnz);
+    //collect all edges
+    GraphPad::edgelist_t<EDGE_T> EAll;
+    collect_edges(E, EAll);
+    std::sort(EAll.edges, EAll.edges + EAll.nnz, edge_compare<EDGE_T>);
+
+    REQUIRE(A.getNNZ() == EAll.nnz);
     REQUIRE(A.m == E.m);
     REQUIRE(A.n == E.n);
     REQUIRE(A.empty == false);
@@ -36,45 +74,53 @@ void matrix_test(GraphPad::edgelist_t<EDGE_T> E)
     // Get new edgelist from matrix
     GraphPad::edgelist_t<EDGE_T> OE;
     A.get_edges(&OE);
-    std::sort(OE.edges, OE.edges + OE.nnz, edge_compare<EDGE_T>);
 
-    REQUIRE(E.nnz == OE.nnz);
-    REQUIRE(E.m == OE.m);
-    REQUIRE(E.n == OE.n);
-    for(int i = 0 ; i < E.nnz ; i++)
+    //collect all edges
+    GraphPad::edgelist_t<EDGE_T> OEAll;
+    collect_edges(OE, OEAll);
+    std::sort(OEAll.edges, OEAll.edges + OEAll.nnz, edge_compare<EDGE_T>);
+
+    REQUIRE(EAll.nnz == OEAll.nnz);
+    REQUIRE(EAll.m == OEAll.m);
+    REQUIRE(EAll.n == OEAll.n);
+    for(int i = 0 ; i < EAll.nnz ; i++)
     {
-            REQUIRE(E.edges[i].src == OE.edges[i].src);
-            REQUIRE(E.edges[i].dst == OE.edges[i].dst);
-            REQUIRE(E.edges[i].val == OE.edges[i].val);
+            REQUIRE(EAll.edges[i].src == OEAll.edges[i].src);
+            REQUIRE(EAll.edges[i].dst == OEAll.edges[i].dst);
+            REQUIRE(EAll.edges[i].val == OEAll.edges[i].val);
     }
 
     // Test transpose
     GraphPad::SpMat<TILE_T> AT;
-    GraphPad::Transpose(A, &AT, 1, 1, GraphPad::partition_fn_1d);
-    REQUIRE(AT.getNNZ() == E.nnz);
+    GraphPad::Transpose(A, &AT, GraphPad::get_global_nrank(), GraphPad::get_global_nrank(), GraphPad::partition_fn_1d);
+    REQUIRE(AT.getNNZ() == EAll.nnz);
     REQUIRE(AT.m == E.n);
     REQUIRE(AT.n == E.m);
     REQUIRE(AT.empty == false);
 
     GraphPad::SpMat<TILE_T> ATT;
-    GraphPad::Transpose(AT, &ATT, 1, 1, GraphPad::partition_fn_1d);
-    REQUIRE(ATT.getNNZ() == E.nnz);
+    GraphPad::Transpose(AT, &ATT, GraphPad::get_global_nrank(), GraphPad::get_global_nrank(), GraphPad::partition_fn_1d);
+    REQUIRE(ATT.getNNZ() == EAll.nnz);
     REQUIRE(ATT.m == E.m);
     REQUIRE(ATT.n == E.n);
     REQUIRE(ATT.empty == false);
 
     GraphPad::edgelist_t<EDGE_T> OET;
     ATT.get_edges(&OET);
-    std::sort(OET.edges, OET.edges + OET.nnz, edge_compare<EDGE_T>);
 
-    REQUIRE(E.nnz == OET.nnz);
+    //collect edges
+    GraphPad::edgelist_t<EDGE_T> OETAll;
+    collect_edges(OET, OETAll);
+    std::sort(OETAll.edges, OETAll.edges + OETAll.nnz, edge_compare<EDGE_T>);
+
+    REQUIRE(EAll.nnz == OETAll.nnz);
     REQUIRE(E.m == OET.m);
     REQUIRE(E.n == OET.n);
-    for(int i = 0 ; i < E.nnz ; i++)
+    for(int i = 0 ; i < EAll.nnz ; i++)
     {
-            REQUIRE(E.edges[i].src == OET.edges[i].src);
-            REQUIRE(E.edges[i].dst == OET.edges[i].dst);
-            REQUIRE(E.edges[i].val == OET.edges[i].val);
+            REQUIRE(EAll.edges[i].src == OETAll.edges[i].src);
+            REQUIRE(EAll.edges[i].dst == OETAll.edges[i].dst);
+            REQUIRE(EAll.edges[i].val == OETAll.edges[i].val);
     }
 }
 
@@ -89,7 +135,7 @@ void create_matrix_test(int N)
 }
 
 
-TEST_CASE("identity_nnz", "identity_nnz")
+TEST_CASE("matrix_nnz", "matrix_nnz")
 {
   SECTION(" CSRTile basic tests ", "CSRTile basic tests") {
         create_matrix_test<GraphPad::CSRTile<int>, int>(500);

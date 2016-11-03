@@ -41,29 +41,37 @@
 
 template <typename T=int>
 GraphPad::edgelist_t<T> generate_identity_edgelist(int n) {
-  GraphPad::edgelist_t<T> identity_edgelist(n, n, n); 
-  for (int i = 0 ;i < n; i++) {
-    identity_edgelist.edges[i].src = i+1;
-    identity_edgelist.edges[i].dst = i+1;
-    identity_edgelist.edges[i].val = 1;
+  int global_myrank = GraphPad::get_global_myrank();
+  GraphPad::edgelist_t<T> identity_edgelist(n, n, 0);
+  if (global_myrank == 0) {
+    identity_edgelist = GraphPad::edgelist_t<T>(n, n, n); 
+    for (int i = 0 ;i < n; i++) {
+      identity_edgelist.edges[i].src = i+1;
+      identity_edgelist.edges[i].dst = i+1;
+      identity_edgelist.edges[i].val = 1;
+    }
   }
   return identity_edgelist;
 }
 
 template <typename T=int>
 GraphPad::edgelist_t<T> generate_random_edgelist(int n, int avg_nnz_per_row) {
-  GraphPad::edgelist_t<T> random_edgelist(n, n, n*avg_nnz_per_row); 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<> dist(1, n);
+  int global_myrank = GraphPad::get_global_myrank();
+  GraphPad::edgelist_t<T> random_edgelist(n, n, 0);
+  if (global_myrank == 0) {
+    random_edgelist = GraphPad::edgelist_t<T>(n, n, n*avg_nnz_per_row); 
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist(1, n);
 
-  int k = 0;
-  for (int i = 0 ;i < n; i++) {
-    for (int j = 0; j < avg_nnz_per_row; j++) {
-      random_edgelist.edges[k].src = i+1;
-      random_edgelist.edges[k].dst = dist(gen);
-      random_edgelist.edges[k].val = 1;
-      k++;
+    int k = 0;
+    for (int i = 0 ;i < n; i++) {
+      for (int j = 0; j < avg_nnz_per_row; j++) {
+        random_edgelist.edges[k].src = i+1;
+        random_edgelist.edges[k].dst = dist(gen);
+        random_edgelist.edges[k].val = 1;
+        k++;
+      }
     }
   }
   return random_edgelist;
