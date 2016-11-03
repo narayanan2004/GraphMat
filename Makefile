@@ -79,10 +79,16 @@ $(BINDIR)/LDA: $(DEPS) $(MULTINODEDEPS) $(SRCDIR)/LDA.cpp
 $(BINDIR)/DS: $(DEPS) $(SRCDIR)/Delta.cpp
 	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/DS $(SRCDIR)/Delta.cpp
 
-test: $(TESTBINDIR)/mat1
+test: $(TESTBINDIR)/mat1.o $(TESTBINDIR)/test_common.o $(TESTBINDIR)/test
 
-$(TESTBINDIR)/mat1: $(DEPS) $(TESTDIR)/mat1.cpp
-	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include $(CXX_OPTIONS) -o $(TESTBINDIR)/mat1 $(TESTDIR)/mat1.cpp 
+$(TESTBINDIR)/mat1.o: $(DEPS) $(TESTDIR)/mat1.cpp
+	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include $(CXX_OPTIONS) -c $(TESTDIR)/mat1.cpp -o $(TESTBINDIR)/mat1.o 
+
+$(TESTBINDIR)/test_common.o: $(DEPS) $(TESTDIR)/test_common.cpp
+	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include $(CXX_OPTIONS) -c $(TESTDIR)/test_common.cpp -o $(TESTBINDIR)/test_common.o 
+
+$(TESTBINDIR)/test: $(TESTBINDIR)/test_common.o $(TESTBINDIR)/mat1.o
+	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include $(CXX_OPTIONS) -o $(TESTBINDIR)/test $(TESTBINDIR)/test_common.o $(TESTBINDIR)/mat1.o 
 
 clean:
-	rm $(EXE) bin/graph_converter  $(TESTBINDIR)/mat1
+	rm $(EXE) bin/graph_converter  $(TESTBINDIR)/test $(TESTBINDIR)/*.o

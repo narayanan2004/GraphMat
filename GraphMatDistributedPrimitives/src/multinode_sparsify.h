@@ -40,6 +40,7 @@
 template <template <typename> class SpSegmenta, template <typename> class SpSegmentb, typename Ta, typename Tb>
 void Sparsify_tile(const SpVec<SpSegmenta<Ta> > & v_in, SpVec<SpSegmentb<Tb> > * v_out, int start, int end,
                  void (*add_fp)(Ta, bool*, Tb*, void*), void* vsp) {
+  int global_myrank = get_global_myrank();
   for (int i = start; i < end; i++) {
     if (v_in.nodeIds[i] == global_myrank) {
       sparsify_segment(v_in.segments[i], &(v_out->segments[i]), add_fp, vsp);
@@ -50,6 +51,7 @@ void Sparsify_tile(const SpVec<SpSegmenta<Ta> > & v_in, SpVec<SpSegmentb<Tb> > *
 template <template <typename> class SpTilea, template <typename> class SpTileb, typename Ta, typename Tb>
 void Sparsify_tile(const SpMat<SpTilea<Ta> > & v_in, SpMat<SpTileb<Tb> > * v_out, int start_x, int start_y, int end_x, int end_y,
                  void (*add_fp)(Ta, bool*, Tb*, void*), void* vsp) {
+  int global_myrank = get_global_myrank();
   for (int i = start_y; i < end_y; i++) {
     for(int j = start_x ; j < end_x ; j++)
     {

@@ -59,10 +59,9 @@
 
 namespace GraphPad {
 
-uint64_t mul_flops = 0;
+/*uint64_t mul_flops = 0;
 uint64_t add_flops = 0;
 uint64_t add_flops2 = 0;
-uint64_t nnz_C = 0;
 
 double spmspv_send_time = 0;
 double spmspv_mult_time = 0;
@@ -72,7 +71,7 @@ double spmspv_reduce_time = 0;
 int global_myrank = 0;
 int global_nrank = 0;
 
-double COMPRESSION_THRESHOLD;
+double COMPRESSION_THRESHOLD;*/
 
 #include "src/layouts.h"
 #include "src/edgelist.h"
@@ -90,32 +89,36 @@ double COMPRESSION_THRESHOLD;
 #include "src/multinode_sparsify.h"
 #include "src/multinode_clear.h"
 
+inline double get_compression_threshold() {
+  return 0.5;
+}
+
 template <typename T>
 void ReadEdgesBin(edgelist_t<T>* edgelist, const char* fname_in, bool randomize) {
-  load_edgelist(fname_in, global_myrank, global_nrank, edgelist);
+  load_edgelist(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
 
   if (randomize) {
-    randomize_edgelist_square<T>(edgelist, global_nrank);
+    randomize_edgelist_square<T>(edgelist, get_global_nrank());
   }
 }
 
 template <typename T>
 void ReadEdgesTxt(edgelist_t<T>* edgelist, const char* fname_in, bool randomize) {
-  load_edgelist_txt(fname_in, global_myrank, global_nrank, edgelist);
+  load_edgelist_txt(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
 
   if (randomize) {
-    randomize_edgelist_square<T>(edgelist, global_nrank);
+    randomize_edgelist_square<T>(edgelist, get_global_nrank());
   }
 }
 
 template <typename T>
 void WriteEdgesTxt(const edgelist_t<T>& edgelist, const char* fname_in) {
-  write_edgelist_txt(fname_in, global_myrank, global_nrank, edgelist);
+  write_edgelist_txt(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
 }
 
 template <typename T>
 void WriteEdgesBin(const edgelist_t<T>& edgelist, const char* fname_in) {
-  write_edgelist_bin(fname_in, global_myrank, global_nrank, edgelist);
+  write_edgelist_bin(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
 }
 
 
@@ -137,6 +140,7 @@ void AssignSpVec(edgelist_t<T> edgelist, SpVec<T>* vec, int ntx,
 template <template <typename> class SpTile, typename T>
 void WriteTxt(SpMat<SpTile<T> >* mat, char* fname_in) {
   // Print element 0 for now
+  int global_myrank = get_global_myrank();
   if (global_myrank == 0) {
     std::cout << "Element 0: " << mat->tiles[0][0].a[0] << std::endl;
   }
@@ -145,6 +149,7 @@ void WriteTxt(SpMat<SpTile<T> >* mat, char* fname_in) {
 template <typename T>
 void WriteTxt(SpVec<T>* vec, char* fname_in) {
   // Print element 0 for now
+  int global_myrank = get_global_myrank();
   if (global_myrank == 0) {
     std::cout << "Element 0: " << vec->segments[0]->value[0] << std::endl;
   }
@@ -345,10 +350,10 @@ void UnionReduce(const SpVec<Ta> & v1, const SpVec<Tb> & v2, SpVec<Tc> * v3, voi
   UnionReduce_tile(v1, v2, v3, 0, v1.nsegments, op_fp, vsp);
 }
 
-void GB_Init() {
-  MPI_Comm_rank(MPI_COMM_WORLD, &global_myrank);
-  MPI_Comm_size(MPI_COMM_WORLD, &global_nrank);
-  COMPRESSION_THRESHOLD = 0.5;
+inline void GB_Init() {
+  //MPI_Comm_rank(MPI_COMM_WORLD, &global_myrank);
+  //MPI_Comm_size(MPI_COMM_WORLD, &global_nrank);
+  //COMPRESSION_THRESHOLD = 0.5;
 }
 }  // namespace GraphPad
 

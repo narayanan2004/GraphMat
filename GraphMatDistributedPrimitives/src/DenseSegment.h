@@ -37,6 +37,7 @@
 #include "src/edgelist.h"
 #include "src/bitvector.h"
 
+inline double get_compression_threshold();
 
 template <typename T>
 class segment_props
@@ -142,7 +143,7 @@ class DenseSegment {
 
   bool should_compress(int test_nnz)
   {
-    if(test_nnz > COMPRESSION_THRESHOLD * capacity)
+    if(test_nnz > get_compression_threshold() * capacity)
     {
       return false;
     }

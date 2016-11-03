@@ -65,11 +65,11 @@ struct run_graph_program_temp_structure<T,U,V> graph_program_init(const GraphPro
   //rgpts.px = new SparseInVector<T>(g.nvertices);
   //rgpts.py = new SparseOutVector<U>(g.nvertices);
     rgpts.px  = new GraphPad::SpVec<GraphPad::DenseSegment<T> >();
-    rgpts.px->AllocatePartitioned(g.nvertices, GraphPad::global_nrank, GraphPad::vector_partition_fn);
+    rgpts.px->AllocatePartitioned(g.nvertices, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
     T _t;
     rgpts.px->setAll(_t);
     rgpts.py  = new GraphPad::SpVec<GraphPad::DenseSegment<U> >();
-    rgpts.py->AllocatePartitioned(g.nvertices, GraphPad::global_nrank, GraphPad::vector_partition_fn);
+    rgpts.py->AllocatePartitioned(g.nvertices, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
     U _u;
     rgpts.py->setAll(_u);
   return rgpts;
@@ -306,6 +306,7 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
 
   struct timeval start, end, init_start, init_end, iteration_start, iteration_end;
   double time;
+  int global_myrank = GraphPad::get_global_myrank();
   
   //unsigned long long int init_start = __rdtsc();
   gettimeofday(&init_start, 0);
@@ -320,11 +321,11 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
 
   if (rgpts == NULL) {
     px  = new GraphPad::SpVec<GraphPad::DenseSegment<T> >();
-    px->AllocatePartitioned(g.nvertices, GraphPad::global_nrank, GraphPad::vector_partition_fn);
+    px->AllocatePartitioned(g.nvertices, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
     T _t;
     px->setAll(_t);
     py  = new GraphPad::SpVec<GraphPad::DenseSegment<U> >();
-    py->AllocatePartitioned(g.nvertices, GraphPad::global_nrank, GraphPad::vector_partition_fn);
+    py->AllocatePartitioned(g.nvertices, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
     U _u;
     py->setAll(_u);
   }
@@ -451,7 +452,7 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
     //GraphPad::Apply(y, &g.vertexproperty, apply_func<T,U,V>, (void*)gp);
     for(int segmentId = 0 ; segmentId < y.nsegments ; segmentId++)
     {
-      if(y.nodeIds[segmentId] == GraphPad::global_myrank)
+      if(y.nodeIds[segmentId] == global_myrank)
       {
         auto segment = y.segments[segmentId].properties;
         auto vpValueArray = g.vertexproperty.segments[segmentId].properties.value;

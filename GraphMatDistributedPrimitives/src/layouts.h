@@ -36,7 +36,7 @@
 #include <cmath>
 #include <cassert>
 
-void factorize_int(int val, int * res1, int * res2)
+inline void factorize_int(int val, int * res1, int * res2)
 {
   int sqrt_val = static_cast<int>((sqrt(static_cast<int>(val)) + 0.5));
   (*res1) = sqrt_val;
@@ -48,7 +48,7 @@ void factorize_int(int val, int * res1, int * res2)
   }
 }
 
-int partition_fn_2d(int tileid_x, int tileid_y, int num_tiles_x, int num_tiles_y, int nrank) {
+inline int partition_fn_2d(int tileid_x, int tileid_y, int num_tiles_x, int num_tiles_y, int nrank) {
   int nrank_x, nrank_y;
   factorize_int(nrank, &nrank_y, &nrank_x);
   int rank_x = tileid_x % nrank_x;
@@ -56,15 +56,15 @@ int partition_fn_2d(int tileid_x, int tileid_y, int num_tiles_x, int num_tiles_y
   return rank_y + rank_x * nrank_y;
 }
 
-int partition_fn_1d(int tileid_x, int tileid_y, int num_tiles_x, int num_tiles_y, int nrank) {
+inline int partition_fn_1d(int tileid_x, int tileid_y, int num_tiles_x, int num_tiles_y, int nrank) {
   return tileid_y % nrank;
 }
 
-int vector_partition_fn(int tileid, int ntiles, int nrank) {
+inline int vector_partition_fn(int tileid, int ntiles, int nrank) {
   return tileid % nrank;
 }
 
-void get_fn_and_tiles(int layout, int nrank, int (**partition_fn)(int,int,int,int,int), int * tiles_per_dim)
+inline void get_fn_and_tiles(int layout, int nrank, int (**partition_fn)(int,int,int,int,int), int * tiles_per_dim)
 {
   assert(layout == 1 || layout == 2 || layout == 3);
 

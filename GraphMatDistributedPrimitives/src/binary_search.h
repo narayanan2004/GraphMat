@@ -34,7 +34,7 @@
 #define SRC_BINARY_SEARCH_H_
 
 template<typename T>
-T binary_search_left_border(T * vec, T val,  long start,  long end,  long len)
+inline T binary_search_left_border(T * vec, T val,  long start,  long end,  long len)
 {
   if(len == 0) return -1;
 
@@ -77,7 +77,7 @@ T binary_search_left_border(T * vec, T val,  long start,  long end,  long len)
 
 
 template<typename T>
-T binary_search_right_border(T * vec, T val,  long start,  long end,  long len)
+inline T binary_search_right_border(T * vec, T val,  long start,  long end,  long len)
 {
   if(len == 0) return -1;
 
@@ -117,7 +117,7 @@ T binary_search_right_border(T * vec, T val,  long start,  long end,  long len)
   }
 }
 
-int l_binary_search(int start, int end, int * v, int item) {
+inline int l_binary_search(int start, int end, int * v, int item) {
   int e1 = start;
   int e2 = end;
   int eh;
@@ -139,7 +139,7 @@ int l_binary_search(int start, int end, int * v, int item) {
 }
 
 
-int l_linear_search(int start, int end, int * v, int item) {
+inline int l_linear_search(int start, int end, int * v, int item) {
   if(v[0] >= item) return 0;
   for(int i = start ; i < end -1 ; i++)
   {
