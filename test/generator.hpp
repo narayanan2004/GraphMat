@@ -54,6 +54,18 @@ GraphPad::edgelist_t<T> generate_identity_edgelist(int n) {
   return identity_edgelist;
 }
 
+template <typename T>
+bool dst_present(int dst, const GraphPad::edgelist_t<T>& e, const int start, const int end) {
+  bool retval = false;
+  for (int i = start; i < end; i++) {
+    if (e.edges[i].dst == dst) {
+      retval = true;
+      break;
+    }
+  }
+  return retval;
+}
+
 template <typename T=int>
 GraphPad::edgelist_t<T> generate_random_edgelist(int n, int avg_nnz_per_row) {
   int global_myrank = GraphPad::get_global_myrank();
@@ -68,7 +80,12 @@ GraphPad::edgelist_t<T> generate_random_edgelist(int n, int avg_nnz_per_row) {
     for (int i = 0 ;i < n; i++) {
       for (int j = 0; j < avg_nnz_per_row; j++) {
         random_edgelist.edges[k].src = i+1;
-        random_edgelist.edges[k].dst = dist(gen);
+        int dst;
+        do {
+          dst = dist(gen);
+        } while(dst_present(dst, random_edgelist, i*avg_nnz_per_row, k));
+
+        random_edgelist.edges[k].dst = dst;
         random_edgelist.edges[k].val = 1;
         k++;
       }
