@@ -95,10 +95,10 @@ class Graph {
 //    int end_dst_vertices[MAX_PARTS];
 
   public:
-    void MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges, int grid_size, int alloc=1);
+    void MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges, int grid_size=1, int alloc=1);
     void getVertexEdgelist(GraphPad::edgelist_t<V> & myedges);
-    void ReadMTX(const char* filename, int grid_size); 
-    void ReadMTX_sort(const char* filename, int grid_size, int alloc=1); 
+    void ReadMTX(const char* filename, int grid_size=1); 
+    void ReadMTX_sort(const char* filename, int grid_size=1, int alloc=1); 
     //void ReadMTX_sort(edge_t* edges, int m, int n, int nnz, int grid_size, int alloc=1); 
     void setAllActive();
     void setAllInactive();
@@ -935,7 +935,7 @@ void partition_and_build_dcsc(int * &row_pointers,
 
 }
 
-#define CHECK(a,b,c) { if((a)!=(b)) {std::cout << a << " " << b << " ERROR: " << c << std::endl; exit(0);} }
+//#define CHECK(a,b,c) { if((a)!=(b)) {std::cout << a << " " << b << " ERROR: " << c << std::endl; exit(0);} }
 
 template<class V, class E>
 void Graph<V,E>::ReadMTX(const char* filename, int grid_size) {

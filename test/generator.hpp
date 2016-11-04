@@ -93,4 +93,23 @@ GraphPad::edgelist_t<T> generate_random_edgelist(int n, int avg_nnz_per_row) {
   }
   return random_edgelist;
 }
+
+template <typename T=int>
+GraphPad::edgelist_t<T> generate_upper_triangular_edgelist(int n) {
+  int global_myrank = GraphPad::get_global_myrank();
+  GraphPad::edgelist_t<T> ut_edgelist(n, n, 0);
+  if (global_myrank == 0) {
+    ut_edgelist = GraphPad::edgelist_t<T>(n, n, n*(n-1)/2); 
+    int k = 0;
+    for (int i = 0; i < n; i++) {
+      for (int j = i+1; j < n; j++) {
+        ut_edgelist.edges[k].src = i+1;
+        ut_edgelist.edges[k].dst = j+1;
+        ut_edgelist.edges[k].val = 1;
+        k++;
+      }
+    }
+  }
+  return ut_edgelist;
+}
 #endif 

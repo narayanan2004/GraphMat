@@ -1,0 +1,123 @@
+#include "catch.hpp"
+#include "generator.hpp"
+#include <algorithm>
+#include <climits>
+#include "GraphMatRuntime.cpp"
+
+typedef unsigned int depth_type;
+depth_type MAX_DIST = std::numeric_limits<depth_type>::max();
+
+class BFSD {
+  public: 
+    depth_type depth;
+  public:
+    BFSD() {
+      depth = MAX_DIST;
+    }
+    bool operator != (const BFSD& p) {
+      return (this->depth != p.depth);
+    }
+  friend std::ostream &operator<<(std::ostream &outstream, const BFSD & val)
+    {
+      outstream << val.depth; 
+      return outstream;
+    }
+};
+
+class BFS : public GraphProgram<unsigned long long int, unsigned long long int, BFSD> {
+
+  public:
+    depth_type current_depth;
+    
+  public:
+
+  BFS() {
+    current_depth = 1;
+    this->order = OUT_EDGES;
+    this->process_message_requires_vertexprop = false;
+  }
+
+  void reduce_function(unsigned long long int& a, const unsigned long long int& b) const {
+    a=b;
+  }
+
+  void process_message(const unsigned long long int& message, const int edge_val, const BFSD& vertexprop, unsigned long long int &res) const {
+    res = message;
+  }
+
+  bool send_message(const BFSD& vertexprop, unsigned long long int& message) const {
+    message = 0; //dummy placeholder message
+    return (vertexprop.depth == current_depth-1);
+  }
+
+  void apply(const unsigned long long int& message_out, BFSD& vertexprop)  {
+    if (vertexprop.depth == MAX_DIST) {
+      vertexprop.depth = current_depth;
+    }
+  }
+
+  void do_every_iteration(int iteration_number) {
+    current_depth++;
+  }
+
+};
+
+
+void test_bfs(int n) {
+  auto E = generate_upper_triangular_edgelist<int>(n);
+  Graph<BFSD> G;
+  G.MTXFromEdgelist(E);
+
+  REQUIRE(G.getNumberOfVertices() == n);
+
+  BFS bfs_program;
+
+  SECTION ("Running BFS on node 1") {
+    BFSD v;
+    v.depth = 0;
+    G.setVertexproperty(1, v);
+    G.setAllInactive();
+    G.setActive(1);
+
+    run_graph_program(&bfs_program, G, -1); 
+
+    if (G.vertexNodeOwner(1)) 
+      REQUIRE(G.getVertexproperty(1).depth == 0);
+    for (int i = 2; i <= n; i++) {
+      if (G.vertexNodeOwner(i)) 
+        REQUIRE(G.getVertexproperty(i).depth == 1);
+    }
+  }
+
+  SECTION ("Running BFS on node n/2") {
+    BFSD v;
+    v.depth = 0;
+    G.setVertexproperty(n/2, v);
+    G.setAllInactive();
+    G.setActive(n/2);
+
+    run_graph_program(&bfs_program, G, -1); 
+
+    for (int i = 1; i < n/2; i++) {
+      if (G.vertexNodeOwner(i)) 
+        REQUIRE(G.getVertexproperty(i).depth == MAX_DIST);
+    }
+    if (G.vertexNodeOwner(n/2)) 
+      REQUIRE(G.getVertexproperty(n/2).depth == 0);
+    for (int i = n/2 + 1; i <= n; i++) {
+      if (G.vertexNodeOwner(i)) 
+        REQUIRE(G.getVertexproperty(i).depth == 1);
+    }
+  }
+}
+
+
+TEST_CASE("BFS tests", "[bfs][uppertriangular]")
+{
+  SECTION("BFS size 500") {
+    test_bfs(500);
+  }
+  SECTION("BFS size 1000") {
+    test_bfs(1000);
+  }
+}
