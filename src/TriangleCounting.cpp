@@ -246,9 +246,9 @@ void reset_neighbors(TC v, TC* mutable_v, void* params) {
   mutable_v->neighbors_subset.fill(0);
 }
 
-void run_triangle_counting(char* filename, int nthreads) {
+void run_triangle_counting(char* filename) {
   Graph<TC> G;
-  G.ReadMTX(filename, nthreads*4); //nthread pieces of matrix
+  G.ReadMTX(filename); 
   
   int numberOfVertices = G.getNumberOfVertices();
   GetNeighbors gn;
@@ -309,17 +309,8 @@ int main(int argc, char* argv[]) {
   }
   MPI_Init(&argc, &argv);
   GraphPad::GB_Init();
-
-#pragma omp parallel
-  {
-#pragma omp single
-    {
-      nthreads = omp_get_num_threads();
-      printf("num threads got: %d\n", nthreads);
-    }
-  }
-  
-  run_triangle_counting(argv[1], nthreads); 
+ 
+  run_triangle_counting(argv[1]); 
   MPI_Finalize();
 }
 

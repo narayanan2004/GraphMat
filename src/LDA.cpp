@@ -269,10 +269,10 @@ void return_ll(LatentVector<K>* v, double* out, void* param) {
 }
 
 
-void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations=10) {
+void run_lda(char* filename, int ndoc, int nterms, int niterations=10) {
   const int k = 20;
   Graph< LatentVector<k> > G;
-  G.ReadMTX(filename, nthreads*8); //nthread pieces of matrix
+  G.ReadMTX(filename); 
   if (ndoc + nterms != G.getNumberOfVertices()) {
     std::cout << "Number of vertices in graph != NDOC + NTERMS" << std::endl;
     exit(1);
@@ -397,17 +397,6 @@ int main(int argc, char* argv[]) {
 
   int niterations = (argc >= 5)?(atoi(argv[4])):(10);
 
-
-#pragma omp parallel
-  {
-#pragma omp single
-    {
-      nthreads = omp_get_num_threads();
-      printf("num threads got: %d\n", nthreads);
-    }
-  }
-  
-
-  run_lda(argv[1], nthreads, ndoc, nterms, niterations); 
+  run_lda(argv[1], ndoc, nterms, niterations); 
   MPI_Finalize();  
 }

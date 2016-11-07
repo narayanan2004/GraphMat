@@ -86,14 +86,14 @@ class PageRank : public GraphProgram<float, float, PR, E> {
 
 
 template <class edge>
-void run_pagerank(const char* filename, int nthreads) {
+void run_pagerank(const char* filename) {
 
   Graph<PR, edge> G;
   PageRank<edge> pr;
   Degree<PR, edge> dg;
 
  
-  G.ReadMTX(filename, nthreads*8); //nthread pieces of matrix
+  G.ReadMTX(filename); 
 
   auto dg_tmp = graph_program_init(dg, G);
 
@@ -147,16 +147,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-#pragma omp parallel
-  {
-#pragma omp single
-    {
-      nthreads = omp_get_num_threads();
-      printf("num threads got: %d\n", nthreads);
-    }
-  }
-  
-  run_pagerank<int>(input_filename, nthreads);
+  run_pagerank<int>(input_filename);
 
   MPI_Finalize();
 }

@@ -28,134 +28,127 @@
 * ******************************************************************************/
 /* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
+
+#include "catch.hpp"
+#include "generator.hpp"
+#include <algorithm>
+#include <climits>
 #include "GraphMatRuntime.cpp"
 
-#include "Degree.cpp"
+typedef unsigned int depth_type;
+depth_type MAX_DIST = std::numeric_limits<depth_type>::max();
 
-class dPR {
+class BFSD {
+  public: 
+    depth_type depth;
   public:
-    double delta;
-    double pagerank;
-    int degree;
-  public:
-    dPR() {
-      delta = 0.3;
-      pagerank = 0.3;
-      degree = 0;
+    BFSD() {
+      depth = MAX_DIST;
     }
-    int operator!=(const dPR& p) {
-      return (fabs(p.pagerank-this->pagerank)>1e-8);
+    bool operator != (const BFSD& p) {
+      return (this->depth != p.depth);
     }
-    void print() {
-      printf("current pr = %.4lf \n", pagerank);
+  friend std::ostream &operator<<(std::ostream &outstream, const BFSD & val)
+    {
+      outstream << val.depth; 
+      return outstream;
     }
 };
 
-
-class DeltaPageRank : public GraphProgram<double, double, dPR> {
-  public:
-    double alpha;
-    int iter;
+class BFS : public GraphProgram<unsigned long long int, unsigned long long int, BFSD> {
 
   public:
+    depth_type current_depth;
+    
+  public:
 
-  DeltaPageRank(double a=0.3) {
-    alpha = a;
-    iter = 0;
+  BFS() {
+    current_depth = 1;
     this->order = OUT_EDGES;
-    this->activity=ACTIVE_ONLY;
     this->process_message_requires_vertexprop = false;
   }
 
-  void reduce_function(double& a, const double& b) const {
-    a += b;
+  void reduce_function(unsigned long long int& a, const unsigned long long int& b) const {
+    a=b;
   }
-  void process_message(const double& message, const int edge_val, const dPR& vertexprop, double& res) const {
+
+  void process_message(const unsigned long long int& message, const int edge_val, const BFSD& vertexprop, unsigned long long int &res) const {
     res = message;
   }
-  bool send_message(const dPR& vertexprop, double& message) const {
-    if (vertexprop.degree == 0) {
-      message = 0.0;
-    } else {
-      message = vertexprop.delta/(double)vertexprop.degree;
-    }
 
-    return true;
+  bool send_message(const BFSD& vertexprop, unsigned long long int& message) const {
+    message = 0; //dummy placeholder message
+    return (vertexprop.depth == current_depth-1);
   }
 
-  void apply(const double& message_out, dPR& vertexprop) {
-    if (fabs(vertexprop.delta) > 1e-8) vertexprop.delta = 0.0;
-    vertexprop.delta += (1.0-alpha)*message_out;
-    if (fabs(vertexprop.delta) > 1e-8) {
-      vertexprop.pagerank += vertexprop.delta;
+  void apply(const unsigned long long int& message_out, BFSD& vertexprop)  {
+    if (vertexprop.depth == MAX_DIST) {
+      vertexprop.depth = current_depth;
     }
   }
 
   void do_every_iteration(int iteration_number) {
-    iter++;
+    current_depth++;
   }
 
 };
 
-//-------------------------------------------------------------------------
 
+void test_bfs(int n) {
+  auto E = generate_upper_triangular_edgelist<int>(n);
+  Graph<BFSD> G;
+  G.MTXFromEdgelist(E);
 
-void run_pagerank(const char* filename) {
+  REQUIRE(G.getNumberOfVertices() == n);
 
-  Graph<dPR> G;
-  DeltaPageRank dpr;
-  Degree<dPR, int> dg;
-  
-  G.ReadMTX(filename); 
+  BFS bfs_program;
 
-  //auto dg_tmp = graph_program_init(dg, G);
+  SECTION ("Running BFS on node 1") {
+    BFSD v;
+    v.depth = 0;
+    G.setVertexproperty(1, v);
+    G.setAllInactive();
+    G.setActive(1);
 
-  struct timeval start, end;
-  gettimeofday(&start, 0);
+    run_graph_program(&bfs_program, G, -1); 
 
-  G.setAllActive();
-  run_graph_program(&dg, G, 1);
-
-  gettimeofday(&end, 0);
-  double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
-  printf("Degree Time = %.3f ms \n", time);
-
-  //graph_program_clear(dg_tmp);
-  
-  //auto dpr_tmp = graph_program_init(dpr, G);
-
-  gettimeofday(&start, 0);
-
-  G.setAllActive();
-  run_graph_program(&dpr, G, -1);
-  
-  gettimeofday(&end, 0);
-  time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
-  printf("PR Time = %.3f ms \n", time);
-
-  //graph_program_clear(dpr_tmp);
-
-  for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.getNumberOfVertices()); i++) { 
-    if (G.vertexNodeOwner(i)) {
-      printf("%d : %d %f\n", i, G.getVertexproperty(i).degree, G.getVertexproperty(i).pagerank);
+    if (G.vertexNodeOwner(1)) 
+      REQUIRE(G.getVertexproperty(1).depth == 0);
+    for (int i = 2; i <= n; i++) {
+      if (G.vertexNodeOwner(i)) 
+        REQUIRE(G.getVertexproperty(i).depth == 1);
     }
   }
-  
-}
 
-int main(int argc, char* argv[]) {
-  MPI_Init(&argc, &argv);
-  GraphPad::GB_Init();
+  SECTION ("Running BFS on node n/2") {
+    BFSD v;
+    v.depth = 0;
+    G.setVertexproperty(n/2, v);
+    G.setAllInactive();
+    G.setActive(n/2);
 
-  const char* input_filename = argv[1];
+    run_graph_program(&bfs_program, G, -1); 
 
-  if (argc < 2) {
-    printf("Correct format: %s A.mtx\n", argv[0]);
-    return 0;
+    for (int i = 1; i < n/2; i++) {
+      if (G.vertexNodeOwner(i)) 
+        REQUIRE(G.getVertexproperty(i).depth == MAX_DIST);
+    }
+    if (G.vertexNodeOwner(n/2)) 
+      REQUIRE(G.getVertexproperty(n/2).depth == 0);
+    for (int i = n/2 + 1; i <= n; i++) {
+      if (G.vertexNodeOwner(i)) 
+        REQUIRE(G.getVertexproperty(i).depth == 1);
+    }
   }
-  run_pagerank(input_filename);
-
-  MPI_Finalize();
-  
 }
 
+
+TEST_CASE("BFS tests", "[bfs][uppertriangular]")
+{
+  SECTION("BFS size 500") {
+    test_bfs(500);
+  }
+  SECTION("BFS size 1000") {
+    test_bfs(1000);
+  }
+}
