@@ -188,13 +188,13 @@ void reachable_or_not(BFSD2* v, int *result, void* params=nullptr) {
 
 
 template<class edge_type>
-void run_sssp(const char* filename, int nthreads, int v) {
+void run_sssp(const char* filename, int v) {
   //__itt_pause();
 
   Graph<BFSD2, edge_type> G;
   //Graph<SSSPD> G;
   //G.ReadMTX_sort(filename, nthreads*8); //8 nthread pieces of matrix
-  G.ReadMTX(filename, nthreads*8); //8 nthread pieces of matrix
+  G.ReadMTX(filename); 
   //G.ReadMTX(filename, 240*8); //8 nthread pieces of matrix
 
   //BFS b;
@@ -302,18 +302,9 @@ int main (int argc, char* argv[]) {
   }
 
 
-#pragma omp parallel
-  {
-#pragma omp single
-    {
-      nthreads = omp_get_num_threads();
-      printf("num threads got: %d\n", nthreads);
-    }
-  }
-  
   int source_vertex = atoi(argv[2]);
   //run_sssp(input_filename, nthreads, source_vertex-1);
-  run_sssp<int>(input_filename, nthreads, source_vertex);
+  run_sssp<int>(input_filename, source_vertex);
   MPI_Finalize();
  
  
