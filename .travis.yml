@@ -19,6 +19,9 @@ before_install:
 script:
 # - source ~/.bashrc
  - make MPICXX=mpic++ CXX=g++
+ - make MPICXX=mpic++ CXX=g++ test
+ - ./testbin/test
+ - mpirun -np 2 ./testbin/test
 #Uninstall intel tools
 #after_script:
 #  - '[[ ! -z "${INTEL_INSTALL_PATH}" ]] && uninstall_intel_software'
