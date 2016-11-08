@@ -33,6 +33,20 @@
 #ifndef SRC_BINARY_SEARCH_H_
 #define SRC_BINARY_SEARCH_H_
 
+
+/* binary_search_left_border
+ *
+ * Return the index of the leftmost instance of val. 
+ * If val is not found, return -1.
+ *
+ * Inputs
+ * vec: sorted vector
+ * val: element to search for 
+ * start: starting index for search
+ * end: ending index for search
+ * len: total length of the vector
+ */
+
 template<typename T>
 inline T binary_search_left_border(T * vec, T val,  long start,  long end,  long len)
 {
@@ -44,7 +58,14 @@ inline T binary_search_left_border(T * vec, T val,  long start,  long end,  long
     return -1;
   }
 
+  // Exceed bounds
+  if(start >= len) return -1;
+  if(end < 0) return -1;
+
   long mid = start + (end-start)/2;
+
+  assert(mid < len);
+  assert(mid >= 0);
 
   if(vec[mid] == val)
   {
@@ -75,6 +96,18 @@ inline T binary_search_left_border(T * vec, T val,  long start,  long end,  long
 }
 
 
+/* binary_search_right_border
+ *
+ * Return the index of the rightmost instance of val. 
+ * If val is not found, return -1.
+ *
+ * Inputs
+ * vec: sorted vector
+ * val: element to search for 
+ * start: starting index for search
+ * end: ending index for search
+ * len: total length of the vector
+ */
 
 template<typename T>
 inline T binary_search_right_border(T * vec, T val,  long start,  long end,  long len)
@@ -87,7 +120,14 @@ inline T binary_search_right_border(T * vec, T val,  long start,  long end,  lon
     return -1;
   }
 
+  // Exceed bounds
+  if(start >= len) return -1;
+  if(end < 0) return -1;
+
   long mid = start + (end-start)/2;
+
+  assert(mid < len);
+  assert(mid >= 0);
 
   if(vec[mid] == val)
   {
