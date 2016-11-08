@@ -53,12 +53,13 @@ class custom_vertex_type {
 
 
 
-void test_graph(int n) {
+void test_graph_getset(int n) {
   auto E = generate_random_edgelist<int>(n, 16);
   Graph<custom_vertex_type> G;
   G.MTXFromEdgelist(E);
 
   REQUIRE(G.getNumberOfVertices() == n);
+  REQUIRE(G.nnz == n*16);
 
   for (int i = 1; i <= n; i++) {
     if (G.vertexNodeOwner(i)) {
@@ -81,13 +82,44 @@ void test_graph(int n) {
 
 }
 
+void test_graph_size(int n) {
+  {
+    auto E = generate_random_edgelist<int>(n, 16);
+    Graph<custom_vertex_type> G;
+    G.MTXFromEdgelist(E);
+
+    REQUIRE(G.getNumberOfVertices() == n);
+    REQUIRE(G.nnz == n*16);
+  }
+
+  {
+    auto E = generate_dense_edgelist<int>(n);
+    Graph<custom_vertex_type> G;
+    G.MTXFromEdgelist(E);
+
+    REQUIRE(G.getNumberOfVertices() == n);
+    REQUIRE(G.nnz == n*(n-1));
+  }
+
+  {
+    auto E = generate_upper_triangular_edgelist<int>(n);
+    Graph<custom_vertex_type> G;
+    G.MTXFromEdgelist(E);
+
+    REQUIRE(G.getNumberOfVertices() == n);
+    REQUIRE(G.nnz == n*(n-1)/2);
+  }
+}
 
 TEST_CASE("Graph tests", "[random]")
 {
-  SECTION("size 500") {
-    test_graph(500);
+  SECTION("test get set") {
+    test_graph_getset(500);
+    test_graph_getset(1000);
   }
-  SECTION("size 1000") {
-    test_graph(1000);
+  SECTION("test size") {
+    test_graph_size(50);
+    test_graph_size(500);
+    test_graph_size(1000);
   }
 }
