@@ -61,5 +61,25 @@ TEST_CASE("binary search tests", "binary search test")
     REQUIRE(-1 == GraphPad::binary_search_left_border(vec, 6, 0, 8, 8));
   }
 
+  SECTION("Binary search") {
+    int vec[9] = {1,1,2,2,2,5,5,5,5};
+    REQUIRE(0 == GraphPad::l_binary_search(0, 9, vec, 1));
+    REQUIRE(2 == GraphPad::l_binary_search(0, 9, vec, 2));
+    REQUIRE(0 == GraphPad::l_binary_search(0, 9, vec, 0));
+    REQUIRE(5 == GraphPad::l_binary_search(0, 9, vec, 4));
+    REQUIRE(5 == GraphPad::l_binary_search(0, 9, vec, 5));
+    REQUIRE(9 == GraphPad::l_binary_search(0, 9, vec, 7));
+  }
+
+  SECTION("Linear search") {
+    int vec[9] = {1,1,2,2,2,5,5,5,5};
+    REQUIRE(0 == GraphPad::l_linear_search(0, 9, vec, 1));
+    REQUIRE(2 == GraphPad::l_linear_search(0, 9, vec, 2));
+    REQUIRE(0 == GraphPad::l_linear_search(0, 9, vec, 0));
+    REQUIRE(5 == GraphPad::l_linear_search(0, 9, vec, 4));
+    REQUIRE(5 == GraphPad::l_linear_search(0, 9, vec, 5));
+    REQUIRE(9 == GraphPad::l_linear_search(0, 9, vec, 7));
+  }
+
 }
 

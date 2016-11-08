@@ -95,7 +95,6 @@ inline T binary_search_left_border(T * vec, T val,  long start,  long end,  long
   }
 }
 
-
 /* binary_search_right_border
  *
  * Return the index of the rightmost instance of val. 
@@ -157,6 +156,20 @@ inline T binary_search_right_border(T * vec, T val,  long start,  long end,  lon
   }
 }
 
+/* l_binary_search
+ *
+ * Given a sorted sequence of itegers, returns the index where the elements
+ * cross over from being less than item, to being greater than
+ * or equal to item. If all elements are greater than item, then return 0.
+ * If all elements are less than item, then return end.
+ *
+ * Inputs
+ * start: starting index for search
+ * end: ending index for search
+ * v: vector for searching
+ * item: query value
+ */
+
 inline int l_binary_search(int start, int end, int * v, int item) {
   int e1 = start;
   int e2 = end;
@@ -178,7 +191,19 @@ inline int l_binary_search(int start, int end, int * v, int item) {
   return eh;
 }
 
-
+/* l_linear_search
+ *
+ * Given a sorted sequence of itegers, returns the index where the elements
+ * cross over from being less than item, to being greater than
+ * or equal to item. If all elements are greater than item, then return 0.
+ * If all elements are less than item, then return end.
+ *
+ * Inputs
+ * start: starting index for search
+ * end: ending index for search
+ * v: vector for searching
+ * item: query value
+ */
 inline int l_linear_search(int start, int end, int * v, int item) {
   if(v[0] >= item) return 0;
   for(int i = start ; i < end -1 ; i++)
