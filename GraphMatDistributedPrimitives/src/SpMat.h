@@ -194,7 +194,7 @@ if(global_myrank == 0)
       }
   
       delete [] tedges;
-  
+
       unsigned long int * positions = new unsigned long[global_nrank+1];
       unsigned long int * counts = new unsigned long[global_nrank];
       unsigned long int * recv_positions = new unsigned long[global_nrank+1];
@@ -213,11 +213,6 @@ if(global_myrank == 0)
           counts[i] = (point+1) - current_count;
           positions[i] = current_count;
           current_count = (point+1);
-        }
-  
-        if(global_myrank == 0)
-        {
-          std::cout << "point: " << point << "\t" << counts[i] << std::endl;
         }
       }
       positions[global_nrank] = nnz_l;
@@ -304,11 +299,11 @@ if(global_myrank == 0)
 
           // Find left and right
           int start_nz = binary_search_left_border(assignment2, this_tile_id, 0, new_nnz, new_nnz);
-          int end_nz = binary_search_right_border(assignment2, this_tile_id, 0, new_nnz, new_nnz) + 1;
+          int end_nz = binary_search_right_border(assignment2, this_tile_id, 0, new_nnz, new_nnz);
           int nnz = 0;
           if((start_nz != -1) && (end_nz != -1))
           {
-            nnz = end_nz - start_nz;
+            nnz = (end_nz+1) - start_nz;
           }
           if (nnz <= 0) {
             tiles[tile_i][tile_j] = SpTile(tile_m, tile_n);
