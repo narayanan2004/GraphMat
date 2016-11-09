@@ -77,8 +77,8 @@ void test_graph_getset(int n) {
     }
   }
 
-  std::string fname = "/dev/shm/vprop.txt";
-  G.saveVertexproperty(fname);
+  //std::string fname = "/dev/shm/vprop.txt";
+  //G.saveVertexproperty(fname);
 
 }
 
@@ -113,11 +113,11 @@ void test_graph_size(int n) {
 
 TEST_CASE("Graph tests", "[random]")
 {
-  SECTION("test get set") {
+  SECTION("test get set", "[get][set]") {
     test_graph_getset(500);
     test_graph_getset(1000);
   }
-  SECTION("test size") {
+  SECTION("test size", "[size]") {
     test_graph_size(50);
     test_graph_size(500);
     test_graph_size(1000);
