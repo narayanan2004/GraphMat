@@ -52,7 +52,13 @@ class SpVec {
   std::string name;
   int num_tiles_x;
   int (*pfn)(int, int, int);
-  SpVec() { empty = true; }
+  int global_nrank, global_myrank;
+
+  SpVec() { 
+    empty = true; 
+    global_nrank = get_global_nrank();
+    global_myrank = get_global_myrank(); 
+  }
 
   void alloc(int _n, int _nsegments, int* _nodeIds, int* _start_id) {
     // Copy metadata

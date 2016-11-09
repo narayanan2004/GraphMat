@@ -280,7 +280,7 @@ void my_dcsradd(int m, int n, T *a, int *ja, int *ia, T *b, int *jb, int *ib,
 
 #ifdef UNION_PARALLEL_SPA
 
-bool cmp_int_union_parallel(int i1, int i2) { return i1 < i2; }
+inline bool cmp_int_union_parallel(int i1, int i2) { return i1 < i2; }
 
 template <typename T>
 void my_dcsradd(int m, int n, T *a, int *ja, int *ia, T *b, int *jb, int *ib,

@@ -32,7 +32,7 @@
 #include "GraphMatRuntime.cpp"
 
 const int MAX_THREADS = 120;
-unsigned int rseed[16*MAX_THREADS];
+//unsigned int rseed[16*MAX_THREADS];
 
 template <unsigned int K>
 class LatentVector {
@@ -204,15 +204,15 @@ void return_sqerr(V* vertexprop, double* out, void* params) {
   *out = vertexprop->sqerr;
 }
 
-void run_sgd(char* filename, int nthreads) {
+void run_sgd(char* filename) {
   const int k = 20;
   Graph< LatentVector<k> > G;
-  G.ReadMTX(filename, nthreads*8); //nthread pieces of matrix
+  G.ReadMTX(filename); 
 
   srand(0);
-  for (int i = 0; i < nthreads; i++) {
+  /*for (int i = 0; i < nthreads; i++) {
     rseed[16*i] = rand();
-  }
+  }*/
   double err = 0.0;
 
   SGDProgram<k> sgdp(0.001, 0.00000035);
@@ -299,28 +299,7 @@ int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
   GraphPad::GB_Init();
 
-#ifdef __ASSERT
-  printf("\nASSERT***************************************************Asserts are on.*************\n\n");
-#endif
-
-  //int NTHREADS = atoi(argv[2]);
-  //int tid, nt;
-
-#pragma omp parallel
-  {
-#pragma omp single
-    {
-      nthreads = omp_get_num_threads();
-      printf("num threads got: %d\n", nthreads);
-    }
-  }
-  
-
-  //run_pagerank(argv[1], nthreads);
-  //run_bfs(argv[1], nthreads);
-  //run_triangle_counting(argv[1], nthreads); 
-  run_sgd(argv[1], nthreads); 
-  //run_graph_coloring(argv[1], nthreads); 
+  run_sgd(argv[1]); 
   MPI_Finalize(); 
 }
 

@@ -43,6 +43,7 @@ void IntersectReduce_tile(const SpMat<SpTile<Ta> >& mata,
                           const SpMat<SpTile<Tb> >& matb,
                           SpMat<SpTile<Tc> >* matc, int start_x, int start_y,
                           int end_x, int end_y, void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) {
+  int global_myrank = get_global_myrank();
   for (int i = start_y; i < end_y; i++) {
     for (int j = start_x; j < end_x; j++) {
       if (matc->nodeIds[i + j * matc->ntiles_y] == global_myrank) {
@@ -61,7 +62,7 @@ void IntersectReduce_tile(const SpVec<SpSegment<Ta> > & veca,
                           const SpVec<SpSegment<Tb> > & vecb,
                           SpVec<SpSegment<Tc> > * vecc, int start, int end,
                           void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) {
-
+  int global_myrank = get_global_myrank();
   for (int i = start; i < end; i++) {
     if (veca.nodeIds[i] == global_myrank) {
       intersect_segment(veca.segments[i], vecb.segments[i], &(vecc->segments[i]), op_fp, vsp);

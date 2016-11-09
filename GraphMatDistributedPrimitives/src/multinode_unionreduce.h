@@ -40,6 +40,7 @@ template <template <typename> class SpTile, typename T>
 void UnionReduce_tile(const SpMat<SpTile<T> >& mata, SpMat<SpTile<T> >* matb,
                       int start_x, int start_y, int end_x, int end_y,
                       T (*op_fp)(T, T)) {
+  int global_myrank = get_global_myrank();
   for (int i = start_y; i < end_y; i++) {
     for (int j = start_x; j < end_x; j++) {
       if (matb->nodeIds[i + j * matb->ntiles_y] == global_myrank) {
@@ -57,6 +58,7 @@ void UnionReduce_tile(const SpVec<Ta> & veca,
                           const SpVec<Tb> & vecb,
                           SpVec<Tc> * vecc, int start, int end,
                           void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) {
+  int global_myrank = get_global_myrank();
   for (int i = start; i < end; i++) {
     if (veca.nodeIds[i] == global_myrank) {
       union_segment(veca.segments[i], vecb.segments[i], &(vecc->segments[i]), op_fp, vsp);

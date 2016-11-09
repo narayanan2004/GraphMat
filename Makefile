@@ -1,5 +1,8 @@
 
 DIST_PRIMITIVES_PATH=GraphMatDistributedPrimitives
+CATCHDIR=./test/Catch
+TESTDIR=./test
+TESTBINDIR=./testbin
 include $(DIST_PRIMITIVES_PATH)/Make.inc
 
 MPICXX=mpiicpc
@@ -42,7 +45,7 @@ BINDIR=bin
 
 SOURCES=$(SRCDIR)/PageRank.cpp $(SRCDIR)/Degree.cpp $(SRCDIR)/BFS.cpp $(SRCDIR)/SGD.cpp $(SRCDIR)/TriangleCounting.cpp $(SRCDIR)/SSSP.cpp $(SRCDIR)/Delta.cpp
 
-DEPS=$(SRCDIR)/SPMV.cpp $(SRCDIR)/Graph.cpp $(SRCDIR)/GraphProgram.cpp $(SRCDIR)/SparseVector.cpp $(SRCDIR)/GraphMatRuntime.cpp $(DIST_PRIMITIVES_PATH)/src/layouts.h $(DIST_PRIMITIVES_PATH)/src/graphpad.h
+DEPS=$(SRCDIR)/SPMV.cpp $(SRCDIR)/Graph.cpp $(SRCDIR)/GraphProgram.cpp $(SRCDIR)/GraphMatRuntime.cpp $(DIST_PRIMITIVES_PATH)/src/layouts.h $(DIST_PRIMITIVES_PATH)/src/graphpad.h
 
 EXE=$(BINDIR)/PageRank $(BINDIR)/IncrementalPageRank $(BINDIR)/BFS $(BINDIR)/SSSP $(BINDIR)/LDA $(BINDIR)/SGD $(BINDIR)/TriangleCounting #$(BINDIR)/DS
 
@@ -76,5 +79,19 @@ $(BINDIR)/LDA: $(DEPS) $(MULTINODEDEPS) $(SRCDIR)/LDA.cpp
 $(BINDIR)/DS: $(DEPS) $(SRCDIR)/Delta.cpp
 	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/DS $(SRCDIR)/Delta.cpp
 
+# --- Test --- #
+test: $(TESTBINDIR)/test 
+test_headers = $(wildcard $(TESTDIR)/*.hpp)
+test_src = $(wildcard $(TESTDIR)/*.cpp)
+test_objects = $(patsubst $(TESTDIR)/%.cpp, $(TESTBINDIR)/%.o, $(test_src))
+
+$(TESTBINDIR)/%.o : $(TESTDIR)/%.cpp $(DEPS) $(test_headers) 
+	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include $(CXX_OPTIONS) -c $< -o $@
+
+$(TESTBINDIR)/test: $(test_objects) 
+	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include $(CXX_OPTIONS) -o $(TESTBINDIR)/test $(test_objects)
+
+# --- clean --- #
+
 clean:
-	rm $(EXE) bin/graph_converter 
+	rm $(EXE) bin/graph_converter $(TESTBINDIR)/test $(test_objects)

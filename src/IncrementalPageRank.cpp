@@ -100,13 +100,13 @@ class DeltaPageRank : public GraphProgram<double, double, dPR> {
 //-------------------------------------------------------------------------
 
 
-void run_pagerank(const char* filename, int nthreads) {
+void run_pagerank(const char* filename) {
 
   Graph<dPR> G;
   DeltaPageRank dpr;
   Degree<dPR, int> dg;
   
-  G.ReadMTX(filename, nthreads*4); //nthread*4 pieces of matrix
+  G.ReadMTX(filename); 
 
   //auto dg_tmp = graph_program_init(dg, G);
 
@@ -153,18 +153,7 @@ int main(int argc, char* argv[]) {
     printf("Correct format: %s A.mtx\n", argv[0]);
     return 0;
   }
-
-#pragma omp parallel
-  {
-#pragma omp single
-    {
-      nthreads = omp_get_num_threads();
-      printf("num threads got: %d\n", nthreads);
-    }
-  }
-  
-
-  run_pagerank(input_filename, nthreads);
+  run_pagerank(input_filename);
 
   MPI_Finalize();
   

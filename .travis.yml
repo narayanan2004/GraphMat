@@ -18,7 +18,12 @@ before_install:
 # Build steps
 script:
 # - source ~/.bashrc
+ - git submodule init
+ - git submodule update
  - make MPICXX=mpic++ CXX=g++
+ - make MPICXX=mpic++ CXX=g++ test
+ - ./testbin/test
+ - mpirun -np 4 ./testbin/test
 #Uninstall intel tools
 #after_script:
 #  - '[[ ! -z "${INTEL_INSTALL_PATH}" ]] && uninstall_intel_software'

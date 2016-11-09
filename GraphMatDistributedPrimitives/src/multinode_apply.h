@@ -41,7 +41,7 @@ template <template<typename> class SpSegment, typename Ta, typename Tb>
 void Apply_tile(const SpVec<SpSegment<Ta> > & v_in, SpVec<SpSegment<Tb> > * v_out, int start, int end,
                  void (*add_fp)(Ta, Tb*, void*), void* vsp) {
   for (int i = start; i < end; i++) {
-    if (v_in.nodeIds[i] == global_myrank) {
+    if (v_in.nodeIds[i] == v_in.global_myrank) {
       apply_segment(v_in.segments[i], &(v_out->segments[i]), add_fp, vsp);
     }
   }
@@ -54,7 +54,7 @@ void Apply_tile(const SpMat<SpTilea<Ta> > & v_in, SpMat<SpTileb<Tb> > * v_out, i
   for (int i = start_y; i < end_y; i++) {
     for(int j = start_x ; j < end_x ; j++)
     {
-      if (v_in.nodeIds[i + j * v_in.ntiles_y] == global_myrank) {
+      if (v_in.nodeIds[i + j * v_in.ntiles_y] == v_in.global_myrank) {
         apply_tile(v_in.tiles[i][j], &(v_out->tiles[i][j]), add_fp, vsp);
       }
     }

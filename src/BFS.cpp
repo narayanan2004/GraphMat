@@ -215,10 +215,10 @@ class Calc_Parent : public GraphProgram<ID_depth, ID_depth, BFSD2> {
 };
 
 
-void run_bfs(char* filename, int nthreads, int v) {
+void run_bfs(char* filename, int v) {
   //Graph<BFSD> G;
   Graph<BFSD2> G;
-  G.ReadMTX(filename, nthreads*4); //nthread pieces of matrix
+  G.ReadMTX(filename); 
   
   //for (int i = 0; i < G.nvertices; i++) G.vertexproperty[i].id = i;
   for(int i = 0 ; i < G.getNumberOfVertices() ; i++)
@@ -269,13 +269,13 @@ void run_bfs(char* filename, int nthreads, int v) {
   }
   MPI_Allreduce(MPI_IN_PLACE, &reachable_vertices, 1,  MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-  if (GraphPad::global_myrank == 0) printf("Reachable vertices = %d \n", reachable_vertices);
+  if (GraphPad::get_global_myrank() == 0) printf("Reachable vertices = %d \n", reachable_vertices);
 
   for (int i = 1; i <= std::min(10, G.nvertices); i++) {
     if (G.vertexNodeOwner(i))
     if (G.getVertexproperty(i).depth < 255) {
       //printf("Depth %d : %d \n", i, G.vertexproperty[i].depth);
-      printf("Depth %d : %d parent: %d\n", i, G.getVertexproperty(i).depth, G.getVertexproperty(i).parent);
+      printf("Depth %d : %d parent: %lld\n", i, G.getVertexproperty(i).depth, G.getVertexproperty(i).parent);
     }
     else {
       printf("Depth %d : INF \n", i);
@@ -302,26 +302,9 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-#ifdef __ASSERT
-  printf("\nASSERT***************************************************Asserts are on.*************\n\n");
-#endif
-
-  //int NTHREADS = atoi(argv[2]);
-  //int tid, nt;
-
-#pragma omp parallel
-  {
-#pragma omp single
-    {
-      nthreads = omp_get_num_threads();
-      printf("num threads got: %d\n", nthreads);
-    }
-  }
-  
-
   int source_vertex = atoi(argv[2]);
   //run_bfs(argv[1], nthreads, source_vertex-1);
-  run_bfs(argv[1], nthreads, source_vertex);
+  run_bfs(argv[1], source_vertex);
 
   MPI_Finalize();
   
