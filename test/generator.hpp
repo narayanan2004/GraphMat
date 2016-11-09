@@ -71,6 +71,9 @@ GraphPad::edgelist_t<T> generate_random_edgelist(int n, int avg_nnz_per_row) {
   int global_myrank = GraphPad::get_global_myrank();
   GraphPad::edgelist_t<T> random_edgelist(n, n, 0);
   if (global_myrank == 0) {
+    if (avg_nnz_per_row > n) { 
+      avg_nnz_per_row = n;
+    }
     random_edgelist = GraphPad::edgelist_t<T>(n, n, n*avg_nnz_per_row); 
     std::random_device rd;
     std::mt19937 gen(rd());

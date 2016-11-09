@@ -168,15 +168,19 @@ void create_matrix_test(int N)
 TEST_CASE("matrix_nnz", "matrix_nnz")
 {
   SECTION(" CSRTile basic tests ", "CSRTile basic tests") {
+        create_matrix_test<GraphPad::CSRTile<int>, int>(5);
         create_matrix_test<GraphPad::CSRTile<int>, int>(500);
   }
   SECTION(" DCSCTile basic tests ", "CSRTile basic tests") {
+        create_matrix_test<GraphPad::DCSCTile<int>, int>(5);
         create_matrix_test<GraphPad::DCSCTile<int>, int>(500);
   }
   SECTION(" COOTile basic tests ", "CSRTile basic tests") {
+        create_matrix_test<GraphPad::COOTile<int>, int>(5);
         create_matrix_test<GraphPad::COOTile<int>, int>(500);
   }
   SECTION(" COOSIMD32Tile basic tests ", "CSRTile basic tests") {
+        create_matrix_test<GraphPad::COOSIMD32Tile<int>, int>(5);
         create_matrix_test<GraphPad::COOSIMD32Tile<int>, int>(500);
   }
 }
