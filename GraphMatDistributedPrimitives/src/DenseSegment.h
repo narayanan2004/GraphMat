@@ -490,7 +490,8 @@ class DenseSegment {
     {
       if(get_bitvector(i, properties.bit_vector))
       {
-        edges[mycnt].src = start_nz + mycnt + 1;
+        edges[mycnt].src = start_nz + i + 1;
+        edges[mycnt].dst = 1;
         edges[mycnt].val = properties.value[i];
         mycnt++;
       }
