@@ -88,7 +88,6 @@ void matrix_test(GraphPad::edgelist_t<EDGE_T> E)
 
   // Create identity matrix from generator
     GraphPad::SpMat<TILE_T> A;
-    //GraphPad::AssignSpMat(E, &A, 1, 1, GraphPad::partition_fn_1d);
     GraphPad::AssignSpMat(E, &A, GraphPad::get_global_nrank(), GraphPad::get_global_nrank(), GraphPad::partition_fn_1d);
 
     //collect all edges
@@ -236,4 +235,56 @@ TEST_CASE("spgemm", "spgemm")
   }
 }
 
+template <typename TILE_T, typename EDGE_T>
+void create_spmv_identity_test(int N) {
+    auto E1 = generate_identity_edgelist<EDGE_T>(N);
+    GraphPad::SpMat<TILE_T> A;
+    GraphPad::AssignSpMat(E1, &A, GraphPad::get_global_nrank(), GraphPad::get_global_nrank(), GraphPad::partition_fn_1d);
+    
+    auto E2 = generate_random_vector_edgelist<EDGE_T>(N, N/10);
+    GraphPad::SpVec<GraphPad::DenseSegment<EDGE_T> > x;
+    x.AllocatePartitioned(N, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
+    x.ingestEdgelist(E2);
 
+    GraphPad::SpVec<GraphPad::DenseSegment<EDGE_T> > y;
+    y.AllocatePartitioned(N, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
+    GraphPad::Clear(&y);
+
+    GraphPad::SpMSpV(A, x, &y, mul, add, NULL);
+
+    REQUIRE(x.getNNZ() == y.getNNZ());
+
+    GraphPad::edgelist_t<EDGE_T> E3;
+    GraphPad::edgelist_t<EDGE_T> E4;
+    y.get_edges(&E3);
+    collect_edges(E3, E4);
+    std::sort(E4.edges, E4.edges + E4.nnz, edge_compare<EDGE_T>);
+    for (int i = 0; i < E3.nnz; i++) {
+      printf("%d %d %lf\n", E3.edges[i].src, E3.edges[i].dst, E3.edges[i].val);
+    }
+
+    GraphPad::edgelist_t<EDGE_T> E5;
+    collect_edges(E2, E5);
+    std::sort(E5.edges, E5.edges + E5.nnz, edge_compare<EDGE_T>);
+    for (int i = 0; i < E5.nnz; i++) {
+      printf("%d %d %lf\n", E5.edges[i].src, E5.edges[i].dst, E5.edges[i].val);
+    }
+    for (int i = 0; i < E2.nnz; i++) {
+      printf("%d %d %lf\n", E2.edges[i].src, E2.edges[i].dst, E2.edges[i].val);
+    }
+
+    REQUIRE(E4.nnz == E5.nnz);
+    for (int i = 0; i < E4.nnz; i++) {
+      REQUIRE(E5.edges[i].dst == E4.edges[i].dst);
+      REQUIRE(E5.edges[i].src == E4.edges[i].src);
+      REQUIRE(E5.edges[i].val == E4.edges[i].val);
+    }
+}
+
+
+TEST_CASE("spmv", "spmv") 
+{
+  SECTION("CSR mvm") {
+    create_spmv_identity_test<GraphPad::CSRTile<double>, double>(100);
+  }
+}
