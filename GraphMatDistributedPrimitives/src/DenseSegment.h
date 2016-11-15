@@ -156,8 +156,6 @@ class DenseSegment {
     {
       return;
     }
-    assert(properties.allocated);
-    assert(!properties.uninitialized);
     properties.compressed_indices = reinterpret_cast<int*>(properties.compressed_data + properties.nnz);
 
     int npartitions = omp_get_max_threads() * 16;
