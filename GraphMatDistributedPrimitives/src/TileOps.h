@@ -288,10 +288,13 @@ void mult_segment(const COOTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
   segmenty->alloc();
   segmenty->initialize();
   int nnz = 0;
-  my_coospmspv(tile.a, tile.ia, tile.ja, tile.num_partitions, tile.partition_start,
-               segmentx.properties.value, segmentx.properties.bit_vector,
-               segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
-               mul_fp, add_fp, vsp);
+  if(tile.nnz > 0)
+  {
+    my_coospmspv(tile.a, tile.ia, tile.ja, tile.num_partitions, tile.partition_start,
+                 segmentx.properties.value, segmentx.properties.bit_vector,
+                 segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
+                 mul_fp, add_fp, vsp);
+  }
   segmenty->properties.nnz = segmenty->compute_nnz();
 }
 
@@ -302,10 +305,13 @@ void mult_segment(const COOSIMD32Tile<Ta>& tile, const DenseSegment<Tx>& segment
   segmenty->alloc();
   segmenty->initialize();
   int nnz = 0;
-  my_coospmspv(tile.a, tile.ia, tile.ja, tile.num_partitions, tile.partition_start,
-               segmentx.properties.value, segmentx.properties.bit_vector,
-               segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
-               mul_fp, add_fp, vsp);
+  if(tile.nnz > 0)
+  {
+    my_coospmspv(tile.a, tile.ia, tile.ja, tile.num_partitions, tile.partition_start,
+                 segmentx.properties.value, segmentx.properties.bit_vector,
+                 segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
+                 mul_fp, add_fp, vsp);
+  }
   segmenty->properties.nnz = segmenty->compute_nnz();
 }
 
