@@ -32,6 +32,26 @@ Use `numactl` for NUMA (multi-socket) systems if you are running 1 MPI rank on a
     mpirun -np <NRANKS> numactl -i all bin/PageRank < graph file >
     mpirun -np <NRANKS> numactl -i all bin/BFS < graph file > < start vertex >
 
+To compile and run tests:
+-------------------------
+
+GraphMat uses Catch, a C++ based testing framework.
+  
+    git submodule init
+    git submodule update
+    make test
+
+To run all the tests,
+
+    ./testbin/test 
+
+You can also do 
+    ./testbin/test -? 
+to list all the options available
+
+Converting data to GraphMat compatible format:
+----------------------------------------------
+
 You can convert an edge list file to GraphMat compatible format using
 the `graph_converter` utility. GraphMat works on a binary graph
 format.
@@ -44,6 +64,9 @@ To convert from a text file with 3 white space separated columns
 You can remove selfloops and duplicatededges (when multiple edges with
 same src and dst are found, only one is retained) by changing their
 values in the command line from 1 to 0.
+
+References:
+-----------
 
 If you use GraphMat in your work, please cite the following papers:
 
