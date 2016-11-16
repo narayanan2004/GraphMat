@@ -33,53 +33,7 @@
 #include "catch.hpp"
 #include "generator.hpp"
 #include <algorithm>
-
-
-
-template<typename T>
-bool edge_compare(const GraphPad::edge_t<T> &e1,
-                  const GraphPad::edge_t<T> &e2)
-{
-        if( (e1.src < e2.src) ||
-            ((e1.src == e2.src) && (e1.dst < e2.dst)) ||
-            ((e1.src == e2.src) && (e1.dst == e2.dst) && (e1.val < e2.val)) )
-        {
-                return true;
-        }
-        return false;
-}
-
-template <typename EDGE_T>
-void collect_edges(const GraphPad::edgelist_t<EDGE_T>& in_edges, GraphPad::edgelist_t<EDGE_T>& out_edges) {
-
-    REQUIRE(sizeof(EDGE_T)%sizeof(int) == 0);
-    int T_by_int = sizeof(in_edges.edges[0])/sizeof(int);
-
-    int* OERecvCount = new int[GraphPad::get_global_nrank()];
-    MPI_Allgather(&in_edges.nnz, 1, MPI_INT, OERecvCount, 1, MPI_INT, MPI_COMM_WORLD);
-
-    int* OERecvOffset = new int[GraphPad::get_global_nrank()];
-    int* OERecvCountInt = new int[GraphPad::get_global_nrank()];
-    OERecvOffset[0] = 0;
-    for (int i = 1; i < GraphPad::get_global_nrank(); i++) {
-      OERecvOffset[i] = OERecvOffset[i-1] + T_by_int*OERecvCount[i-1];      
-    }
-    for (int i = 0; i < GraphPad::get_global_nrank(); i++) {
-      OERecvCountInt[i] = T_by_int*OERecvCount[i];
-    }
-
-    int nnz = 0;
-    for (int i = 0; i < GraphPad::get_global_nrank(); i++) {
-      nnz += OERecvCount[i];
-    }
-    out_edges = GraphPad::edgelist_t<EDGE_T>(in_edges.m, in_edges.n, nnz);
-
-    MPI_Allgatherv(in_edges.edges, in_edges.nnz*T_by_int, MPI_INT, out_edges.edges, OERecvCountInt, OERecvOffset, MPI_INT, MPI_COMM_WORLD);
-
-    delete [] OERecvCount;
-    delete [] OERecvCountInt;
-    delete [] OERecvOffset;
-}
+#include "test_utils.hpp"
 
 template <typename TILE_T, typename EDGE_T>
 void matrix_test(GraphPad::edgelist_t<EDGE_T> E)
@@ -184,11 +138,6 @@ TEST_CASE("matrix_nnz", "matrix_nnz")
   }
 }
 
-template <typename T>
-void mul(T a, T b, T * c, void* vsp) {*c = a*b;}
-
-template <typename T>
-void add(T a, T b, T * c, void* vsp) {*c = a+b;}
 
 template <typename TILE_T, typename EDGE_T>
 void spgemm_IxI_test(GraphPad::edgelist_t<EDGE_T> E, 
@@ -235,67 +184,4 @@ TEST_CASE("spgemm", "spgemm")
   }
 }
 
-template <typename TILE_T, typename EDGE_T>
-void create_spmv_identity_test(int N) {
-  // create identity matrix
-  auto E1 = generate_identity_edgelist<EDGE_T>(N);
-  GraphPad::SpMat<TILE_T> A;
-  GraphPad::AssignSpMat(E1, &A, GraphPad::get_global_nrank(), GraphPad::get_global_nrank(), GraphPad::partition_fn_1d);
 
-  //create random sparse vector
-  auto E2 = generate_random_vector_edgelist<EDGE_T>(N, N/10);
-  GraphPad::SpVec<GraphPad::DenseSegment<EDGE_T> > x;
-  x.AllocatePartitioned(N, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
-  x.ingestEdgelist(E2);
-
-  //create output vector
-  GraphPad::SpVec<GraphPad::DenseSegment<EDGE_T> > y;
-  y.AllocatePartitioned(N, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
-  GraphPad::Clear(&y);
-
-  //do SPMV: y = A * x
-  GraphPad::SpMSpV(A, x, &y, mul, add, NULL);
-
-  //Collect elements of y
-  GraphPad::edgelist_t<EDGE_T> E3;
-  GraphPad::edgelist_t<EDGE_T> E4;
-  y.get_edges(&E3);
-  collect_edges(E3, E4);
-  std::sort(E4.edges, E4.edges + E4.nnz, edge_compare<EDGE_T>);
-
-  //Collect elements of x
-  GraphPad::edgelist_t<EDGE_T> E5;
-  collect_edges(E2, E5);
-  std::sort(E5.edges, E5.edges + E5.nnz, edge_compare<EDGE_T>);
-
-  //Compare x == y
-  REQUIRE(x.getNNZ() == y.getNNZ());
-  REQUIRE(E4.nnz == E5.nnz);
-  for (int i = 0; i < E4.nnz; i++) {
-    REQUIRE(E5.edges[i].dst == E4.edges[i].dst);
-    REQUIRE(E5.edges[i].src == E4.edges[i].src);
-    REQUIRE(E5.edges[i].val == E4.edges[i].val);
-  }
-}
-
-
-TEST_CASE("spmv", "spmv") 
-{
-  SECTION("CSR mvm") {
-    create_spmv_identity_test<GraphPad::CSRTile<double>, double>(5000);
-    create_spmv_identity_test<GraphPad::CSRTile<double>, double>(10);
-  }
-  SECTION("DCSC mvm") {
-    create_spmv_identity_test<GraphPad::DCSCTile<double>, double>(5000);
-    create_spmv_identity_test<GraphPad::DCSCTile<double>, double>(10);
-  }
-  SECTION("COO mvm") {
-    create_spmv_identity_test<GraphPad::COOTile<double>, double>(5000);
-    create_spmv_identity_test<GraphPad::COOTile<double>, double>(10);
-  }
-  SECTION("COOSIMD32 mvm") {
-    create_spmv_identity_test<GraphPad::COOSIMD32Tile<double>, double>(5000);
-    create_spmv_identity_test<GraphPad::COOSIMD32Tile<double>, double>(10);
-  }
-
-}
