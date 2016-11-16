@@ -259,19 +259,10 @@ void create_spmv_identity_test(int N) {
     y.get_edges(&E3);
     collect_edges(E3, E4);
     std::sort(E4.edges, E4.edges + E4.nnz, edge_compare<EDGE_T>);
-    for (int i = 0; i < E3.nnz; i++) {
-      printf("%d %d %lf\n", E3.edges[i].src, E3.edges[i].dst, E3.edges[i].val);
-    }
 
     GraphPad::edgelist_t<EDGE_T> E5;
     collect_edges(E2, E5);
     std::sort(E5.edges, E5.edges + E5.nnz, edge_compare<EDGE_T>);
-    for (int i = 0; i < E5.nnz; i++) {
-      printf("%d %d %lf\n", E5.edges[i].src, E5.edges[i].dst, E5.edges[i].val);
-    }
-    for (int i = 0; i < E2.nnz; i++) {
-      printf("%d %d %lf\n", E2.edges[i].src, E2.edges[i].dst, E2.edges[i].val);
-    }
 
     REQUIRE(E4.nnz == E5.nnz);
     for (int i = 0; i < E4.nnz; i++) {
@@ -285,6 +276,7 @@ void create_spmv_identity_test(int N) {
 TEST_CASE("spmv", "spmv") 
 {
   SECTION("CSR mvm") {
-    create_spmv_identity_test<GraphPad::CSRTile<double>, double>(100);
+    create_spmv_identity_test<GraphPad::CSRTile<double>, double>(5000);
+    create_spmv_identity_test<GraphPad::CSRTile<double>, double>(10);
   }
 }
