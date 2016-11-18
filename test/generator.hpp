@@ -121,16 +121,14 @@ GraphPad::edgelist_t<T> generate_dense_edgelist(int n) {
   int global_myrank = GraphPad::get_global_myrank();
   GraphPad::edgelist_t<T> dense_edgelist(n, n, 0);
   if (global_myrank == 0) {
-    dense_edgelist = GraphPad::edgelist_t<T>(n, n, n*(n-1)); 
+    dense_edgelist = GraphPad::edgelist_t<T>(n, n, n*n); 
     int k = 0;
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
-        if (i != j) {
-          dense_edgelist.edges[k].src = i+1;
-          dense_edgelist.edges[k].dst = j+1;
-          dense_edgelist.edges[k].val = 1;
-          k++;
-        }
+        dense_edgelist.edges[k].src = i+1;
+        dense_edgelist.edges[k].dst = j+1;
+        dense_edgelist.edges[k].val = 1;
+        k++;
       }
     }
   }

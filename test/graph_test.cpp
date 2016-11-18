@@ -98,7 +98,7 @@ void test_graph_size(int n) {
     G.MTXFromEdgelist(E);
 
     REQUIRE(G.getNumberOfVertices() == n);
-    REQUIRE(G.nnz == n*(n-1));
+    REQUIRE(G.nnz == n*n);
   }
 
   {
