@@ -64,14 +64,14 @@ class Graph {
     bool vertexID_randomization;
 
 
-    GraphPad::SpMat<GraphPad::DCSCTile<E> > A;
-    GraphPad::SpMat<GraphPad::DCSCTile<E> > AT;
-    GraphPad::SpVec<GraphPad::DenseSegment<V> > vertexproperty;
-    GraphPad::SpVec<GraphPad::DenseSegment<bool> > active;
+    GMDP::SpMat<GMDP::DCSCTile<E> > A;
+    GMDP::SpMat<GMDP::DCSCTile<E> > AT;
+    GMDP::SpVec<GMDP::DenseSegment<V> > vertexproperty;
+    GMDP::SpVec<GMDP::DenseSegment<bool> > active;
 
   public:
-    void MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges);
-    void getVertexEdgelist(GraphPad::edgelist_t<V> & myedges);
+    void MTXFromEdgelist(GMDP::edgelist_t<E> A_edges);
+    void getVertexEdgelist(GMDP::edgelist_t<V> & myedges);
     void ReadMTX(const char* filename, int grid_size=1); //grid_size is deprecated
     void setAllActive();
     void setAllInactive();
@@ -136,9 +136,9 @@ int Graph<V,E>::nativeToVertex(int vertex, int nsegments, int len) const
 }
 
 template<class V, class E>
-void Graph<V,E>::MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges) {
+void Graph<V,E>::MTXFromEdgelist(GMDP::edgelist_t<E> A_edges) {
 
-  //if (GraphPad::global_nrank == 1) {
+  //if (GMDP::global_nrank == 1) {
   //  vertexID_randomization = false;
   //} else {
   vertexID_randomization = true;
@@ -147,7 +147,7 @@ void Graph<V,E>::MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges) {
   struct timeval start, end;
   gettimeofday(&start, 0);
   {
-    tiles_per_dim = GraphPad::get_global_nrank();
+    tiles_per_dim = GMDP::get_global_nrank();
     
     #pragma omp parallel for
     for(int i = 0 ; i < A_edges.nnz ; i++)
@@ -156,32 +156,32 @@ void Graph<V,E>::MTXFromEdgelist(GraphPad::edgelist_t<E> A_edges) {
       A_edges.edges[i].dst = vertexToNative(A_edges.edges[i].dst, tiles_per_dim, A_edges.m);
     }
 
-    GraphPad::AssignSpMat(A_edges, &A, tiles_per_dim, tiles_per_dim, GraphPad::partition_fn_2d);
-    GraphPad::Transpose(A, &AT, tiles_per_dim, tiles_per_dim, GraphPad::partition_fn_2d);
+    GMDP::AssignSpMat(A_edges, &A, tiles_per_dim, tiles_per_dim, GMDP::partition_fn_2d);
+    GMDP::Transpose(A, &AT, tiles_per_dim, tiles_per_dim, GMDP::partition_fn_2d);
 
     int m_ = A.m;
     assert(A.m == A.n);
     nnz = A.getNNZ();
-      vertexproperty.AllocatePartitioned(A.m, tiles_per_dim, GraphPad::vector_partition_fn);
+      vertexproperty.AllocatePartitioned(A.m, tiles_per_dim, GMDP::vector_partition_fn);
       V *__v = new V;
       vertexproperty.setAll(*__v);
       delete __v;
-      active.AllocatePartitioned(A.m, tiles_per_dim, GraphPad::vector_partition_fn);
+      active.AllocatePartitioned(A.m, tiles_per_dim, GMDP::vector_partition_fn);
       active.setAll(false);
 
     nvertices = m_;
     vertexpropertyowner = 1;
   }
   gettimeofday(&end, 0);
-  std::cout << "Finished GraphPad read + construction, time: " << sec(start,end)  << std::endl;
+  std::cout << "Finished GMDP read + construction, time: " << sec(start,end)  << std::endl;
 
 
 }
 
 template<class V, class E>
 void Graph<V,E>::ReadMTX(const char* filename, int grid_size) {
-  GraphPad::edgelist_t<E> A_edges;
-  GraphPad::ReadEdgesBin(&A_edges, filename, false);
+  GMDP::edgelist_t<E> A_edges;
+  GMDP::ReadEdgesBin(&A_edges, filename, false);
   MTXFromEdgelist(A_edges);
   _mm_free(A_edges.edges);
 }
@@ -193,23 +193,23 @@ void Graph<V,E>::setAllActive() {
   //  active[i] = true;
   //}
   //memset(active, 0xff, sizeof(bool)*(nvertices));
-  //GraphPad::Apply(active, &active, set_all_true);
+  //GMDP::Apply(active, &active, set_all_true);
   active.setAll(true);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setAllInactive() {
   //memset(active, 0x0, sizeof(bool)*(nvertices));
-  //GraphPad::Apply(active, &active, set_all_false);
+  //GMDP::Apply(active, &active, set_all_false);
   active.setAll(false);
-  int global_myrank = GraphPad::get_global_myrank();
-  //GraphPad::Clear(&active);
+  int global_myrank = GMDP::get_global_myrank();
+  //GMDP::Clear(&active);
   for(int segmentId = 0 ; segmentId < active.nsegments ; segmentId++)
   {
     if(active.nodeIds[segmentId] == global_myrank)
     {
-      GraphPad::DenseSegment<bool>* s1 = &(active.segments[segmentId]);
-      GraphPad::clear_dense_segment(s1->properties.value, s1->properties.bit_vector, s1->num_ints);
+      GMDP::DenseSegment<bool>* s1 = &(active.segments[segmentId]);
+      GMDP::clear_dense_segment(s1->properties.value, s1->properties.bit_vector, s1->num_ints);
     }
   }
 }
@@ -264,7 +264,7 @@ void Graph<V,E>::setVertexproperty(int v, const V& val) {
 }
 
 template<class V, class E> 
-void Graph<V,E>::getVertexEdgelist(GraphPad::edgelist_t<V> & myedges) {
+void Graph<V,E>::getVertexEdgelist(GMDP::edgelist_t<V> & myedges) {
   vertexproperty.get_edges(&myedges);
   for(unsigned int i = 0 ; i < myedges.nnz ; i++)
   {
@@ -274,14 +274,14 @@ void Graph<V,E>::getVertexEdgelist(GraphPad::edgelist_t<V> & myedges) {
 
 template<class V, class E> 
 void Graph<V,E>::saveVertexproperty(std::string fname, bool includeHeader) const {
-  GraphPad::edgelist_t<V> myedges;
+  GMDP::edgelist_t<V> myedges;
   vertexproperty.get_edges(&myedges);
   for(unsigned int i = 0 ; i < myedges.nnz ; i++)
   {
     myedges.edges[i].src = nativeToVertex(myedges.edges[i].src, tiles_per_dim, nvertices);
   }
-  GraphPad::SpVec<GraphPad::DenseSegment<V> > vertexproperty2;
-  vertexproperty2.AllocatePartitioned(nvertices, tiles_per_dim, GraphPad::vector_partition_fn);
+  GMDP::SpVec<GMDP::DenseSegment<V> > vertexproperty2;
+  vertexproperty2.AllocatePartitioned(nvertices, tiles_per_dim, GMDP::vector_partition_fn);
   vertexproperty2.ingestEdgelist(myedges);
   _mm_free(myedges.edges);
   vertexproperty2.save(fname, includeHeader);
@@ -309,14 +309,14 @@ int Graph<V,E>::getNumberOfVertices() const {
 
 template<class V, class E> 
 void Graph<V,E>::applyToAllVertices( void (*ApplyFn)(V, V*, void*), void* param) {
-  GraphPad::Apply(vertexproperty, &vertexproperty, ApplyFn, param);
+  GMDP::Apply(vertexproperty, &vertexproperty, ApplyFn, param);
 }
 
 
 template<class V, class E> 
 template<class T> 
 void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*), void* param) {
-  GraphPad::MapReduce(&vertexproperty, val, ApplyFn, ReduceFn, param);
+  GMDP::MapReduce(&vertexproperty, val, ApplyFn, ReduceFn, param);
 }
 
 template<class V, class E> 

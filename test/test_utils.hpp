@@ -35,8 +35,8 @@
 
 
 template<typename T>
-bool edge_compare(const GraphPad::edge_t<T> &e1,
-                  const GraphPad::edge_t<T> &e2)
+bool edge_compare(const GMDP::edge_t<T> &e1,
+                  const GMDP::edge_t<T> &e2)
 {
         if( (e1.src < e2.src) ||
             ((e1.src == e2.src) && (e1.dst < e2.dst)) ||
@@ -48,29 +48,29 @@ bool edge_compare(const GraphPad::edge_t<T> &e1,
 }
 
 template <typename EDGE_T>
-void collect_edges(const GraphPad::edgelist_t<EDGE_T>& in_edges, GraphPad::edgelist_t<EDGE_T>& out_edges) {
+void collect_edges(const GMDP::edgelist_t<EDGE_T>& in_edges, GMDP::edgelist_t<EDGE_T>& out_edges) {
 
     REQUIRE(sizeof(EDGE_T)%sizeof(int) == 0);
     int T_by_int = sizeof(in_edges.edges[0])/sizeof(int);
 
-    int* OERecvCount = new int[GraphPad::get_global_nrank()];
+    int* OERecvCount = new int[GMDP::get_global_nrank()];
     MPI_Allgather(&in_edges.nnz, 1, MPI_INT, OERecvCount, 1, MPI_INT, MPI_COMM_WORLD);
 
-    int* OERecvOffset = new int[GraphPad::get_global_nrank()];
-    int* OERecvCountInt = new int[GraphPad::get_global_nrank()];
+    int* OERecvOffset = new int[GMDP::get_global_nrank()];
+    int* OERecvCountInt = new int[GMDP::get_global_nrank()];
     OERecvOffset[0] = 0;
-    for (int i = 1; i < GraphPad::get_global_nrank(); i++) {
+    for (int i = 1; i < GMDP::get_global_nrank(); i++) {
       OERecvOffset[i] = OERecvOffset[i-1] + T_by_int*OERecvCount[i-1];      
     }
-    for (int i = 0; i < GraphPad::get_global_nrank(); i++) {
+    for (int i = 0; i < GMDP::get_global_nrank(); i++) {
       OERecvCountInt[i] = T_by_int*OERecvCount[i];
     }
 
     int nnz = 0;
-    for (int i = 0; i < GraphPad::get_global_nrank(); i++) {
+    for (int i = 0; i < GMDP::get_global_nrank(); i++) {
       nnz += OERecvCount[i];
     }
-    out_edges = GraphPad::edgelist_t<EDGE_T>(in_edges.m, in_edges.n, nnz);
+    out_edges = GMDP::edgelist_t<EDGE_T>(in_edges.m, in_edges.n, nnz);
 
     MPI_Allgatherv(in_edges.edges, in_edges.nnz*T_by_int, MPI_INT, out_edges.edges, OERecvCountInt, OERecvOffset, MPI_INT, MPI_COMM_WORLD);
 

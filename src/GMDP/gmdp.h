@@ -30,8 +30,8 @@
  *  * ******************************************************************************/
 
 
-#ifndef SRC_GRAPH_BLAS_H_
-#define SRC_GRAPH_BLAS_H_
+#ifndef SRC_GMDP_H_
+#define SRC_GMDP_H_
 
 #include <mpi.h>
 #include <sys/types.h>
@@ -55,7 +55,7 @@
 #include <fstream>
 #include <iostream>
 
-namespace GraphPad {
+namespace GMDP {
 
 inline int get_global_nrank() {
   int global_nrank;
@@ -92,6 +92,6 @@ inline double get_compression_threshold() {
 #include "GMDP/multinode/apply.h"
 #include "GMDP/multinode/clear.h"
 
-}  // namespace GraphPad
+}  // namespace GMDP
 
-#endif  // SRC_GRAPH_BLAS_H_
+#endif  // SRC_GMDP_H_

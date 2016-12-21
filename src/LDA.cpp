@@ -346,7 +346,7 @@ void run_lda(char* filename, int ndoc, int nterms, int niterations=10) {
   run_graph_program(&ldall, G, 1);
   double total_ll = 0.0;
   G.applyReduceAllVertices(&total_ll, return_ll<k>);
-  if (GraphPad::get_global_myrank() == 0) {
+  if (GMDP::get_global_myrank() == 0) {
     printf("Total Loglikelihood = %lf \n", total_ll);
   }
 

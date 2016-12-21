@@ -250,7 +250,7 @@ void run_sssp(const char* filename, int v) {
   
   G.applyReduceAllVertices(&reachable_vertices, reachable_or_not); //default reduction = sum
 
-  if (GraphPad::get_global_myrank() == 0) printf("Reachable vertices = %d \n", reachable_vertices);
+  if (GMDP::get_global_myrank() == 0) printf("Reachable vertices = %d \n", reachable_vertices);
 
   for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.nvertices); i++) {
   //for (int i = 1; i <= G.nvertices; i++) {

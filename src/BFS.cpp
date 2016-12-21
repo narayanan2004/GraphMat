@@ -269,7 +269,7 @@ void run_bfs(char* filename, int v) {
   }
   MPI_Allreduce(MPI_IN_PLACE, &reachable_vertices, 1,  MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-  if (GraphPad::get_global_myrank() == 0) printf("Reachable vertices = %d \n", reachable_vertices);
+  if (GMDP::get_global_myrank() == 0) printf("Reachable vertices = %d \n", reachable_vertices);
 
   for (int i = 1; i <= std::min(10, G.nvertices); i++) {
     if (G.vertexNodeOwner(i))

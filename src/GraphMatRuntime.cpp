@@ -29,7 +29,7 @@
 /* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
 
-#include "GMDP/graphpad.h"
+#include "GMDP/gmdp.h"
 //#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -54,8 +54,8 @@ template<class T, class U, class V>
 struct run_graph_program_temp_structure {
   //SparseInVector<T>* px;
   //SparseOutVector<U>* py;
-   GraphPad::SpVec<GraphPad::DenseSegment<T> >* px;
-   GraphPad::SpVec<GraphPad::DenseSegment<U> >* py;
+   GMDP::SpVec<GMDP::DenseSegment<T> >* px;
+   GMDP::SpVec<GMDP::DenseSegment<U> >* py;
 };
 
 template<class T, class U, class V, class E>
@@ -64,12 +64,12 @@ struct run_graph_program_temp_structure<T,U,V> graph_program_init(const GraphPro
   struct run_graph_program_temp_structure<T,U,V> rgpts;
   //rgpts.px = new SparseInVector<T>(g.nvertices);
   //rgpts.py = new SparseOutVector<U>(g.nvertices);
-    rgpts.px  = new GraphPad::SpVec<GraphPad::DenseSegment<T> >();
-    rgpts.px->AllocatePartitioned(g.nvertices, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
+    rgpts.px  = new GMDP::SpVec<GMDP::DenseSegment<T> >();
+    rgpts.px->AllocatePartitioned(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
     T _t;
     rgpts.px->setAll(_t);
-    rgpts.py  = new GraphPad::SpVec<GraphPad::DenseSegment<U> >();
-    rgpts.py->AllocatePartitioned(g.nvertices, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
+    rgpts.py  = new GMDP::SpVec<GMDP::DenseSegment<U> >();
+    rgpts.py->AllocatePartitioned(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
     U _u;
     rgpts.py->setAll(_u);
   return rgpts;
@@ -103,7 +103,7 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
 
   struct timeval start, end, init_start, init_end, iteration_start, iteration_end;
   double time;
-  int global_myrank = GraphPad::get_global_myrank();
+  int global_myrank = GMDP::get_global_myrank();
   
   //unsigned long long int init_start = __rdtsc();
   gettimeofday(&init_start, 0);
@@ -111,22 +111,22 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
 
   auto act = gp->getActivity();
 
-  GraphPad::SpVec<GraphPad::DenseSegment<T> >* px;
-  GraphPad::SpVec<GraphPad::DenseSegment<U> >* py;
+  GMDP::SpVec<GMDP::DenseSegment<T> >* px;
+  GMDP::SpVec<GMDP::DenseSegment<U> >* py;
 
   if (rgpts == NULL) {
-    px  = new GraphPad::SpVec<GraphPad::DenseSegment<T> >();
-    px->AllocatePartitioned(g.nvertices, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
+    px  = new GMDP::SpVec<GMDP::DenseSegment<T> >();
+    px->AllocatePartitioned(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
     T _t;
     px->setAll(_t);
-    py  = new GraphPad::SpVec<GraphPad::DenseSegment<U> >();
-    py->AllocatePartitioned(g.nvertices, GraphPad::get_global_nrank(), GraphPad::vector_partition_fn);
+    py  = new GMDP::SpVec<GMDP::DenseSegment<U> >();
+    py->AllocatePartitioned(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
     U _u;
     py->setAll(_u);
   }
 
-  GraphPad::SpVec<GraphPad::DenseSegment<T> >& x = (rgpts==NULL)?(*px):*(rgpts->px);//*px;
-  GraphPad::SpVec<GraphPad::DenseSegment<U> >& y = (rgpts==NULL)?(*py):*(rgpts->py);//*py;
+  GMDP::SpVec<GMDP::DenseSegment<T> >& x = (rgpts==NULL)?(*px):*(rgpts->px);//*px;
+  GMDP::SpVec<GMDP::DenseSegment<U> >& y = (rgpts==NULL)?(*py):*(rgpts->py);//*py;
 
   if (act == ALL_VERTICES) {
     g.setAllActive();
@@ -145,13 +145,13 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
   while(1) {
     gettimeofday(&iteration_start, 0);
 
-    GraphPad::Clear(&x);
-    GraphPad::Clear(&y);
+    GMDP::Clear(&x);
+    GMDP::Clear(&y);
     converged = 1;
 
     gettimeofday(&start, 0);
 
-    GraphPad::IntersectReduce(g.active, g.vertexproperty, &x, send_message<T,U,V,E>, (void*)gp);
+    GMDP::IntersectReduce(g.active, g.vertexproperty, &x, send_message<T,U,V,E>, (void*)gp);
 
     #ifdef __TIMING
     printf("x.length = %d \n", x.getNNZ());
@@ -198,9 +198,9 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
     int local_converged = 1;
     converged = 1;
 
-    //GraphPad::IntersectReduce(g.active, y, &g.vertexproperty, set_y<U,V>);
+    //GMDP::IntersectReduce(g.active, y, &g.vertexproperty, set_y<U,V>);
     //auto apply_func  = set_y_apply<U,V>;
-    //GraphPad::Apply(y, &g.vertexproperty, apply_func<T,U,V>, (void*)gp);
+    //GMDP::Apply(y, &g.vertexproperty, apply_func<T,U,V>, (void*)gp);
     for(int segmentId = 0 ; segmentId < y.nsegments ; segmentId++)
     {
       if(y.nodeIds[segmentId] == global_myrank)
@@ -222,7 +222,7 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
             gp->apply(segment.value[idx], vpValueArray[idx]);
             if (old_prop != vpValueArray[idx]) {
               g.active.segments[segmentId].properties.value[idx] = true;
-              GraphPad::set_bitvector(idx, g.active.segments[segmentId].properties.bit_vector);
+              GMDP::set_bitvector(idx, g.active.segments[segmentId].properties.bit_vector);
               local_converged = 0;
             }
 

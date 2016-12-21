@@ -36,16 +36,16 @@
 #include "test_utils.hpp"
 
 template <typename TILE_T, typename EDGE_T>
-void matrix_test(GraphPad::edgelist_t<EDGE_T> E)
+void matrix_test(GMDP::edgelist_t<EDGE_T> E)
 {
     std::sort(E.edges, E.edges + E.nnz, edge_compare<EDGE_T>);
 
   // Create identity matrix from generator
-    GraphPad::SpMat<TILE_T> A;
-    GraphPad::AssignSpMat(E, &A, GraphPad::get_global_nrank(), GraphPad::get_global_nrank(), GraphPad::partition_fn_1d);
+    GMDP::SpMat<TILE_T> A;
+    GMDP::AssignSpMat(E, &A, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
 
     //collect all edges
-    GraphPad::edgelist_t<EDGE_T> EAll;
+    GMDP::edgelist_t<EDGE_T> EAll;
     collect_edges(E, EAll);
     std::sort(EAll.edges, EAll.edges + EAll.nnz, edge_compare<EDGE_T>);
 
@@ -55,11 +55,11 @@ void matrix_test(GraphPad::edgelist_t<EDGE_T> E)
     REQUIRE(A.empty == false);
 
     // Get new edgelist from matrix
-    GraphPad::edgelist_t<EDGE_T> OE;
+    GMDP::edgelist_t<EDGE_T> OE;
     A.get_edges(&OE);
 
     //collect all edges
-    GraphPad::edgelist_t<EDGE_T> OEAll;
+    GMDP::edgelist_t<EDGE_T> OEAll;
     collect_edges(OE, OEAll);
     std::sort(OEAll.edges, OEAll.edges + OEAll.nnz, edge_compare<EDGE_T>);
 
@@ -74,25 +74,25 @@ void matrix_test(GraphPad::edgelist_t<EDGE_T> E)
     }
 
     // Test transpose
-    GraphPad::SpMat<TILE_T> AT;
-    GraphPad::Transpose(A, &AT, GraphPad::get_global_nrank(), GraphPad::get_global_nrank(), GraphPad::partition_fn_1d);
+    GMDP::SpMat<TILE_T> AT;
+    GMDP::Transpose(A, &AT, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
     REQUIRE(AT.getNNZ() == EAll.nnz);
     REQUIRE(AT.m == E.n);
     REQUIRE(AT.n == E.m);
     REQUIRE(AT.empty == false);
 
-    GraphPad::SpMat<TILE_T> ATT;
-    GraphPad::Transpose(AT, &ATT, GraphPad::get_global_nrank(), GraphPad::get_global_nrank(), GraphPad::partition_fn_1d);
+    GMDP::SpMat<TILE_T> ATT;
+    GMDP::Transpose(AT, &ATT, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
     REQUIRE(ATT.getNNZ() == EAll.nnz);
     REQUIRE(ATT.m == E.m);
     REQUIRE(ATT.n == E.n);
     REQUIRE(ATT.empty == false);
 
-    GraphPad::edgelist_t<EDGE_T> OET;
+    GMDP::edgelist_t<EDGE_T> OET;
     ATT.get_edges(&OET);
 
     //collect edges
-    GraphPad::edgelist_t<EDGE_T> OETAll;
+    GMDP::edgelist_t<EDGE_T> OETAll;
     collect_edges(OET, OETAll);
     std::sort(OETAll.edges, OETAll.edges + OETAll.nnz, edge_compare<EDGE_T>);
 
@@ -121,20 +121,20 @@ void create_matrix_test(int N)
 TEST_CASE("matrix_nnz", "matrix_nnz")
 {
   SECTION(" CSRTile basic tests ", "CSRTile basic tests") {
-        create_matrix_test<GraphPad::CSRTile<int>, int>(5);
-        create_matrix_test<GraphPad::CSRTile<int>, int>(500);
+        create_matrix_test<GMDP::CSRTile<int>, int>(5);
+        create_matrix_test<GMDP::CSRTile<int>, int>(500);
   }
   SECTION(" DCSCTile basic tests ", "CSRTile basic tests") {
-        create_matrix_test<GraphPad::DCSCTile<int>, int>(5);
-        create_matrix_test<GraphPad::DCSCTile<int>, int>(500);
+        create_matrix_test<GMDP::DCSCTile<int>, int>(5);
+        create_matrix_test<GMDP::DCSCTile<int>, int>(500);
   }
   SECTION(" COOTile basic tests ", "CSRTile basic tests") {
-        create_matrix_test<GraphPad::COOTile<int>, int>(5);
-        create_matrix_test<GraphPad::COOTile<int>, int>(500);
+        create_matrix_test<GMDP::COOTile<int>, int>(5);
+        create_matrix_test<GMDP::COOTile<int>, int>(500);
   }
   SECTION(" COOSIMD32Tile basic tests ", "CSRTile basic tests") {
-        create_matrix_test<GraphPad::COOSIMD32Tile<int>, int>(5);
-        create_matrix_test<GraphPad::COOSIMD32Tile<int>, int>(500);
+        create_matrix_test<GMDP::COOSIMD32Tile<int>, int>(5);
+        create_matrix_test<GMDP::COOSIMD32Tile<int>, int>(500);
   }
 }
 
