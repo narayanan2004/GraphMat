@@ -139,6 +139,40 @@ void my_coospmspv3(Ta* a, int* ia, int* ja, int num_partitions, int * partition_
 }
 
 
+template <typename Ta, typename Tx, typename Tvp, typename Ty>
+void mult_segment3(const DCSCTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
+                  const DenseSegment<Tvp> & segmentvp,
+                  DenseSegment<Ty>* segmenty, int output_rank,
+                  void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+  segmenty->alloc();
+  segmenty->initialize();
+  int nnz = 0;
+  my_spmspv3(tile.row_inds, tile.col_ptrs, tile.col_indices, tile.vals,
+            tile.num_partitions, tile.row_pointers, tile.col_starts,
+            tile.edge_pointers, segmentx.properties.value, segmentx.properties.bit_vector,
+     	    segmentvp.properties.value, segmentvp.properties.bit_vector,
+            segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
+            mul_fp, add_fp, vsp);
+  segmenty->properties.nnz = segmenty->compute_nnz();
+}
+
+template <typename Ta, typename Tx, typename Tvp, typename Ty>
+void mult_segment3(const COOTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
+                  const DenseSegment<Tvp> & segmentvp,
+                  DenseSegment<Ty>* segmenty, int output_rank,
+                  void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+  segmenty->alloc();
+  segmenty->initialize();
+  int nnz = 0;
+  my_coospmspv3(tile.a, tile.ia, tile.ja, tile.num_partitions, tile.partition_start,
+               segmentx.properties.value, segmentx.properties.bit_vector,
+     	       segmentvp.properties.value, segmentvp.properties.bit_vector,
+               segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
+               mul_fp, add_fp, vsp);
+  segmenty->properties.nnz = segmenty->compute_nnz();
+}
+
+
 
 
 #endif  // SRC_SINGLENODE_SPMSPV3_H_

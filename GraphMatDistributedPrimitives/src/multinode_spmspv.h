@@ -34,8 +34,8 @@
 #define SRC_MULTINODE_SPMSPV_H_
 
 #include "src/SpMat.h"
-#include "src/TileOps.h"
 #include "src/SpVec.h"
+#include "src/singlenode_spmspv.h"
 
 template <template <typename> class SpTile, typename T>
 void get_row_ranks_spmspv(const SpMat<SpTile<T> >& mat,

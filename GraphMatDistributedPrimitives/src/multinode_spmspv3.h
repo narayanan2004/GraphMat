@@ -34,8 +34,8 @@
 #define SRC_MULTINODE_SPMSPV3_H_
 
 #include "src/SpMat.h"
-#include "src/TileOps.h"
 #include "src/SpVec.h"
+#include "src/singlenode_spmspv3.h"
 
 template <template <typename> class SpTile, template<typename> class SpSegment, typename Ta, typename Tx,
           typename Tvp,
