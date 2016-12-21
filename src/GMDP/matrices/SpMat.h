@@ -477,6 +477,40 @@ void get_row_ranks(const SpMat<SpTile<T> >& mat,
   }
 }
 
+template <template <typename> class SpTile, typename T>
+void AssignSpMat(edgelist_t<T> edgelist, SpMat<SpTile<T> >* mat, int ntx,
+                 int nty, int (*pfn)(int, int, int, int, int)) {
+  mat->Allocate2DPartitioned(edgelist.m, edgelist.n, ntx, nty, pfn);
+  mat->ingestEdgelist(edgelist);
+  mat->print_tiles("A", 0);
+}
+
+template <template <typename> class SpTile, typename T>
+void Transpose(const SpMat<SpTile<T> >& mat, SpMat<SpTile<T> >* matc, int ntx,
+               int nty, int (*pfn)(int, int, int, int, int)) {
+
+  edgelist_t<T> edgelist;
+  mat.get_edges(&edgelist);
+#pragma omp parallel for
+  for (int i = 0; i < edgelist.nnz; i++) {
+    int tmp = edgelist.edges[i].src;
+    edgelist.edges[i].src = edgelist.edges[i].dst;
+    edgelist.edges[i].dst = tmp;
+  }
+  int tmp = edgelist.m;
+  edgelist.m = edgelist.n;
+  edgelist.n = tmp;
+  SpMat<SpTile<T> > C;
+
+  AssignSpMat(edgelist, &C, ntx, nty, pfn);
+  if(edgelist.nnz > 0)
+  {
+    _mm_free(edgelist.edges);
+  }
+  *matc = C;
+}
+
+
 
 
 

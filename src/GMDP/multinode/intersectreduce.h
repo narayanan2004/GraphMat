@@ -49,5 +49,13 @@ void IntersectReduce_tile(const SpVec<SpSegment<Ta> > & veca,
   }
 }
 
+template <template <typename> class SpSegment, typename Ta, typename Tb, typename Tc>
+void IntersectReduce(const SpVec<SpSegment<Ta> > & v1, const SpVec<SpSegment<Tb> > & v2, SpVec<SpSegment<Tc> > * v3, void (*op_fp)(Ta,Tb,Tc*,void*), void* vsp=NULL)
+{
+  IntersectReduce_tile(v1, v2, v3, 0, v1.nsegments, op_fp, vsp);
+}
+
+
+
 
 #endif  // SRC_MULTINODE_INTERSECTREDUCE_H_

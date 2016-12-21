@@ -46,4 +46,12 @@ void Clear_tile(SpVec<SpSegment<T> > * v1, int start, int end) {
   }
 }
 
+template <typename T>
+void Clear(SpVec<T> * v1)
+{
+  Clear_tile(v1, 0, v1->nsegments);
+}
+
+
+
 #endif  // SRC_MULTINODE_CLEAR_H_

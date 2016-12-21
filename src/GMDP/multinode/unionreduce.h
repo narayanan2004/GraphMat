@@ -48,4 +48,12 @@ void UnionReduce_tile(const SpVec<Ta> & veca,
   }
 }
 
+template <typename Ta, typename Tb, typename Tc>
+void UnionReduce(const SpVec<Ta> & v1, const SpVec<Tb> & v2, SpVec<Tc> * v3, void (*op_fp)(Ta,Tb,Tc*,void*), void* vsp=NULL)
+{
+  UnionReduce_tile(v1, v2, v3, 0, v1.nsegments, op_fp, vsp);
+}
+
+
+
 #endif  // SRC_MULTINODE_UNIONREDUCE_H_

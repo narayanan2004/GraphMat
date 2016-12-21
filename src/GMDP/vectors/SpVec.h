@@ -407,4 +407,11 @@ class SpVec {
   }
 };
 
+template <typename T>
+void AssignSpVec(edgelist_t<T> edgelist, SpVec<T>* vec, int ntx,
+                 int (*pfn)(int, int, int)) {
+  vec->AllocatePartitioned(edgelist.m, ntx, pfn);
+  vec->ingestEdgelist(edgelist);
+}
+
 #endif  // SRC_SPVEC_H_

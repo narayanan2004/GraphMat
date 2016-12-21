@@ -263,4 +263,13 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<SpSegment<Tx> >& 
   //spmspv_reduce_time += MPI_Wtime() - tmp_time;
 }
 
+template <template <typename> class SpTile, template <typename> class SpSegment, typename Ta, typename Tx,
+          typename Tvp, typename Ty>
+void SpMSpV3(const SpMat<SpTile<Ta> >& mata, const SpVec<SpSegment<Tx> >& vecx,
+            const SpVec<SpSegment<Tvp> > & vecvp, 
+	    SpVec<SpSegment<Ty> >* vecy, void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
+  SpMSpV3_tile(mata, vecx, vecvp, vecy, 0, 0, mata.ntiles_y, mata.ntiles_x, mul_fp,
+              add_fp, vsp);
+}
+
 #endif  // SRC_MULTINODE_SPMSPV3_H_

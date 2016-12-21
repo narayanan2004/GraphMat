@@ -106,4 +106,12 @@ void MapReduce_tile(SpVec<SpSegment<VT> > * vec, T* res, int start, int end,
   MPI_Bcast(res, sizeof(T), MPI_CHAR, 0, MPI_COMM_WORLD);
 }
 
+
+template <template<typename> class SpSegment, typename T, typename VT>
+void MapReduce(SpVec<SpSegment<VT> > * vec, T* res, void (*op_map)(VT*, T*, void*), void (*op_fp)(T, T, T*, void*), void* vsp=NULL) {
+  MapReduce_tile(vec, res, 0, vec->nsegments, op_map, op_fp, vsp);
+}
+
+
+
 #endif  // SRC_MULTINODE_REDUCE_H_

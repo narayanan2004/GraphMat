@@ -46,4 +46,12 @@ void Apply_tile(const SpVec<SpSegment<Ta> > & v_in, SpVec<SpSegment<Tb> > * v_ou
   }
 }
 
+template <template<typename> class SpSegment, typename Ta, typename Tb>
+void Apply(const SpVec<SpSegment<Ta> > & v_in, SpVec<SpSegment<Tb> > * v_out, void (*add_fp)(Ta, Tb*, void*), void* vsp=NULL)
+{
+  Apply_tile(v_in, v_out, 0, v_in.nsegments, add_fp, vsp);
+}
+
+
+
 #endif  // SRC_MULTINODE_APPLY_H_

@@ -72,18 +72,6 @@ struct tedge_t {
   T val;
 };
 
-inline int get_global_nrank() {
-  int global_nrank;
-  MPI_Comm_size(MPI_COMM_WORLD, &global_nrank);
-  return global_nrank;
-}
-
-inline int get_global_myrank() {
-  int global_myrank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &global_myrank);
-  return global_myrank;
-}
-
 template <typename T>
 void load_edgelist(const char* dir, int myrank, int nrank,
                    edgelist_t<T>* edgelist) {
@@ -362,5 +350,35 @@ void get_dimensions(edge_t<T> * edges, int nnz, int &max_m, int &max_n)
   MPI_Allreduce(&local_max_m, &max_m, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   MPI_Allreduce(&local_max_n, &max_n, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 }
+
+template <typename T>
+void ReadEdgesBin(edgelist_t<T>* edgelist, const char* fname_in, bool randomize) {
+  load_edgelist(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
+
+  if (randomize) {
+    randomize_edgelist_square<T>(edgelist, get_global_nrank());
+  }
+}
+
+template <typename T>
+void ReadEdgesTxt(edgelist_t<T>* edgelist, const char* fname_in, bool randomize) {
+  load_edgelist_txt(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
+
+  if (randomize) {
+    randomize_edgelist_square<T>(edgelist, get_global_nrank());
+  }
+}
+
+template <typename T>
+void WriteEdgesTxt(const edgelist_t<T>& edgelist, const char* fname_in) {
+  write_edgelist_txt(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
+}
+
+template <typename T>
+void WriteEdgesBin(const edgelist_t<T>& edgelist, const char* fname_in) {
+  write_edgelist_bin(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
+}
+
+
 
 #endif  // SRC_EDGELIST_H_
