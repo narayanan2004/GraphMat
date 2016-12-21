@@ -1,9 +1,7 @@
 
-DIST_PRIMITIVES_PATH=GraphMatDistributedPrimitives
 CATCHDIR=./test/Catch
 TESTDIR=./test
 TESTBINDIR=./testbin
-include $(DIST_PRIMITIVES_PATH)/Make.inc
 
 MPICXX=mpiicpc
 CXX=icpc
@@ -14,7 +12,7 @@ else
   CXX_OPTIONS=-fopenmp --std=c++11 -I/usr/include/mpi/
 endif
 
-CXX_OPTIONS+=-Isrc -I$(DIST_PRIMITIVES_PATH)
+CXX_OPTIONS+=-Isrc
 
 
 ifeq (${debug}, 1)
@@ -26,8 +24,6 @@ else
     CXX_OPTIONS += -O3 -flto -fwhole-program
   endif
 endif
-
-CXX_OPTIONS += $(GPFLAGS)
 
 ifeq (${CXX}, icpc)
   CXX_OPTIONS += -xHost
@@ -41,11 +37,12 @@ else
 endif
 
 SRCDIR=src
+DIST_PRIMITIVES_PATH=$(SRCDIR)/GMDP
 BINDIR=bin
 
 SOURCES=$(SRCDIR)/PageRank.cpp $(SRCDIR)/Degree.cpp $(SRCDIR)/BFS.cpp $(SRCDIR)/SGD.cpp $(SRCDIR)/TriangleCounting.cpp $(SRCDIR)/SSSP.cpp $(SRCDIR)/Delta.cpp
 
-DEPS=$(SRCDIR)/SPMV.cpp $(SRCDIR)/Graph.cpp $(SRCDIR)/GraphProgram.cpp $(SRCDIR)/GraphMatRuntime.cpp $(DIST_PRIMITIVES_PATH)/src/layouts.h $(DIST_PRIMITIVES_PATH)/src/graphpad.h
+DEPS=$(SRCDIR)/SPMV.cpp $(SRCDIR)/Graph.cpp $(SRCDIR)/GraphProgram.cpp $(SRCDIR)/GraphMatRuntime.cpp $(DIST_PRIMITIVES_PATH)/matrices/layouts.h $(DIST_PRIMITIVES_PATH)/graphpad.h
 
 EXE=$(BINDIR)/PageRank $(BINDIR)/IncrementalPageRank $(BINDIR)/BFS $(BINDIR)/SSSP $(BINDIR)/LDA $(BINDIR)/SGD $(BINDIR)/TriangleCounting #$(BINDIR)/DS
 

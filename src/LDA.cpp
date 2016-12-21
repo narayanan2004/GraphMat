@@ -390,7 +390,6 @@ int main(int argc, char* argv[]) {
     return 0;
   }
   MPI_Init(&argc, &argv);
-  GraphPad::GB_Init();
 
   int ndoc = atoi(argv[2]);
   int nterms = atoi(argv[3]);

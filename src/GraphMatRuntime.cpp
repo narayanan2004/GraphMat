@@ -29,7 +29,7 @@
 /* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
 
-#include "src/graphpad.h"
+#include "GMDP/graphpad.h"
 //#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

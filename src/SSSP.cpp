@@ -292,7 +292,6 @@ void run_sssp(const char* filename, int v) {
 
 int main (int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
-  GraphPad::GB_Init();
 
   const char* input_filename = argv[1];
 

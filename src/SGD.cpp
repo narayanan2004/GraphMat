@@ -297,7 +297,6 @@ int main(int argc, char* argv[]) {
     return 0;
   }
   MPI_Init(&argc, &argv);
-  GraphPad::GB_Init();
 
   run_sgd(argv[1]); 
   MPI_Finalize(); 

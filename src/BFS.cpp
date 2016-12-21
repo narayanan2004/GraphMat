@@ -295,7 +295,6 @@ void run_bfs(char* filename, int v) {
 
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
-  GraphPad::GB_Init();
 
   if (argc < 3) {
     printf("Correct format: %s A.mtx source_vertex (1-based index)\n", argv[0]);

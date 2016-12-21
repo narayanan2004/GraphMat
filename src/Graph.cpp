@@ -40,7 +40,6 @@
 #include <parallel/algorithm>
 #include <omp.h>
 #include <cassert>
-#include "src/layouts.h"
 
 inline double sec(struct timeval start, struct timeval end)
 {
