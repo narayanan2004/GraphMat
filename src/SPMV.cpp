@@ -58,7 +58,7 @@ void Addfn(U a, U b, U * c, void* gpv) {
 
 
 template <class T, class U, class V, class E>
-void SpMSpV(const Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, const GMDP::SpVec<GMDP::DenseSegment<T> >& x, GMDP::SpVec<GMDP::DenseSegment<U> >& y) {
+void SpMSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GMDP::SpVec<GMDP::DenseSegment<T> >& x, GMDP::SpVec<GMDP::DenseSegment<U> >& y) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 
@@ -75,7 +75,7 @@ void SpMSpV(const Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, const GMDP::Sp
   #endif
 }
 template <class T, class U, class V, class E>
-void SpMTSpV(const Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, const GMDP::SpVec<GMDP::DenseSegment<T> >& x, GMDP::SpVec<GMDP::DenseSegment<U> >& y) {
+void SpMTSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GMDP::SpVec<GMDP::DenseSegment<T> >& x, GMDP::SpVec<GMDP::DenseSegment<U> >& y) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 

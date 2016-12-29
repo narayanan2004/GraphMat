@@ -35,50 +35,68 @@
 
 #include <string>
 #include <algorithm>
+#include <vector>
 
 #include "GMDP/vectors/DenseSegment.h"
 
 template <typename SpSegment>
 class SpVec {
  public:
-  SpSegment * segments;
+  std::vector<int> nodeIds;
+  std::vector<int> start_id;
+  std::vector<SpSegment> segments;
 
-  int* start_id;
-  int* nodeIds;
   int nsegments;
   int n;
-  bool empty;
   std::string name;
   int num_tiles_x;
   int (*pfn)(int, int, int);
   int global_nrank, global_myrank;
 
-  SpVec() { 
-    empty = true; 
+  SpVec()
+  {
+    nsegments = 0;
+    n = 0;
+    name = "Empty";
+    num_tiles_x = 0;
+    pfn = NULL;
     global_nrank = get_global_nrank();
     global_myrank = get_global_myrank(); 
   }
 
-  void alloc(int _n, int _nsegments, int* _nodeIds, int* _start_id) {
-    // Copy metadata
-    empty = false;
-    start_id =
-        reinterpret_cast<int*>(_mm_malloc((_nsegments + 1) * sizeof(int), 64));
-    nodeIds =
-        reinterpret_cast<int*>(_mm_malloc((_nsegments) * sizeof(int), 64));
-    memcpy(start_id, _start_id, (_nsegments + 1) * sizeof(int));
-    memcpy(nodeIds, _nodeIds, (_nsegments) * sizeof(int));
+  SpVec(int _n, int _num_tiles_x,
+                           int (*_pfn)(int, int, int)) {
 
+    global_nrank = get_global_nrank();
+    global_myrank = get_global_myrank(); 
+    num_tiles_x = _num_tiles_x;
     n = _n;
-    nsegments = _nsegments;
+    pfn = _pfn;
+    int vx, vy;
+    int roundup = 256;
+    nsegments = num_tiles_x;
+    vx =
+        ((((n + nsegments - 1) / nsegments) + roundup - 1) / roundup) * roundup;
+
+    // In case the roundup affected the num tiles
+    for (int j = 0; j < num_tiles_x; j++) {
+      nodeIds.push_back(pfn(j, num_tiles_x, global_nrank));
+    }
+    for (int j = 0; j < num_tiles_x; j++) {
+      start_id.push_back(std::min(vx * j, n));
+    }
+    start_id.push_back(n);
+
+    // Copy metadata
     assert(nsegments > 0);
 
     // Allocate space for tiles
-    segments = new SpSegment[nsegments];
     for (int j = 0; j < nsegments; j++) {
-      segments[j] = SpSegment(start_id[j + 1] - start_id[j]);
+      segments.push_back(SpSegment(start_id[j + 1] - start_id[j]));
     }
   }
+
+  ~SpVec() {}
 
   inline int getPartition(int src) const {
     for (int i = 0; i < nsegments; i++) {
@@ -290,36 +308,9 @@ class SpVec {
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
-  void AllocatePartitioned(int n, int _num_tiles_x,
-                           int (*_pfn)(int, int, int)) {
-    num_tiles_x = _num_tiles_x;
-    pfn = _pfn;
-    int vx, vy;
-    int roundup = 256;
-    int nsegments = num_tiles_x;
-    vx =
-        ((((n + nsegments - 1) / nsegments) + roundup - 1) / roundup) * roundup;
-
-    // In case the roundup affected the num tiles
-    int* nodeIds =
-        reinterpret_cast<int*>(_mm_malloc(num_tiles_x * sizeof(int), 64));
-    int* startx =
-        reinterpret_cast<int*>(_mm_malloc((num_tiles_x + 1) * sizeof(int), 64));
-    for (int j = 0; j < num_tiles_x; j++) {
-      nodeIds[j] = pfn(j, num_tiles_x, global_nrank);
-    }
-    for (int j = 0; j < num_tiles_x; j++) {
-      startx[j] = std::min(vx * j, n);
-    }
-    startx[num_tiles_x] = n;
-    alloc(n, num_tiles_x, nodeIds, startx);
-    _mm_free(nodeIds);
-    _mm_free(startx);
-  }
 
   template<typename T>
   void set(int idx, T val) {
-    assert(!empty);
     int partitionId = getPartition(idx);
     assert(partitionId >= 0);
     if (nodeIds[partitionId] == global_myrank) {
@@ -330,7 +321,6 @@ class SpVec {
 
   template<typename T>
   void setAll(T val) {
-    assert(!empty);
     for(int segmentId = 0 ; segmentId < nsegments ; segmentId++)
     {
       if(nodeIds[segmentId] == global_myrank)
@@ -342,7 +332,6 @@ class SpVec {
 
   template<typename T>
   void get(const int idx, T * myres) const {
-    assert(!empty);
     int partitionId = getPartition(idx);
     assert(partitionId >= 0);
     if (nodeIds[partitionId] == global_myrank) {
@@ -368,7 +357,6 @@ class SpVec {
   }
 
   bool node_owner(const int idx) const {
-    assert(!empty);
     int partitionId = getPartition(idx);
     assert(partitionId >= 0);
     bool v;
@@ -406,12 +394,5 @@ class SpVec {
     }
   }
 };
-
-template <typename T>
-void AssignSpVec(edgelist_t<T> edgelist, SpVec<T>* vec, int ntx,
-                 int (*pfn)(int, int, int)) {
-  vec->AllocatePartitioned(edgelist.m, ntx, pfn);
-  vec->ingestEdgelist(edgelist);
-}
 
 #endif  // SRC_SPVEC_H_

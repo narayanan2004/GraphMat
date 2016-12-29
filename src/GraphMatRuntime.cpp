@@ -64,12 +64,10 @@ struct run_graph_program_temp_structure<T,U,V> graph_program_init(const GraphPro
   struct run_graph_program_temp_structure<T,U,V> rgpts;
   //rgpts.px = new SparseInVector<T>(g.nvertices);
   //rgpts.py = new SparseOutVector<U>(g.nvertices);
-    rgpts.px  = new GMDP::SpVec<GMDP::DenseSegment<T> >();
-    rgpts.px->AllocatePartitioned(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
+    rgpts.px = new GMDP::SpVec<GMDP::DenseSegment<T> >(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
     T _t;
     rgpts.px->setAll(_t);
-    rgpts.py  = new GMDP::SpVec<GMDP::DenseSegment<U> >();
-    rgpts.py->AllocatePartitioned(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
+    rgpts.py = new GMDP::SpVec<GMDP::DenseSegment<U> >(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
     U _u;
     rgpts.py->setAll(_u);
   return rgpts;
@@ -115,12 +113,10 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
   GMDP::SpVec<GMDP::DenseSegment<U> >* py;
 
   if (rgpts == NULL) {
-    px  = new GMDP::SpVec<GMDP::DenseSegment<T> >();
-    px->AllocatePartitioned(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
+    px = new GMDP::SpVec<GMDP::DenseSegment<T> >(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
     T _t;
     px->setAll(_t);
-    py  = new GMDP::SpVec<GMDP::DenseSegment<U> >();
-    py->AllocatePartitioned(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
+    py = new GMDP::SpVec<GMDP::DenseSegment<U> >(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
     U _u;
     py->setAll(_u);
   }

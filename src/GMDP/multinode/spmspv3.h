@@ -40,8 +40,8 @@
 template <template <typename> class SpTile, template<typename> class SpSegment, typename Ta, typename Tx,
           typename Tvp,
           typename Ty>
-void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<SpSegment<Tx> >& vecx,
-                 const SpVec<SpSegment<Tvp> >& vecvp,
+void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
+                 SpVec<SpSegment<Tvp> >& vecvp,
                  SpVec<SpSegment<Ty> >* vecy, int start_m, int start_n, int end_m,
                  int end_n, void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
   int output_rank = 0;
@@ -265,8 +265,8 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<SpSegment<Tx> >& 
 
 template <template <typename> class SpTile, template <typename> class SpSegment, typename Ta, typename Tx,
           typename Tvp, typename Ty>
-void SpMSpV3(const SpMat<SpTile<Ta> >& mata, const SpVec<SpSegment<Tx> >& vecx,
-            const SpVec<SpSegment<Tvp> > & vecvp, 
+void SpMSpV3(const SpMat<SpTile<Ta> >& mata, SpVec<SpSegment<Tx> >& vecx,
+            SpVec<SpSegment<Tvp> > & vecvp, 
 	    SpVec<SpSegment<Ty> >* vecy, void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
   SpMSpV3_tile(mata, vecx, vecvp, vecy, 0, 0, mata.ntiles_y, mata.ntiles_x, mul_fp,
               add_fp, vsp);

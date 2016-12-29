@@ -162,11 +162,11 @@ void Graph<V,E>::MTXFromEdgelist(GMDP::edgelist_t<E> A_edges) {
     int m_ = A.m;
     assert(A.m == A.n);
     nnz = A.getNNZ();
-      vertexproperty.AllocatePartitioned(A.m, tiles_per_dim, GMDP::vector_partition_fn);
+      vertexproperty = GMDP::SpVec<GMDP::DenseSegment<V> >(A.m, tiles_per_dim, GMDP::vector_partition_fn);
       V *__v = new V;
       vertexproperty.setAll(*__v);
       delete __v;
-      active.AllocatePartitioned(A.m, tiles_per_dim, GMDP::vector_partition_fn);
+      active = GMDP::SpVec<GMDP::DenseSegment<bool> >(A.m, tiles_per_dim, GMDP::vector_partition_fn);
       active.setAll(false);
 
     nvertices = m_;
@@ -280,8 +280,7 @@ void Graph<V,E>::saveVertexproperty(std::string fname, bool includeHeader) const
   {
     myedges.edges[i].src = nativeToVertex(myedges.edges[i].src, tiles_per_dim, nvertices);
   }
-  GMDP::SpVec<GMDP::DenseSegment<V> > vertexproperty2;
-  vertexproperty2.AllocatePartitioned(nvertices, tiles_per_dim, GMDP::vector_partition_fn);
+  GMDP::SpVec<GMDP::DenseSegment<V> > vertexproperty2(nvertices, tiles_per_dim, GMDP::vector_partition_fn);
   vertexproperty2.ingestEdgelist(myedges);
   _mm_free(myedges.edges);
   vertexproperty2.save(fname, includeHeader);

@@ -62,7 +62,7 @@ void get_row_ranks_spmspv(const SpMat<SpTile<T> >& mat,
 
 template <template <typename> class SpTile, template<typename> class SpSegment, typename Ta, typename Tx,
           typename Ty>
-void SpMSpV_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<SpSegment<Tx> >& vecx,
+void SpMSpV_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
                  SpVec<SpSegment<Ty> >* vecy, int start_m, int start_n, int end_m,
                  int end_n, void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
   int output_rank = 0;
@@ -228,7 +228,7 @@ void SpMSpV_tile(const SpMat<SpTile<Ta> >& grida, const SpVec<SpSegment<Tx> >& v
 
 template <template <typename> class SpTile, template <typename> class SpSegment, typename Ta, typename Tx,
           typename Ty>
-void SpMSpV(const SpMat<SpTile<Ta> >& mata, const SpVec<SpSegment<Tx> >& vecx,
+void SpMSpV(const SpMat<SpTile<Ta> >& mata, SpVec<SpSegment<Tx> >& vecx,
             SpVec<SpSegment<Ty> >* vecy, void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
   SpMSpV_tile(mata, vecx, vecy, 0, 0, mata.ntiles_y, mata.ntiles_x, mul_fp,
               add_fp, vsp);
