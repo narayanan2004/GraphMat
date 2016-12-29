@@ -66,14 +66,14 @@ void intersect_dense_segment(Ta* v1, int * bv1, int * nnz, int num_ints, Tb * v2
 }
 
 template <typename Ta, typename Tb, typename Tc>
-void intersect_segment(const DenseSegment<Ta> & s1, const DenseSegment<Tb> & s2, DenseSegment<Tc> * s3, 
+void intersect_segment(const DenseSegment<Ta> * s1, const DenseSegment<Tb> * s2, DenseSegment<Tc> * s3, 
                     void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) {
 
   s3->alloc();
   s3->initialize();
-  if(!s1.properties.uninitialized && !s2.properties.uninitialized)
+  if(!s1->properties.uninitialized && !s2->properties.uninitialized)
   {
-    intersect_dense_segment(s1.properties.value, s1.properties.bit_vector, &(s3->properties.nnz), s1.num_ints, s2.properties.value, s2.properties.bit_vector, s3->properties.value, s3->properties.bit_vector, op_fp, vsp);
+    intersect_dense_segment(s1->properties.value, s1->properties.bit_vector, &(s3->properties.nnz), s1->num_ints, s2->properties.value, s2->properties.bit_vector, s3->properties.value, s3->properties.bit_vector, op_fp, vsp);
   }
 }
 

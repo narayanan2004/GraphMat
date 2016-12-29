@@ -201,10 +201,10 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
     {
       if(y.nodeIds[segmentId] == global_myrank)
       {
-        auto segment = y.segments[segmentId].properties;
-        auto vpValueArray = g.vertexproperty.segments[segmentId].properties.value;
+        auto segment = y.segments[segmentId]->properties;
+        auto vpValueArray = g.vertexproperty.segments[segmentId]->properties.value;
         #pragma omp parallel for reduction(&:local_converged) 
-        for (int i = 0; i < y.segments[segmentId].num_ints; i++) {
+        for (int i = 0; i < y.segments[segmentId]->num_ints; i++) {
           unsigned int value = segment.bit_vector[i];
           while (value != 0) {
             int last_bit = _bit_scan_forward(value);
@@ -217,8 +217,8 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
             //gp->apply(segment.value[idx], g.vertexproperty.segments[segmentId].properties.value[idx]);
             gp->apply(segment.value[idx], vpValueArray[idx]);
             if (old_prop != vpValueArray[idx]) {
-              g.active.segments[segmentId].properties.value[idx] = true;
-              GMDP::set_bitvector(idx, g.active.segments[segmentId].properties.bit_vector);
+              g.active.segments[segmentId]->properties.value[idx] = true;
+              GMDP::set_bitvector(idx, g.active.segments[segmentId]->properties.bit_vector);
               local_converged = 0;
             }
 

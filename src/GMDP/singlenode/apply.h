@@ -64,11 +64,11 @@ void apply_dense_segment(Ta* v1, int * bitvector, int * nnz, int num_ints,
 }
 
 template <typename Ta, typename Tb>
-void apply_segment(const DenseSegment<Ta> & s_in, DenseSegment<Tb> * s_out, 
+void apply_segment(const DenseSegment<Ta> * s_in, DenseSegment<Tb> * s_out, 
                     void (*add_fp)(Ta, Tb*, void*), void* vsp) {
   s_out->alloc();
   s_out->initialize();
-  apply_dense_segment(s_in.properties.value, s_in.properties.bit_vector, &(s_out->properties.nnz), s_in.num_ints, s_out->properties.value, s_out->properties.bit_vector,  add_fp, vsp);
+  apply_dense_segment(s_in->properties.value, s_in->properties.bit_vector, &(s_out->properties.nnz), s_in->num_ints, s_out->properties.value, s_out->properties.bit_vector,  add_fp, vsp);
 }
 
 

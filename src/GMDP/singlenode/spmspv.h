@@ -223,14 +223,14 @@ void my_coospmspv(Ta* a, int* ia, int* ja, int num_partitions, int * partition_s
 }
 
 template <typename Ta, typename Tx, typename Ty>
-void mult_segment(const DCSCTile<Ta>& tile, DenseSegment<Tx>& segmentx,
+void mult_segment(const DCSCTile<Ta>& tile, DenseSegment<Tx>* segmentx,
                   DenseSegment<Ty>* segmenty, int output_rank,
                   void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
   my_spmspv(tile.row_inds, tile.col_ptrs, tile.col_indices, tile.vals,
             tile.num_partitions, tile.row_pointers, tile.col_starts,
-            tile.edge_pointers, segmentx.properties.value, segmentx.properties.bit_vector,
+            tile.edge_pointers, segmentx->properties.value, segmentx->properties.bit_vector,
             segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&segmenty->properties.nnz),
             mul_fp, add_fp, vsp);
   segmenty->properties.nnz = segmenty->compute_nnz();
@@ -238,7 +238,7 @@ void mult_segment(const DCSCTile<Ta>& tile, DenseSegment<Tx>& segmentx,
 
 
 template <typename Ta, typename Tx, typename Ty>
-void mult_segment(const HybridTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
+void mult_segment(const HybridTile<Ta>& tile, const DenseSegment<Tx> * segmentx,
                   DenseSegment<Ty>* segmenty, int output_rank,
                   void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
@@ -246,11 +246,11 @@ void mult_segment(const HybridTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
   int nnz = 0;
   if(tile.t1->nnz > 0)
   {
-    my_dcsrspmspv(tile.t1->a, tile.t1->ia, tile.t1->ja, tile.t1->row_ids, tile.t1->num_rows, tile.t1->partition_ptrs, tile.t1->num_partitions, segmentx.properties.value, segmentx.properties.bit_vector,
+    my_dcsrspmspv(tile.t1->a, tile.t1->ia, tile.t1->ja, tile.t1->row_ids, tile.t1->num_rows, tile.t1->partition_ptrs, tile.t1->num_partitions, segmentx->properties.value, segmentx->properties.bit_vector,
                  segmenty->properties.value, segmenty->properties.bit_vector, tile.t1->m, tile.t1->n, (&nnz),
                  mul_fp, add_fp, vsp);
      /*
-    my_csrspmspv(tile.t1->a, tile.t1->ia, tile.t1->ja, segmentx.properties.value, segmentx.properties.bit_vector,
+    my_csrspmspv(tile.t1->a, tile.t1->ia, tile.t1->ja, segmentx->properties.value, segmentx->properties.bit_vector,
                  segmenty->properties.value, segmenty->properties.bit_vector, tile.t1->m, tile.t1->n, (&nnz),
                  mul_fp, add_fp, vsp);
                  */
@@ -258,7 +258,7 @@ void mult_segment(const HybridTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
   if(tile.t2->nnz > 0)
   {
     my_coospmspv(tile.t2->a, tile.t2->ia, tile.t2->ja, tile.t2->num_partitions, tile.t2->partition_start,
-                 segmentx.properties.value, segmentx.properties.bit_vector,
+                 segmentx->properties.value, segmentx->properties.bit_vector,
                  segmenty->properties.value, segmenty->properties.bit_vector, tile.t2->m, tile.t2->n, (&nnz),
                  mul_fp, add_fp, vsp);
   }
@@ -267,7 +267,7 @@ void mult_segment(const HybridTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
 
 
 template <typename Ta, typename Tx, typename Ty>
-void mult_segment(const CSRTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
+void mult_segment(const CSRTile<Ta>& tile, const DenseSegment<Tx> * segmentx,
                   DenseSegment<Ty>* segmenty, int output_rank,
                   void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
@@ -275,7 +275,7 @@ void mult_segment(const CSRTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
   int nnz = 0;
   if(tile.nnz > 0)
   {
-    my_csrspmspv(tile.a, tile.ia, tile.ja, segmentx.properties.value, segmentx.properties.bit_vector,
+    my_csrspmspv(tile.a, tile.ia, tile.ja, segmentx->properties.value, segmentx->properties.bit_vector,
                  segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
                  mul_fp, add_fp, vsp);
   }
@@ -284,7 +284,7 @@ void mult_segment(const CSRTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
 
 
 template <typename Ta, typename Tx, typename Ty>
-void mult_segment(const COOTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
+void mult_segment(const COOTile<Ta>& tile, const DenseSegment<Tx>* segmentx,
                   DenseSegment<Ty>* segmenty, int output_rank,
                   void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
@@ -293,7 +293,7 @@ void mult_segment(const COOTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
   if(tile.nnz > 0)
   {
     my_coospmspv(tile.a, tile.ia, tile.ja, tile.num_partitions, tile.partition_start,
-                 segmentx.properties.value, segmentx.properties.bit_vector,
+                 segmentx->properties.value, segmentx->properties.bit_vector,
                  segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
                  mul_fp, add_fp, vsp);
   }
@@ -301,7 +301,7 @@ void mult_segment(const COOTile<Ta>& tile, const DenseSegment<Tx>& segmentx,
 }
 
 template <typename Ta, typename Tx, typename Ty>
-void mult_segment(const COOSIMD32Tile<Ta>& tile, const DenseSegment<Tx>& segmentx,
+void mult_segment(const COOSIMD32Tile<Ta>& tile, const DenseSegment<Tx>* segmentx,
                   DenseSegment<Ty>* segmenty, int output_rank,
                   void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
@@ -310,7 +310,7 @@ void mult_segment(const COOSIMD32Tile<Ta>& tile, const DenseSegment<Tx>& segment
   if(tile.nnz > 0)
   {
     my_coospmspv(tile.a, tile.ia, tile.ja, tile.num_partitions, tile.partition_start,
-                 segmentx.properties.value, segmentx.properties.bit_vector,
+                 segmentx->properties.value, segmentx->properties.bit_vector,
                  segmenty->properties.value, segmenty->properties.bit_vector, tile.m, tile.n, (&nnz),
                  mul_fp, add_fp, vsp);
   }

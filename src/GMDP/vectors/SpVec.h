@@ -44,7 +44,7 @@ class SpVec {
  public:
   std::vector<int> nodeIds;
   std::vector<int> start_id;
-  std::vector<SpSegment> segments;
+  std::vector<SpSegment*> segments;
 
   int nsegments;
   int n;
@@ -92,7 +92,7 @@ class SpVec {
 
     // Allocate space for tiles
     for (int j = 0; j < nsegments; j++) {
-      segments.push_back(SpSegment(start_id[j + 1] - start_id[j]));
+      segments.push_back(new SpSegment(start_id[j + 1] - start_id[j]));
     }
   }
 
@@ -117,7 +117,7 @@ class SpVec {
     {
       if(nodeIds[segment] == global_myrank)
       {
-        blob->nnz += segments[segment].compute_nnz();
+        blob->nnz += segments[segment]->compute_nnz();
       }
     }
     if(blob->nnz > 0)
@@ -129,13 +129,14 @@ class SpVec {
       {
         if(nodeIds[segment] == global_myrank)
         {
-          segments[segment].get_edges(blob->edges + nnzs, start_id[segment]);
-          nnzs += segments[segment].compute_nnz();
+          segments[segment]->get_edges(blob->edges + nnzs, start_id[segment]);
+          nnzs += segments[segment]->compute_nnz();
         }
       }
     }
   }
 
+  // Note: replace with all-to-all-v
   template <typename T>
   void ingestEdgelist(edgelist_t<T> blob) {
     int nnz_l = blob.nnz;
@@ -277,26 +278,22 @@ class SpVec {
 
     for (int segment_i = 0; segment_i < nsegments; segment_i++) {
       if (nodeIds[segment_i] == global_myrank) {
-      /*
-        std::cout << "Node: " << global_myrank
-                  << " processing tile: " << segment_i << std::endl;
-		  */
         int tile_m = start_id[segment_i + 1] - start_id[segment_i];
         int nnz = counts[segment_i];
         int start_nz = start_nzs[segment_i];
 	assert(start_nz <= new_nnz);
 	assert(nnz <= new_nnz);
         if (nnz <= 0) {
-          segments[segment_i] = SpSegment(tile_m);
+          segments[segment_i] = new SpSegment(tile_m);
           std::stringstream ss;
           ss << "LoadedEmpty_" << segment_i;
-          segments[segment_i].name = ss.str();
+          segments[segment_i]->name = ss.str();
         } else {
           segments[segment_i] =
-              SpSegment(edges + start_nz, tile_m, nnz, start_id[segment_i]);
+              new SpSegment(edges + start_nz, tile_m, nnz, start_id[segment_i]);
           std::stringstream ss;
           ss << "Loaded_" << segment_i;
-          segments[segment_i].name = ss.str();
+          segments[segment_i]->name = ss.str();
         }
       }
     }
@@ -314,8 +311,8 @@ class SpVec {
     int partitionId = getPartition(idx);
     assert(partitionId >= 0);
     if (nodeIds[partitionId] == global_myrank) {
-      assert(segments[partitionId].capacity > 0);
-      segments[partitionId].set(idx - start_id[partitionId], val);
+      assert(segments[partitionId]->capacity > 0);
+      segments[partitionId]->set(idx - start_id[partitionId], val);
     }
   }
 
@@ -325,7 +322,7 @@ class SpVec {
     {
       if(nodeIds[segmentId] == global_myrank)
       {
-        segments[segmentId].setAll(val);
+        segments[segmentId]->setAll(val);
       }
     }
   }
@@ -335,8 +332,8 @@ class SpVec {
     int partitionId = getPartition(idx);
     assert(partitionId >= 0);
     if (nodeIds[partitionId] == global_myrank) {
-      SpSegment segment = segments[partitionId];
-      *myres = segment.get(idx - start_id[partitionId]);
+      SpSegment * segment = segments[partitionId];
+      *myres = segment->get(idx - start_id[partitionId]);
     }
   }
 
@@ -348,7 +345,7 @@ class SpVec {
       if(nodeIds[s] == global_myrank)
       {
         //total_nnz += segments[s].getNNZ();
-        total_nnz += segments[s].compute_nnz();
+        total_nnz += segments[s]->compute_nnz();
       }
     }
     // global reduction
@@ -373,26 +370,11 @@ class SpVec {
     {
       if(nodeIds[segment] == global_myrank)
       {
-        segments[segment].save(fname + std::to_string(segment), start_id[segment], n, includeHeader);
+        segments[segment]->save(fname + std::to_string(segment), start_id[segment], n, includeHeader);
       }
     }
   }
 
-  void printStatus() const {
-    if(global_myrank == 0)
-    {
-      std::cout << "nsegments: " << nsegments << std::endl;
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    for(int segment = 0 ; segment < nsegments ; segment++)
-    {
-      if(nodeIds[segment] == global_myrank)
-      {
-        std::cout << "nodeID, segment, allocated, uninitialized: " << global_myrank << "\t" << segment << "\t" << segments[segment].properties.allocated << "\t" << segments[segment].properties.uninitialized << std::endl;
-      }
-      MPI_Barrier(MPI_COMM_WORLD);
-    }
-  }
 };
 
 #endif  // SRC_SPVEC_H_

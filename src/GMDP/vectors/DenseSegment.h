@@ -95,7 +95,6 @@ class DenseSegment {
   DenseSegment(int n) {
     capacity = n;
     num_ints = (n + sizeof(int) * 8 - 1) / (sizeof(int) * 8);
-    //std::cout << "Capacity, num_ints: " << capacity << "\t" << num_ints << std::endl;
   }
 
   DenseSegment(edge_t<T>* edges, int _m, int _nnz, int row_start)

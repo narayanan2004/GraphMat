@@ -41,7 +41,7 @@ void Apply_tile(const SpVec<SpSegment<Ta> > & v_in, SpVec<SpSegment<Tb> > * v_ou
                  void (*add_fp)(Ta, Tb*, void*), void* vsp) {
   for (int i = start; i < end; i++) {
     if (v_in.nodeIds[i] == v_in.global_myrank) {
-      apply_segment(v_in.segments[i], &(v_out->segments[i]), add_fp, vsp);
+      apply_segment(v_in.segments[i], v_out->segments[i], add_fp, vsp);
     }
   }
 }

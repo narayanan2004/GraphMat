@@ -99,10 +99,10 @@ void mapreduce_dense_segment(VT* value, int * bitvector, int nnz, T* result, boo
 }
 
 template <typename T>
-void reduce_segment(const DenseSegment<T>& segment, T* res, bool* res_set,
+void reduce_segment(const DenseSegment<T> * segment, T* res, bool* res_set,
                     void (*op_fp)(T, T, T*, void*), void* vsp) {
 
-  reduce_dense_segment(segment.properties.value, segment.properties.bit_vector, segment.capacity, res, res_set, op_fp, vsp);
+  reduce_dense_segment(segment->properties.value, segment->properties.bit_vector, segment->capacity, res, res_set, op_fp, vsp);
 }
 
 template <typename VT, typename T>

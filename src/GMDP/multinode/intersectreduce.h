@@ -44,7 +44,7 @@ void IntersectReduce_tile(const SpVec<SpSegment<Ta> > & veca,
   int global_myrank = get_global_myrank();
   for (int i = start; i < end; i++) {
     if (veca.nodeIds[i] == global_myrank) {
-      intersect_segment(veca.segments[i], vecb.segments[i], &(vecc->segments[i]), op_fp, vsp);
+      intersect_segment(veca.segments[i], vecb.segments[i], vecc->segments[i], op_fp, vsp);
     }
   }
 }

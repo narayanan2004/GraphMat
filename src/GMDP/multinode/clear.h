@@ -41,7 +41,7 @@ template <template<typename> class SpSegment, typename T>
 void Clear_tile(SpVec<SpSegment<T> > * v1, int start, int end) {
   for (int i = start; i < end; i++) {
     if (v1->nodeIds[i] == v1->global_myrank) {
-      clear_segment(&(v1->segments[i]));
+      clear_segment(v1->segments[i]);
     }
   }
 }

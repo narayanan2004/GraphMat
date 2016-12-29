@@ -43,7 +43,7 @@ void UnionReduce_tile(const SpVec<Ta> & veca,
   int global_myrank = get_global_myrank();
   for (int i = start; i < end; i++) {
     if (veca.nodeIds[i] == global_myrank) {
-      union_segment(veca.segments[i], vecb.segments[i], &(vecc->segments[i]), op_fp, vsp);
+      union_segment(veca.segments[i], vecb.segments[i], vecc->segments[]), op_fp, vsp);
     }
   }
 }
