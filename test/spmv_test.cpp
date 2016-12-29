@@ -44,13 +44,11 @@ void create_spmv_identity_test(int N) {
 
   //create random sparse vector
   auto E2 = generate_random_vector_edgelist<EDGE_T>(N, N/10);
-  GMDP::SpVec<GMDP::DenseSegment<EDGE_T> > x;
-  x.AllocatePartitioned(N, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
+  GMDP::SpVec<GMDP::DenseSegment<EDGE_T> > x(N, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
   x.ingestEdgelist(E2);
 
   //create output vector
-  GMDP::SpVec<GMDP::DenseSegment<EDGE_T> > y;
-  y.AllocatePartitioned(N, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
+  GMDP::SpVec<GMDP::DenseSegment<EDGE_T> > y(N, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
   GMDP::Clear(&y);
 
   //do SPMV: y = A * x

@@ -117,7 +117,7 @@ class DenseSegment {
 
   ~DenseSegment() {}
 
-  int compute_nnz()
+  int compute_nnz() const
   {
     if(properties.uninitialized) return 0;
     int len = 0;
@@ -129,7 +129,7 @@ class DenseSegment {
     return len;
   }
   
-  int compute_nnz(int start, int finish)
+  int compute_nnz(int start, int finish) const
   {
     if(properties.uninitialized) return 0;
     int len = 0;
@@ -481,7 +481,7 @@ class DenseSegment {
     fout.close();
   }
 
-  void get_edges(edge_t<T> * edges, unsigned int start_nz)
+  void get_edges(edge_t<T> * edges, unsigned int start_nz) const
   {
     unsigned int mycnt = 0;
     for(int i = 0 ; i < capacity ; i++)
