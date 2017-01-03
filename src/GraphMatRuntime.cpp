@@ -164,16 +164,16 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
     //do SpMV
     if (gp->getOrder() == OUT_EDGES) {
 
-      SpMTSpV(g, gp, x, y);
+      SpMTSpV(g, gp, &x, &y);
 
     } else if (gp->getOrder() == IN_EDGES) {
 
-      SpMSpV(g, gp, x, y);
+      SpMSpV(g, gp, &x, &y);
 
     } else if (gp->getOrder() == ALL_EDGES) {
 
-      SpMTSpV(g, gp, x, y);
-      SpMSpV(g, gp, x, y);
+      SpMTSpV(g, gp, &x, &y);
+      SpMSpV(g, gp, &x, &y);
 
     } else {
       printf("Unrecognized option \n");
@@ -202,7 +202,7 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
       if(y.nodeIds[segmentId] == global_myrank)
       {
         auto segment = y.segments[segmentId]->properties;
-        auto vpValueArray = g.vertexproperty.segments[segmentId]->properties.value;
+        auto vpValueArray = g.vertexproperty->segments[segmentId]->properties.value;
         #pragma omp parallel for reduction(&:local_converged) 
         for (int i = 0; i < y.segments[segmentId]->num_ints; i++) {
           unsigned int value = segment.bit_vector[i];
@@ -217,8 +217,8 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
             //gp->apply(segment.value[idx], g.vertexproperty.segments[segmentId].properties.value[idx]);
             gp->apply(segment.value[idx], vpValueArray[idx]);
             if (old_prop != vpValueArray[idx]) {
-              g.active.segments[segmentId]->properties.value[idx] = true;
-              GMDP::set_bitvector(idx, g.active.segments[segmentId]->properties.bit_vector);
+              g.active->segments[segmentId]->properties.value[idx] = true;
+              GMDP::set_bitvector(idx, g.active->segments[segmentId]->properties.bit_vector);
               local_converged = 0;
             }
 
@@ -241,8 +241,8 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
     gettimeofday(&iteration_end, 0);
     #ifdef __TIMING
     time = (iteration_end.tv_sec-iteration_start.tv_sec)*1e3+(iteration_end.tv_usec-iteration_start.tv_usec)*1e-3;
-    //printf("Number of vertices that changed state = %d \n", g.active.getNNZ());
-    printf("Iteration %d :: %f msec :: updated %d vertices :: changed %d vertices \n", it, time, y.getNNZ(), g.active.getNNZ());
+    //printf("Number of vertices that changed state = %d \n", g.active->getNNZ());
+    printf("Iteration %d :: %f msec :: updated %d vertices :: changed %d vertices \n", it, time, y.getNNZ(), g.active->getNNZ());
     #endif
 
     if (act == ALL_VERTICES) {

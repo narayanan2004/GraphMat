@@ -96,7 +96,14 @@ class SpVec {
     }
   }
 
-  ~SpVec() {}
+  ~SpVec() 
+  {
+    for(auto it = segments.begin() ; it != segments.end() ; it++)
+    {
+      delete *it;
+    }
+    segments.clear();
+  }
 
   inline int getPartition(int src) const {
     for (int i = 0; i < nsegments; i++) {
@@ -283,17 +290,9 @@ class SpVec {
         int start_nz = start_nzs[segment_i];
 	assert(start_nz <= new_nnz);
 	assert(nnz <= new_nnz);
-        if (nnz <= 0) {
-          segments[segment_i] = new SpSegment(tile_m);
-          std::stringstream ss;
-          ss << "LoadedEmpty_" << segment_i;
-          segments[segment_i]->name = ss.str();
-        } else {
-          segments[segment_i] =
-              new SpSegment(edges + start_nz, tile_m, nnz, start_id[segment_i]);
-          std::stringstream ss;
-          ss << "Loaded_" << segment_i;
-          segments[segment_i]->name = ss.str();
+        if(nnz > 0)
+        {
+              segments[segment_i]->ingestEdges(edges + start_nz, tile_m, nnz, start_id[segment_i]);
         }
       }
     }

@@ -58,14 +58,14 @@ void Addfn(U a, U b, U * c, void* gpv) {
 
 
 template <class T, class U, class V, class E>
-void SpMSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GMDP::SpVec<GMDP::DenseSegment<T> >& x, GMDP::SpVec<GMDP::DenseSegment<U> >& y) {
+void SpMSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GMDP::SpVec<GMDP::DenseSegment<T> > * x, GMDP::SpVec<GMDP::DenseSegment<U> >* y) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 
   if (gp->getProcessMessageRequiresVertexprop()) {
-    GMDP::SpMSpV3(G.A, x, G.vertexproperty, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+    GMDP::SpMSpV3(G.A, x, G.vertexproperty, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
   } else {
-    GMDP::SpMSpV(G.A, x, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+    GMDP::SpMSpV(G.A, x, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
   }
 
   #ifdef __TIMING
@@ -75,14 +75,14 @@ void SpMSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GMDP::SpVec<GMDP::De
   #endif
 }
 template <class T, class U, class V, class E>
-void SpMTSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GMDP::SpVec<GMDP::DenseSegment<T> >& x, GMDP::SpVec<GMDP::DenseSegment<U> >& y) {
+void SpMTSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GMDP::SpVec<GMDP::DenseSegment<T> >* x, GMDP::SpVec<GMDP::DenseSegment<U> >* y) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 
   if (gp->getProcessMessageRequiresVertexprop()) {
-    GMDP::SpMSpV3(G.AT, x, G.vertexproperty, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+    GMDP::SpMSpV3(G.AT, x, G.vertexproperty, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
   } else {
-    GMDP::SpMSpV(G.AT, x, &y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+    GMDP::SpMSpV(G.AT, x, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
   }
 
   #ifdef __TIMING

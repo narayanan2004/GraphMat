@@ -66,8 +66,8 @@ class Graph {
 
     GMDP::SpMat<GMDP::DCSCTile<E> > A;
     GMDP::SpMat<GMDP::DCSCTile<E> > AT;
-    GMDP::SpVec<GMDP::DenseSegment<V> > vertexproperty;
-    GMDP::SpVec<GMDP::DenseSegment<bool> > active;
+    GMDP::SpVec<GMDP::DenseSegment<V> > * vertexproperty;
+    GMDP::SpVec<GMDP::DenseSegment<bool> > * active;
 
   public:
     void MTXFromEdgelist(GMDP::edgelist_t<E> A_edges);
@@ -162,12 +162,12 @@ void Graph<V,E>::MTXFromEdgelist(GMDP::edgelist_t<E> A_edges) {
     int m_ = A.m;
     assert(A.m == A.n);
     nnz = A.getNNZ();
-      vertexproperty = GMDP::SpVec<GMDP::DenseSegment<V> >(A.m, tiles_per_dim, GMDP::vector_partition_fn);
+      vertexproperty = new GMDP::SpVec<GMDP::DenseSegment<V> >(A.m, tiles_per_dim, GMDP::vector_partition_fn);
       V *__v = new V;
-      vertexproperty.setAll(*__v);
+      vertexproperty->setAll(*__v);
       delete __v;
-      active = GMDP::SpVec<GMDP::DenseSegment<bool> >(A.m, tiles_per_dim, GMDP::vector_partition_fn);
-      active.setAll(false);
+      active = new GMDP::SpVec<GMDP::DenseSegment<bool> >(A.m, tiles_per_dim, GMDP::vector_partition_fn);
+      active->setAll(false);
 
     nvertices = m_;
     vertexpropertyowner = 1;
@@ -194,21 +194,21 @@ void Graph<V,E>::setAllActive() {
   //}
   //memset(active, 0xff, sizeof(bool)*(nvertices));
   //GMDP::Apply(active, &active, set_all_true);
-  active.setAll(true);
+  active->setAll(true);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setAllInactive() {
   //memset(active, 0x0, sizeof(bool)*(nvertices));
   //GMDP::Apply(active, &active, set_all_false);
-  active.setAll(false);
+  active->setAll(false);
   int global_myrank = GMDP::get_global_myrank();
   //GMDP::Clear(&active);
-  for(int segmentId = 0 ; segmentId < active.nsegments ; segmentId++)
+  for(int segmentId = 0 ; segmentId < active->nsegments ; segmentId++)
   {
-    if(active.nodeIds[segmentId] == global_myrank)
+    if(active->nodeIds[segmentId] == global_myrank)
     {
-      GMDP::DenseSegment<bool>* s1 = active.segments[segmentId];
+      GMDP::DenseSegment<bool>* s1 = active->segments[segmentId];
       GMDP::clear_dense_segment(s1->properties.value, s1->properties.bit_vector, s1->num_ints);
     }
   }
@@ -218,21 +218,21 @@ template<class V, class E>
 void Graph<V,E>::setActive(int v) {
   //active[v] = true;
   int v_new = vertexToNative(v, tiles_per_dim, nvertices);
-  active.set(v_new, true);
+  active->set(v_new, true);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setInactive(int v) {
   //active[v] = false;
   int v_new = vertexToNative(v, tiles_per_dim, nvertices);
-  active.set(v_new, false);
+  active->set(v_new, false);
 }
 template<class V, class E> 
 void Graph<V,E>::reset() {
   //memset(active, 0, sizeof(bool)*(nvertices));
   setAllInactive();
   V v;
-  vertexproperty.setAll(v);
+  vertexproperty->setAll(v);
   //#pragma omp parallel for num_threads(nthreads)
   //for (int i = 0; i < nvertices; i++) {
   //  V v;
@@ -253,19 +253,19 @@ void Graph<V,E>::setAllVertexproperty(const V& val) {
   //for (int i = 0; i < nvertices; i++) {
   //  vertexproperty[i] = val;
   //}
-  vertexproperty.setAll(val);
+  vertexproperty->setAll(val);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setVertexproperty(int v, const V& val) {
   //vertexproperty[v] = val;
   int v_new = vertexToNative(v, tiles_per_dim, nvertices);
-  vertexproperty.set(v_new, val);
+  vertexproperty->set(v_new, val);
 }
 
 template<class V, class E> 
 void Graph<V,E>::getVertexEdgelist(GMDP::edgelist_t<V> & myedges) {
-  vertexproperty.get_edges(&myedges);
+  vertexproperty->get_edges(&myedges);
   for(unsigned int i = 0 ; i < myedges.nnz ; i++)
   {
     myedges.edges[i].src = nativeToVertex(myedges.edges[i].src, tiles_per_dim, nvertices);
@@ -275,21 +275,22 @@ void Graph<V,E>::getVertexEdgelist(GMDP::edgelist_t<V> & myedges) {
 template<class V, class E> 
 void Graph<V,E>::saveVertexproperty(std::string fname, bool includeHeader) const {
   GMDP::edgelist_t<V> myedges;
-  vertexproperty.get_edges(&myedges);
+  vertexproperty->get_edges(&myedges);
   for(unsigned int i = 0 ; i < myedges.nnz ; i++)
   {
     myedges.edges[i].src = nativeToVertex(myedges.edges[i].src, tiles_per_dim, nvertices);
   }
-  GMDP::SpVec<GMDP::DenseSegment<V> > vertexproperty2(nvertices, tiles_per_dim, GMDP::vector_partition_fn);
-  vertexproperty2.ingestEdgelist(myedges);
+  GMDP::SpVec<GMDP::DenseSegment<V> > * vertexproperty2 = new GMDP::SpVec<GMDP::DenseSegment<V> >(nvertices, tiles_per_dim, GMDP::vector_partition_fn);
+  vertexproperty2->ingestEdgelist(myedges);
   _mm_free(myedges.edges);
-  vertexproperty2.save(fname, includeHeader);
+  vertexproperty2->save(fname, includeHeader);
+  delete vertexproperty2;
 }
 
 template<class V, class E>
 bool Graph<V,E>::vertexNodeOwner(const int v) const {
   int v_new = vertexToNative(v, tiles_per_dim, nvertices);
-  return vertexproperty.node_owner(v_new);
+  return vertexproperty->node_owner(v_new);
 }
 
 template<class V, class E> 
@@ -297,7 +298,7 @@ V Graph<V,E>::getVertexproperty(const int v) const {
   //return vertexproperty[v];
   V vp ;
   int v_new = vertexToNative(v, tiles_per_dim, nvertices);
-  vertexproperty.get(v_new, &vp);
+  vertexproperty->get(v_new, &vp);
   return vp;
 }
 
@@ -308,14 +309,14 @@ int Graph<V,E>::getNumberOfVertices() const {
 
 template<class V, class E> 
 void Graph<V,E>::applyToAllVertices( void (*ApplyFn)(V, V*, void*), void* param) {
-  GMDP::Apply(vertexproperty, &vertexproperty, ApplyFn, param);
+  GMDP::Apply(vertexproperty, vertexproperty, ApplyFn, param);
 }
 
 
 template<class V, class E> 
 template<class T> 
 void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*), void* param) {
-  GMDP::MapReduce(&vertexproperty, val, ApplyFn, ReduceFn, param);
+  GMDP::MapReduce(vertexproperty, val, ApplyFn, ReduceFn, param);
 }
 
 template<class V, class E> 

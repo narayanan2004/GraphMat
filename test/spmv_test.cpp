@@ -52,7 +52,7 @@ void create_spmv_identity_test(int N) {
   GMDP::Clear(&y);
 
   //do SPMV: y = A * x
-  GMDP::SpMSpV(A, x, &y, mul, add, NULL);
+  GMDP::SpMSpV(A, &x, &y, mul, add, NULL);
 
   //Collect elements of y
   GMDP::edgelist_t<EDGE_T> E3;

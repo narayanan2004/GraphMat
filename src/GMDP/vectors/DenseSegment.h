@@ -86,22 +86,13 @@ class DenseSegment {
   std::vector<segment_props<T> > received_properties;
   std::vector<segment_props<T> > uninitialized_properties;
 
-  DenseSegment()
-  {
-    capacity=0;
-    num_ints=0;
-  }
-
   DenseSegment(int n) {
     capacity = n;
     num_ints = (n + sizeof(int) * 8 - 1) / (sizeof(int) * 8);
   }
 
-  DenseSegment(edge_t<T>* edges, int _m, int _nnz, int row_start)
+  void ingestEdges(edge_t<T>* edges, int _m, int _nnz, int row_start)
   {
-    capacity = _m;
-    num_ints = (capacity + sizeof(int) * 8 - 1) / (sizeof(int) * 8);
-
     alloc();
     initialize();
 

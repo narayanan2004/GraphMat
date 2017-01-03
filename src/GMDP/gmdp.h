@@ -85,7 +85,6 @@ inline double get_compression_threshold() {
 #include "GMDP/vectors/SpVec.h"
 #include "GMDP/vectors/DenseSegment.h"
 #include "GMDP/multinode/intersectreduce.h"
-#include "GMDP/multinode/unionreduce.h"
 #include "GMDP/multinode/reduce.h"
 #include "GMDP/multinode/spmspv.h"
 #include "GMDP/multinode/spmspv3.h"

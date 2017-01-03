@@ -36,12 +36,13 @@
 #include "GMDP/matrices/SpMat.h"
 #include "GMDP/vectors/SpVec.h"
 #include "GMDP/singlenode/spmspv3.h"
+#include "GMDP/singlenode/unionreduce.h"
 
 template <template <typename> class SpTile, template<typename> class SpSegment, typename Ta, typename Tx,
           typename Tvp,
           typename Ty>
-void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
-                 SpVec<SpSegment<Tvp> >& vecvp,
+void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >* vecx,
+                 SpVec<SpSegment<Tvp> >* vecvp,
                  SpVec<SpSegment<Ty> >* vecy, int start_m, int start_n, int end_m,
                  int end_n, void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
   int output_rank = 0;
@@ -62,8 +63,8 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
     for (std::set<int>::iterator it = col_ranks[j].begin();
          it != col_ranks[j].end(); it++) {
       int dst_rank = *it;
-      if (global_myrank == vecx.nodeIds[j] && global_myrank != dst_rank) {
-        vecx.segments[j]->compress();
+      if (global_myrank == vecx->nodeIds[j] && global_myrank != dst_rank) {
+        vecx->segments[j]->compress();
       }
     }
   }
@@ -73,8 +74,8 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
     for (std::set<int>::iterator it = row_ranks[j].begin();
          it != row_ranks[j].end(); it++) {
       int dst_rank = *it;
-      if (global_myrank == vecvp.nodeIds[j] && global_myrank != dst_rank) {
-        vecvp.segments[j]->compress();
+      if (global_myrank == vecvp->nodeIds[j] && global_myrank != dst_rank) {
+        vecvp->segments[j]->compress();
       }
     }
   }
@@ -83,12 +84,12 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
     for (std::set<int>::iterator it = col_ranks[j].begin();
          it != col_ranks[j].end(); it++) {
       int dst_rank = *it;
-      if (global_myrank == vecx.nodeIds[j] && global_myrank != dst_rank) {
-        vecx.segments[j]->send_tile_metadata(global_myrank, dst_rank, output_rank, &requests);
+      if (global_myrank == vecx->nodeIds[j] && global_myrank != dst_rank) {
+        vecx->segments[j]->send_tile_metadata(global_myrank, dst_rank, output_rank, &requests);
       }
-      if (global_myrank == dst_rank && global_myrank != vecx.nodeIds[j]) {
-        vecx.segments[j]
-            ->recv_tile_metadata(global_myrank, vecx.nodeIds[j], output_rank, &requests);
+      if (global_myrank == dst_rank && global_myrank != vecx->nodeIds[j]) {
+        vecx->segments[j]
+            ->recv_tile_metadata(global_myrank, vecx->nodeIds[j], output_rank, &requests);
       }
     }
   }
@@ -98,12 +99,12 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
     for (std::set<int>::iterator it = row_ranks[j].begin();
          it != row_ranks[j].end(); it++) {
       int dst_rank = *it;
-      if (global_myrank == vecvp.nodeIds[j] && global_myrank != dst_rank) {
-        vecvp.segments[j]->send_tile_metadata(global_myrank, dst_rank, output_rank, &requests);
+      if (global_myrank == vecvp->nodeIds[j] && global_myrank != dst_rank) {
+        vecvp->segments[j]->send_tile_metadata(global_myrank, dst_rank, output_rank, &requests);
       }
-      if (global_myrank == dst_rank && global_myrank != vecvp.nodeIds[j]) {
-        vecvp.segments[j]
-            ->recv_tile_metadata(global_myrank, vecvp.nodeIds[j], output_rank, &requests);
+      if (global_myrank == dst_rank && global_myrank != vecvp->nodeIds[j]) {
+        vecvp->segments[j]
+            ->recv_tile_metadata(global_myrank, vecvp->nodeIds[j], output_rank, &requests);
       }
     }
   }
@@ -114,12 +115,12 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
     for (std::set<int>::iterator it = col_ranks[j].begin();
          it != col_ranks[j].end(); it++) {
       int dst_rank = *it;
-      if (global_myrank == vecx.nodeIds[j] && global_myrank != dst_rank) {
-        vecx.segments[j]->send_tile_compressed(global_myrank, dst_rank, output_rank, &requests);
+      if (global_myrank == vecx->nodeIds[j] && global_myrank != dst_rank) {
+        vecx->segments[j]->send_tile_compressed(global_myrank, dst_rank, output_rank, &requests);
       }
-      if (global_myrank == dst_rank && global_myrank != vecx.nodeIds[j]) {
-        vecx.segments[j]
-            ->recv_tile_compressed(global_myrank, vecx.nodeIds[j], output_rank, &requests);
+      if (global_myrank == dst_rank && global_myrank != vecx->nodeIds[j]) {
+        vecx->segments[j]
+            ->recv_tile_compressed(global_myrank, vecx->nodeIds[j], output_rank, &requests);
       }
     }
   }
@@ -129,12 +130,12 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
     for (std::set<int>::iterator it = row_ranks[j].begin();
          it != row_ranks[j].end(); it++) {
       int dst_rank = *it;
-      if (global_myrank == vecvp.nodeIds[j] && global_myrank != dst_rank) {
-        vecvp.segments[j]->send_tile_compressed(global_myrank, dst_rank, output_rank, &requests);
+      if (global_myrank == vecvp->nodeIds[j] && global_myrank != dst_rank) {
+        vecvp->segments[j]->send_tile_compressed(global_myrank, dst_rank, output_rank, &requests);
       }
-      if (global_myrank == dst_rank && global_myrank != vecvp.nodeIds[j]) {
-        vecvp.segments[j]
-            ->recv_tile_compressed(global_myrank, vecvp.nodeIds[j], output_rank, &requests);
+      if (global_myrank == dst_rank && global_myrank != vecvp->nodeIds[j]) {
+        vecvp->segments[j]
+            ->recv_tile_compressed(global_myrank, vecvp->nodeIds[j], output_rank, &requests);
       }
     }
   }
@@ -148,8 +149,8 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
     for (std::set<int>::iterator it = col_ranks[j].begin();
          it != col_ranks[j].end(); it++) {
       int dst_rank = *it;
-      if (global_myrank == dst_rank && global_myrank != vecx.nodeIds[j]) {
-        vecx.segments[j]
+      if (global_myrank == dst_rank && global_myrank != vecx->nodeIds[j]) {
+        vecx->segments[j]
             ->decompress();
       }
     }
@@ -159,8 +160,8 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
     for (std::set<int>::iterator it = row_ranks[j].begin();
          it != row_ranks[j].end(); it++) {
       int dst_rank = *it;
-      if (global_myrank == dst_rank && global_myrank != vecvp.nodeIds[j]) {
-        vecvp.segments[j]
+      if (global_myrank == dst_rank && global_myrank != vecvp->nodeIds[j]) {
+        vecvp->segments[j]
             ->decompress();
       }
     }
@@ -173,7 +174,7 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
   for (int i = start_m; i < end_m; i++) {
     for (int j = start_n; j < end_n; j++) {
       if (global_myrank == grida.nodeIds[i + j * grida.ntiles_y]) {
-        mult_segment3(grida.tiles[i][j], vecx.segments[j], vecvp.segments[i], vecy->segments[i],
+        mult_segment3(grida.tiles[i][j], vecx->segments[j], vecvp->segments[i], vecy->segments[i],
                      output_rank, mul_fp, add_fp, vsp);
       }
     }
@@ -184,15 +185,15 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
 
   // Free input vectors allocated during computation
   for (int j = start_n; j < end_n; j++) {
-    if (global_myrank != vecx.nodeIds[j]) {
-      vecx.segments[j]->set_uninitialized();
+    if (global_myrank != vecx->nodeIds[j]) {
+      vecx->segments[j]->set_uninitialized();
     }
   }
 
   // Free input vectors allocated during computation
   for (int j = start_m; j < end_m; j++) {
-    if (global_myrank != vecvp.nodeIds[j]) {
-      vecvp.segments[j]->set_uninitialized();
+    if (global_myrank != vecvp->nodeIds[j]) {
+      vecvp->segments[j]->set_uninitialized();
     }
   }
 
@@ -265,8 +266,8 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >& vecx,
 
 template <template <typename> class SpTile, template <typename> class SpSegment, typename Ta, typename Tx,
           typename Tvp, typename Ty>
-void SpMSpV3(const SpMat<SpTile<Ta> >& mata, SpVec<SpSegment<Tx> >& vecx,
-            SpVec<SpSegment<Tvp> > & vecvp, 
+void SpMSpV3(const SpMat<SpTile<Ta> >& mata, SpVec<SpSegment<Tx> >* vecx,
+            SpVec<SpSegment<Tvp> > * vecvp, 
 	    SpVec<SpSegment<Ty> >* vecy, void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
   SpMSpV3_tile(mata, vecx, vecvp, vecy, 0, 0, mata.ntiles_y, mata.ntiles_x, mul_fp,
               add_fp, vsp);
