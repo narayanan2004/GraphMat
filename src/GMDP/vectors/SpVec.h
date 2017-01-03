@@ -53,17 +53,6 @@ class SpVec {
   int (*pfn)(int, int, int);
   int global_nrank, global_myrank;
 
-  SpVec()
-  {
-    nsegments = 0;
-    n = 0;
-    name = "Empty";
-    num_tiles_x = 0;
-    pfn = NULL;
-    global_nrank = get_global_nrank();
-    global_myrank = get_global_myrank(); 
-  }
-
   SpVec(int _n, int _num_tiles_x,
                            int (*_pfn)(int, int, int)) {
 

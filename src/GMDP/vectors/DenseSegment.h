@@ -105,7 +105,10 @@ class DenseSegment {
     properties.uninitialized = false;
   }
 
-  ~DenseSegment() {}
+  ~DenseSegment() 
+  {
+    dealloc();
+  }
 
   int compute_nnz() const
   {
