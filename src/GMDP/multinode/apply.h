@@ -37,21 +37,15 @@
 #include "GMDP/singlenode/apply.h"
 
 template <template<typename> class SpSegment, typename Ta, typename Tb>
-void Apply_tile(const SpVec<SpSegment<Ta> > * v_in, SpVec<SpSegment<Tb> > * v_out, int start, int end,
+void Apply(const SpVec<SpSegment<Ta> > * v_in, SpVec<SpSegment<Tb> > * v_out,
                  void (*add_fp)(Ta, Tb*, void*), void* vsp) {
+  int start = 0; 
+  int end = v_in->nsegments;
   for (int i = start; i < end; i++) {
     if (v_in->nodeIds[i] == v_in->global_myrank) {
       apply_segment(v_in->segments[i], v_out->segments[i], add_fp, vsp);
     }
   }
 }
-
-template <template<typename> class SpSegment, typename Ta, typename Tb>
-void Apply(const SpVec<SpSegment<Ta> > * v_in, SpVec<SpSegment<Tb> > * v_out, void (*add_fp)(Ta, Tb*, void*), void* vsp=NULL)
-{
-  Apply_tile(v_in, v_out, 0, v_in->nsegments, add_fp, vsp);
-}
-
-
 
 #endif  // SRC_MULTINODE_APPLY_H_

@@ -36,46 +36,13 @@
 #include "GMDP/matrices/SpMat.h"
 #include "GMDP/singlenode/reduce.h"
 
-template <template<typename> class SpSegment, typename T>
-void Reduce_tile(const SpVec<SpSegment<T> >& vec, T* res, int start, int end,
-                 void (*op_fp)(T, T, T*, void*), void* vsp) {
-  int global_myrank = get_global_myrank();
-  int global_nrank = get_global_nrank();
-  bool res_set = false;
-
-  for (int i = start; i < end; i++) {
-    if (vec.nodeIds[i] == global_myrank) {
-      reduce_segment(vec.segments[i], res, &res_set, op_fp, vsp);
-    }
-  }
-
-  // Reduce across nodes
-  T* all_res = new T[global_nrank];
-  all_res[global_myrank] = *res;
-  MPI_Status status;
-  for (int i = 1; i < global_nrank; i++) {
-    if (global_myrank == i) {
-      MPI_Send(all_res + i, sizeof(T), MPI_CHAR, 0, 0, MPI_COMM_WORLD);
-    }
-  }
-  for (int i = 1; i < global_nrank; i++) {
-    if (global_myrank == 0) {
-      MPI_Recv(all_res + i, sizeof(T), MPI_CHAR, i, 0, MPI_COMM_WORLD, &status);
-      T tmp_res = *res;
-      op_fp(tmp_res, all_res[i], res, vsp);
-    }
-  }
-
-  // Broadcast to all nodes
-  MPI_Bcast(res, sizeof(T), MPI_CHAR, 0, MPI_COMM_WORLD);
-}
-
-
 template <template<typename> class SpSegment, typename T, typename VT>
-void MapReduce_tile(SpVec<SpSegment<VT> > * vec, T* res, int start, int end,
+void MapReduce(SpVec<SpSegment<VT> > * vec, T* res,
                  void (*op_map)(VT*, T*, void*), void (*op_fp)(T, T, T*, void*), void* vsp) {
   int global_myrank = get_global_myrank();
   int global_nrank = get_global_nrank();
+  int start = 0;
+  int end = vec->nsegments;
   bool res_set = false;
 
   for (int i = start; i < end; i++) {
@@ -104,13 +71,6 @@ void MapReduce_tile(SpVec<SpSegment<VT> > * vec, T* res, int start, int end,
   // Broadcast to all nodes
   MPI_Bcast(res, sizeof(T), MPI_CHAR, 0, MPI_COMM_WORLD);
 }
-
-
-template <template<typename> class SpSegment, typename T, typename VT>
-void MapReduce(SpVec<SpSegment<VT> > * vec, T* res, void (*op_map)(VT*, T*, void*), void (*op_fp)(T, T, T*, void*), void* vsp=NULL) {
-  MapReduce_tile(vec, res, 0, vec->nsegments, op_map, op_fp, vsp);
-}
-
 
 
 #endif  // SRC_MULTINODE_REDUCE_H_

@@ -41,11 +41,14 @@
 template <template <typename> class SpTile, template<typename> class SpSegment, typename Ta, typename Tx,
           typename Tvp,
           typename Ty>
-void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >* vecx,
+void SpMSpV3(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >* vecx,
                  SpVec<SpSegment<Tvp> >* vecvp,
-                 SpVec<SpSegment<Ty> >* vecy, int start_m, int start_n, int end_m,
-                 int end_n, void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
+                 SpVec<SpSegment<Ty> >* vecy,void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
   int output_rank = 0;
+  int start_m = 0;
+  int start_n = 0;
+  int end_m = grida.ntiles_y;
+  int end_n = grida.ntiles_x;
 
   // Build list of row/column partners
   std::vector<std::set<int> > row_ranks;
@@ -262,15 +265,6 @@ void SpMSpV3_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >* vecx,
   }
 
   //spmspv_reduce_time += MPI_Wtime() - tmp_time;
-}
-
-template <template <typename> class SpTile, template <typename> class SpSegment, typename Ta, typename Tx,
-          typename Tvp, typename Ty>
-void SpMSpV3(const SpMat<SpTile<Ta> >& mata, SpVec<SpSegment<Tx> >* vecx,
-            SpVec<SpSegment<Tvp> > * vecvp, 
-	    SpVec<SpSegment<Ty> >* vecy, void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
-  SpMSpV3_tile(mata, vecx, vecvp, vecy, 0, 0, mata.ntiles_y, mata.ntiles_x, mul_fp,
-              add_fp, vsp);
 }
 
 #endif  // SRC_MULTINODE_SPMSPV3_H_

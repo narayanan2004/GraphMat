@@ -38,20 +38,14 @@
 #include "GMDP/singlenode/clear.h"
 
 template <template<typename> class SpSegment, typename T>
-void Clear_tile(SpVec<SpSegment<T> > * v1, int start, int end) {
+void Clear(SpVec<SpSegment<T> > * v1) {
+  int start = 0;
+  int end = v1->nsegments;
   for (int i = start; i < end; i++) {
     if (v1->nodeIds[i] == v1->global_myrank) {
       clear_segment(v1->segments[i]);
     }
   }
 }
-
-template <typename T>
-void Clear(SpVec<T> * v1)
-{
-  Clear_tile(v1, 0, v1->nsegments);
-}
-
-
 
 #endif  // SRC_MULTINODE_CLEAR_H_

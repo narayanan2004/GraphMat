@@ -37,25 +37,18 @@
 #include "GMDP/singlenode/intersectreduce.h"
 
 template <template <typename> class SpSegment, typename Ta, typename Tb, typename Tc>
-void IntersectReduce_tile(const SpVec<SpSegment<Ta> > * veca,
+void IntersectReduce(const SpVec<SpSegment<Ta> > * veca,
                           const SpVec<SpSegment<Tb> > * vecb,
-                          SpVec<SpSegment<Tc> > * vecc, int start, int end,
+                          SpVec<SpSegment<Tc> > * vecc,
                           void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) {
   int global_myrank = get_global_myrank();
+  int start = 0;
+  int end = veca->nsegments;
   for (int i = start; i < end; i++) {
     if (veca->nodeIds[i] == global_myrank) {
       intersect_segment(veca->segments[i], vecb->segments[i], vecc->segments[i], op_fp, vsp);
     }
   }
 }
-
-template <template <typename> class SpSegment, typename Ta, typename Tb, typename Tc>
-void IntersectReduce(const SpVec<SpSegment<Ta> > * v1, const SpVec<SpSegment<Tb> > * v2, SpVec<SpSegment<Tc> > * v3, void (*op_fp)(Ta,Tb,Tc*,void*), void* vsp=NULL)
-{
-  IntersectReduce_tile(v1, v2, v3, 0, v1->nsegments, op_fp, vsp);
-}
-
-
-
 
 #endif  // SRC_MULTINODE_INTERSECTREDUCE_H_
