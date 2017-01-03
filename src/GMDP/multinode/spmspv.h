@@ -38,29 +38,6 @@
 #include "GMDP/singlenode/spmspv.h"
 #include "GMDP/singlenode/unionreduce.h"
 
-template <template <typename> class SpTile, typename T>
-void get_row_ranks_spmspv(const SpMat<SpTile<T> >& mat,
-                          std::vector<std::set<int> >* row_ranks_out,
-                          std::vector<std::set<int> >* col_ranks_out) {
-  for (int i = 0; i < mat.ntiles_y; i++) {
-    // Create set of row nodeIDs
-    std::set<int> row_ranks;
-    for (int j = 0; j < mat.ntiles_x; j++) {
-      row_ranks.insert(mat.nodeIds[i + j * mat.ntiles_y]);
-    }
-    row_ranks_out->push_back(row_ranks);
-  }
-
-  for (int j = 0; j < mat.ntiles_x; j++) {
-    // Create set of col nodeIDs
-    std::set<int> col_ranks;
-    for (int i = 0; i < mat.ntiles_y; i++) {
-      col_ranks.insert(mat.nodeIds[i + j * mat.ntiles_y]);
-    }
-    col_ranks_out->push_back(col_ranks);
-  }
-}
-
 template <template <typename> class SpTile, template<typename> class SpSegment, typename Ta, typename Tx,
           typename Ty>
 void SpMSpV_tile(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >* vecx,
