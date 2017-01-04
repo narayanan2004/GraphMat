@@ -269,6 +269,7 @@ class DenseSegment {
       if(it->allocated)
       {
         _mm_free(it->value);
+        _mm_free(it->compressed_data);
       }
     }
     received_properties.clear();
@@ -278,6 +279,7 @@ class DenseSegment {
     dealloc_received();
     if (properties.allocated) {
       _mm_free(properties.value);
+      _mm_free(properties.compressed_data);
       properties.allocated = false;
       properties.uninitialized = true;
       properties.nnz = 0;
