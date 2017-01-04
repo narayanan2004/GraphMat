@@ -36,6 +36,7 @@
 #include <string>
 #include "GMDP/matrices/edgelist.h"
 #include "GMDP/utils/bitvector.h"
+#include "GMDP/singlenode/unionreduce.h"
 
 inline double get_compression_threshold();
 
@@ -418,7 +419,6 @@ class DenseSegment {
     recv_buffer(properties, myrank, src_rank, requests);
   }
 
-
   void save(std::string fname, int start_id, int _m, bool includeHeader)
   {
     int nnz = compute_nnz();
@@ -452,5 +452,24 @@ class DenseSegment {
       }
     }
   }
+
+  template <typename Ta, typename Tb, typename Tc>
+  void union_received(void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) {
+    alloc();
+    initialize();
+    for(auto it = received_properties.begin() ; it != received_properties.end() ; it++)
+    {
+      if(should_compress(it->nnz))
+      {
+        union_compressed(it->compressed_data, it->nnz, capacity, num_ints, properties.value, properties.bit_vector, op_fp, vsp);
+      }
+      else
+      {
+        union_dense(it->value, it->bit_vector, capacity, num_ints, properties.value, properties.bit_vector, properties.value, properties.bit_vector, op_fp, vsp);
+      }
+    } 
+  }
 };
+
+
 #endif  // SRC_DENSESEGMENT_H_

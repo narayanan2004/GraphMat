@@ -197,7 +197,7 @@ void SpMSpV(const SpMat<SpTile<Ta> > * grida, SpVec<SpSegment<Tx> >* vecx,
   // Sum received tiles
   for (int i = start_m; i < end_m; i++) {
     if (global_myrank == vecy->nodeIds[i]) {
-      union_compress_segment(vecy->segments[i], add_fp, vsp);
+      vecy->segments[i]->union_received(add_fp, vsp);
       vecy->segments[i]->set_uninitialized_received();
     }
   }

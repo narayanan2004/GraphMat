@@ -36,7 +36,7 @@
 #include <algorithm>
 
 template <typename Ta, typename Tb, typename Tc>
-void union_dense_segment(Ta* v1, int * bv1, int nnz, int num_ints, Tb * v2, int * bv2, Tc * v3, int * bv3,
+void union_dense(Ta* v1, int * bv1, int nnz, int num_ints, Tb * v2, int * bv2, Tc * v3, int * bv3,
                           void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) 
 {
 
@@ -66,7 +66,7 @@ void union_dense_segment(Ta* v1, int * bv1, int nnz, int num_ints, Tb * v2, int 
 }
 
 template <typename Ta, typename Tb>
-void union_compressed_segment(Ta* v1, int nnz, int capacity, int num_ints, Tb * v2, int * bv2,
+void union_compressed(Ta* v1, int nnz, int capacity, int num_ints, Tb * v2, int * bv2,
                           void (*op_fp)(Ta, Tb, Tb*, void*), void* vsp) 
 {
   int * indices = reinterpret_cast<int*>(v1 + nnz);
@@ -102,37 +102,5 @@ void union_compressed_segment(Ta* v1, int nnz, int capacity, int num_ints, Tb * 
     }
   }
 }
-
-template <typename Ta, typename Tb, typename Tc>
-void union_segment(const DenseSegment<Ta> * s1, const DenseSegment<Tb> * s2, DenseSegment<Tc> * s3, 
-                    void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) {
-
-  s3->alloc();
-  union_dense_segment(s1->properties.value, s1->properties.bit_vector, s1->capacity, s1->num_ints, s2->properties.value, s2->properties.bit_vector, s3->properties.value, s3->properties.bit_vector, op_fp, vsp);
-}
-
-template <typename Ta, typename Tb, typename Tc>
-void union_compress_segment(DenseSegment<Ta> * s1, 
-                    void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) {
-
-  s1->alloc();
-  s1->initialize();
-  for(auto it = s1->received_properties.begin() ; it != s1->received_properties.end() ; it++)
-  {
-    assert(!(it->uninitialized));
-    assert(it->allocated);
-    if(s1->should_compress(it->nnz))
-    {
-      union_compressed_segment(it->compressed_data, it->nnz, s1->capacity, s1->num_ints, s1->properties.value, s1->properties.bit_vector, op_fp, vsp);
-    }
-    else
-    {
-      union_dense_segment(it->value, it->bit_vector, s1->capacity, s1->num_ints, s1->properties.value, s1->properties.bit_vector, s1->properties.value, s1->properties.bit_vector, op_fp, vsp);
-    }
-  }
-}
-
-
-
 
 #endif  // SRC_SINGLENODE_UNIONREDUCE_H_
