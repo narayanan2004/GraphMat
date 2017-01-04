@@ -353,25 +353,23 @@ class DenseSegment {
   void recv_tile_metadata(int myrank, int src_rank,
                  std::vector<MPI_Request>* requests) {
 
-    // if uninitialized
-    if(properties.uninitialized)
+    // Create new buffer
+    segment_props<T> new_properties;
+    if(uninitialized_properties.size() > 0) 
     {
-      MPI_Recv(&(properties.nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
-               MPI_STATUS_IGNORE);
+      new_properties = uninitialized_properties.back();
+      uninitialized_properties.pop_back();
     }
-    else
-    {
-      // Create new buffer
-      segment_props<T> new_properties;
-      if(uninitialized_properties.size() > 0) 
-      {
-        new_properties = uninitialized_properties.back();
-        uninitialized_properties.pop_back();
-      }
-      MPI_Recv(&(new_properties.nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
+    MPI_Recv(&(new_properties.nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
+             MPI_STATUS_IGNORE);
+    to_be_received_properties.push_back(new_properties);
+  }
+
+  void recv_tile_metadata_overwrite(int myrank, int src_rank,
+                 std::vector<MPI_Request>* requests) {
+
+    MPI_Recv(&(properties.nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
                MPI_STATUS_IGNORE);
-      to_be_received_properties.push_back(new_properties);
-    }
   }
 
   void send_tile(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
@@ -393,40 +391,42 @@ class DenseSegment {
                  std::vector<MPI_Request>* requests) {
     MPI_Request r1;
     alloc();
-    if(properties.uninitialized)
+    segment_props<T> new_properties = to_be_received_properties[0];
+    to_be_received_properties.erase(to_be_received_properties.begin());
+    new_properties.alloc(capacity, num_ints);
+    if(!should_compress(new_properties.nnz))
     {
-      if(!should_compress(properties.nnz))
-      {
-        MPI_Irecv(properties.value, capacity * sizeof(T) + num_ints * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-               &r1);
-      }
-      else
-      {
-        MPI_Irecv(properties.compressed_data, properties.nnz * sizeof(T) + properties.nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-               &r1);
-      }
-      properties.uninitialized = false;
+      MPI_Irecv(new_properties.value, capacity * sizeof(T) + num_ints* sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+             &r1);
     }
     else
     {
-      segment_props<T> new_properties = to_be_received_properties[0];
-      to_be_received_properties.erase(to_be_received_properties.begin());
-      new_properties.alloc(capacity, num_ints);
-      if(!should_compress(new_properties.nnz))
-      {
-        MPI_Irecv(new_properties.value, capacity * sizeof(T) + num_ints* sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-               &r1);
-      }
-      else
-      {
-        MPI_Irecv(new_properties.compressed_data, new_properties.nnz * sizeof(T) + new_properties.nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-               &r1);
-      }
-      new_properties.uninitialized = false;
-      received_properties.push_back(new_properties);
+      MPI_Irecv(new_properties.compressed_data, new_properties.nnz * sizeof(T) + new_properties.nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+             &r1);
     }
+    new_properties.uninitialized = false;
+    received_properties.push_back(new_properties);
     requests->push_back(r1);
   }
+
+  void recv_tile_overwrite(int myrank, int src_rank, 
+                 std::vector<MPI_Request>* requests) {
+    MPI_Request r1;
+    alloc();
+    if(!should_compress(properties.nnz))
+    {
+      MPI_Irecv(properties.value, capacity * sizeof(T) + num_ints * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+             &r1);
+    }
+    else
+    {
+      MPI_Irecv(properties.compressed_data, properties.nnz * sizeof(T) + properties.nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+             &r1);
+    }
+    properties.uninitialized = false;
+    requests->push_back(r1);
+  }
+
 
   void save(std::string fname, int start_id, int _m, bool includeHeader)
   {

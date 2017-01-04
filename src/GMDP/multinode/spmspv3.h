@@ -122,7 +122,7 @@ void SpMSpV3(const SpMat<SpTile<Ta> > * grida, SpVec<SpSegment<Tx> >* vecx,
       }
       if (global_myrank == dst_rank && global_myrank != vecx->nodeIds[j]) {
         vecx->segments[j]
-            ->recv_tile(global_myrank, vecx->nodeIds[j], &requests);
+            ->recv_tile_overwrite(global_myrank, vecx->nodeIds[j], &requests);
       }
     }
   }
@@ -137,7 +137,7 @@ void SpMSpV3(const SpMat<SpTile<Ta> > * grida, SpVec<SpSegment<Tx> >* vecx,
       }
       if (global_myrank == dst_rank && global_myrank != vecvp->nodeIds[j]) {
         vecvp->segments[j]
-            ->recv_tile(global_myrank, vecvp->nodeIds[j], &requests);
+            ->recv_tile_overwrite(global_myrank, vecvp->nodeIds[j], &requests);
       }
     }
   }
