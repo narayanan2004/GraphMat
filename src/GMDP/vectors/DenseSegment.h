@@ -349,25 +349,18 @@ class DenseSegment {
   void send_nnz(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     MPI_Send(&(properties.nnz), 1, MPI_INT, dst_rank, 0, MPI_COMM_WORLD);
   }
-
   void recv_nnz_queue(int myrank, int src_rank,
                  std::vector<MPI_Request>* requests) {
-
-    // Create new buffer
     int new_nnz;
     MPI_Recv(&(new_nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
              MPI_STATUS_IGNORE);
     to_be_received_properties.push_back(new_nnz);
-
   }
-
   void recv_nnz(int myrank, int src_rank,
-                 std::vector<MPI_Request>* requests) {
-
-    MPI_Recv(&(properties.nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
-               MPI_STATUS_IGNORE);
+                std::vector<MPI_Request>* requests) {
+   MPI_Recv(&(properties.nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
+            MPI_STATUS_IGNORE);
   }
-
   void send_segment(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     MPI_Request r1;
     if(!should_compress(properties.nnz))
@@ -383,6 +376,25 @@ class DenseSegment {
     requests->push_back(r1);
   }
 
+  void recv_buffer(segment_props<T> & p,
+                   int myrank, int src_rank, 
+                 std::vector<MPI_Request>* requests) {
+
+    MPI_Request r1;
+    if(!should_compress(p.nnz))
+    {
+      MPI_Irecv(p.value, capacity * sizeof(T) + num_ints* sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+             &r1);
+    }
+    else
+    {
+      MPI_Irecv(p.compressed_data, p.nnz * sizeof(T) + p.nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+             &r1);
+    }
+    p.uninitialized = false;
+    requests->push_back(r1);
+  }
+
   void recv_segment_queue(int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
 
@@ -392,43 +404,18 @@ class DenseSegment {
       new_properties = uninitialized_properties.back();
       uninitialized_properties.pop_back();
     }
+    new_properties.alloc(capacity, num_ints);
     new_properties.nnz = to_be_received_properties[0];
     to_be_received_properties.erase(to_be_received_properties.begin());
 
-    MPI_Request r1;
-    alloc();
-    new_properties.alloc(capacity, num_ints);
-    if(!should_compress(new_properties.nnz))
-    {
-      MPI_Irecv(new_properties.value, capacity * sizeof(T) + num_ints* sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-             &r1);
-    }
-    else
-    {
-      MPI_Irecv(new_properties.compressed_data, new_properties.nnz * sizeof(T) + new_properties.nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-             &r1);
-    }
-    new_properties.uninitialized = false;
+    recv_buffer(new_properties, myrank, src_rank, requests);
     received_properties.push_back(new_properties);
-    requests->push_back(r1);
   }
 
   void recv_segment(int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
-    MPI_Request r1;
     alloc();
-    if(!should_compress(properties.nnz))
-    {
-      MPI_Irecv(properties.value, capacity * sizeof(T) + num_ints * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-             &r1);
-    }
-    else
-    {
-      MPI_Irecv(properties.compressed_data, properties.nnz * sizeof(T) + properties.nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-             &r1);
-    }
-    properties.uninitialized = false;
-    requests->push_back(r1);
+    recv_buffer(properties, myrank, src_rank, requests);
   }
 
 
