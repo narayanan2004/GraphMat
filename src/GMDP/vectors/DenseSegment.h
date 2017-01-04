@@ -376,84 +376,56 @@ class DenseSegment {
 
   void send_tile(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     MPI_Request r1;
-    MPI_Isend(properties.value, capacity * sizeof(T) + num_ints * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
-               &r1);
+    if(!should_compress(properties.nnz))
+    {
+      MPI_Isend(properties.value, capacity * sizeof(T) + num_ints * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
+                 &r1);
+    }
+    else
+    {
+      MPI_Isend(properties.compressed_data, properties.nnz * sizeof(T) + properties.nnz * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
+                 &r1);
+    }
     requests->push_back(r1);
   }
 
   void recv_tile(int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
-
-    alloc();
-    if(properties.uninitialized)
-    {
-      MPI_Request r1;
-      MPI_Irecv(properties.value, capacity * sizeof(T) + num_ints * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-             &r1);
-      requests->push_back(r1);
-      properties.uninitialized = false;
-    }
-    else
-    {
-      segment_props<T> new_properties = to_be_received_properties[0];
-      to_be_received_properties.erase(to_be_received_properties.begin());
-      new_properties.alloc(capacity, num_ints);
-      MPI_Request r1;
-      MPI_Irecv(new_properties.value, capacity * sizeof(T) + num_ints* sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-             &r1);
-      requests->push_back(r1);
-      new_properties.uninitialized = false;
-      received_properties.push_back(new_properties);
-    }
-  }
-
-
-  void send_tile_compressed(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
-    if(!should_compress(properties.nnz))
-    {
-      send_tile(myrank, dst_rank, requests);
-      return;
-    }
     MPI_Request r1;
-    MPI_Isend(properties.compressed_data, properties.nnz * sizeof(T) + properties.nnz * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
-               &r1);
-    requests->push_back(r1);
-  }
-
-  void recv_tile_compressed(int myrank, int src_rank, 
-                 std::vector<MPI_Request>* requests) {
-
     alloc();
     if(properties.uninitialized)
     {
       if(!should_compress(properties.nnz))
       {
-        recv_tile(myrank, src_rank, requests);
-        return;
+        MPI_Irecv(properties.value, capacity * sizeof(T) + num_ints * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+               &r1);
       }
-      MPI_Request r1;
-      MPI_Irecv(properties.compressed_data, properties.nnz * sizeof(T) + properties.nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-             &r1);
-      requests->push_back(r1);
+      else
+      {
+        MPI_Irecv(properties.compressed_data, properties.nnz * sizeof(T) + properties.nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+               &r1);
+      }
       properties.uninitialized = false;
     }
     else
     {
       segment_props<T> new_properties = to_be_received_properties[0];
-      if(!should_compress(new_properties.nnz))
-      {
-        recv_tile(myrank, src_rank, requests);
-        return;
-      }
       to_be_received_properties.erase(to_be_received_properties.begin());
       new_properties.alloc(capacity, num_ints);
-      MPI_Request r1;
-      MPI_Irecv(new_properties.compressed_data, new_properties.nnz * sizeof(T) + new_properties.nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-             &r1);
-      requests->push_back(r1);
+      if(!should_compress(new_properties.nnz))
+      {
+        MPI_Irecv(new_properties.value, capacity * sizeof(T) + num_ints* sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+               &r1);
+      }
+      else
+      {
+        MPI_Irecv(new_properties.compressed_data, new_properties.nnz * sizeof(T) + new_properties.nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+               &r1);
+      }
       new_properties.uninitialized = false;
       received_properties.push_back(new_properties);
     }
+    requests->push_back(r1);
   }
 
   void save(std::string fname, int start_id, int _m, bool includeHeader)
