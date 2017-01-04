@@ -107,7 +107,30 @@ class DenseSegment {
 
   ~DenseSegment() 
   {
-    dealloc();
+    if (properties.allocated) {
+      _mm_free(properties.value);
+      _mm_free(properties.compressed_data);
+    }
+
+    for(auto it = received_properties.begin() ; it != received_properties.end() ; it++)
+    {
+      if(it->allocated)
+      {
+        _mm_free(it->value);
+        _mm_free(it->compressed_data);
+      }
+    }
+    received_properties.clear();
+
+    for(auto it = uninitialized_properties.begin() ; it != uninitialized_properties.end() ; it++)
+    {
+      if(it->allocated)
+      {
+        _mm_free(it->value);
+        _mm_free(it->compressed_data);
+      }
+    }
+    uninitialized_properties.clear();
   }
 
   int compute_nnz() const
@@ -262,45 +285,6 @@ class DenseSegment {
     properties.nnz = 0;
   }
 
-  void dealloc_received()
-  {
-    for(auto it = received_properties.begin() ; it != received_properties.end() ; it++)
-    {
-      if(it->allocated)
-      {
-        _mm_free(it->value);
-        _mm_free(it->compressed_data);
-      }
-    }
-    received_properties.clear();
-  }
-
-  void dealloc_uninitialized()
-  {
-    for(auto it = uninitialized_properties.begin() ; it != uninitialized_properties.end() ; it++)
-    {
-      if(it->allocated)
-      {
-        _mm_free(it->value);
-        _mm_free(it->compressed_data);
-      }
-    }
-    uninitialized_properties.clear();
-  }
-
-
-  void dealloc() {
-    dealloc_uninitialized();
-    dealloc_received();
-    if (properties.allocated) {
-      _mm_free(properties.value);
-      _mm_free(properties.compressed_data);
-      properties.allocated = false;
-      properties.uninitialized = true;
-      properties.nnz = 0;
-    }
-  }
-
   void alloc() {
     if(!properties.allocated)
     {
@@ -362,11 +346,11 @@ class DenseSegment {
     return properties.value[idx - 1];
   }
 
-  void send_tile_metadata(int myrank, int dst_rank, int output_rank, std::vector<MPI_Request>* requests) {
+  void send_tile_metadata(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     MPI_Send(&(properties.nnz), 1, MPI_INT, dst_rank, 0, MPI_COMM_WORLD);
   }
 
-  void recv_tile_metadata(int myrank, int src_rank, int output_rank,
+  void recv_tile_metadata(int myrank, int src_rank,
                  std::vector<MPI_Request>* requests) {
 
     // if uninitialized
@@ -390,14 +374,14 @@ class DenseSegment {
     }
   }
 
-  void send_tile(int myrank, int dst_rank, int output_rank, std::vector<MPI_Request>* requests) {
+  void send_tile(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     MPI_Request r1;
     MPI_Isend(properties.value, capacity * sizeof(T) + num_ints * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
                &r1);
     requests->push_back(r1);
   }
 
-  void recv_tile(int myrank, int src_rank, int output_rank,
+  void recv_tile(int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
 
     alloc();
@@ -424,10 +408,10 @@ class DenseSegment {
   }
 
 
-  void send_tile_compressed(int myrank, int dst_rank, int output_rank, std::vector<MPI_Request>* requests) {
+  void send_tile_compressed(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     if(!should_compress(properties.nnz))
     {
-      send_tile(myrank, dst_rank, output_rank, requests);
+      send_tile(myrank, dst_rank, requests);
       return;
     }
     MPI_Request r1;
@@ -436,7 +420,7 @@ class DenseSegment {
     requests->push_back(r1);
   }
 
-  void recv_tile_compressed(int myrank, int src_rank, int output_rank,
+  void recv_tile_compressed(int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
 
     alloc();
@@ -444,7 +428,7 @@ class DenseSegment {
     {
       if(!should_compress(properties.nnz))
       {
-        recv_tile(myrank, src_rank, output_rank, requests);
+        recv_tile(myrank, src_rank, requests);
         return;
       }
       MPI_Request r1;
@@ -458,7 +442,7 @@ class DenseSegment {
       segment_props<T> new_properties = to_be_received_properties[0];
       if(!should_compress(new_properties.nnz))
       {
-        recv_tile(myrank, src_rank, output_rank, requests);
+        recv_tile(myrank, src_rank, requests);
         return;
       }
       to_be_received_properties.erase(to_be_received_properties.begin());

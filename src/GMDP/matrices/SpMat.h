@@ -298,11 +298,11 @@ class SpMat {
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
-  void print_tiles(std::string msg, int output_rank) {
+  void print_tiles(std::string msg) {
 
     MPI_Barrier(MPI_COMM_WORLD);
     {
-      if (global_myrank == output_rank) {
+      if (global_myrank == 0) {
         std::cout << "Rank " << global_myrank << "\t" << msg << std::endl;
         for (int i = 0; i < ntiles_y; i++) {
           for (int j = 0; j < ntiles_x; j++) {

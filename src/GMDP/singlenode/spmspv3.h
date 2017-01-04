@@ -142,7 +142,7 @@ void my_coospmspv3(Ta* a, int* ia, int* ja, int num_partitions, int * partition_
 template <typename Ta, typename Tx, typename Tvp, typename Ty>
 void mult_segment3(const DCSCTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
                   const DenseSegment<Tvp> * segmentvp,
-                  DenseSegment<Ty> * segmenty, int output_rank,
+                  DenseSegment<Ty> * segmenty,
                   void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
@@ -159,7 +159,7 @@ void mult_segment3(const DCSCTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
 template <typename Ta, typename Tx, typename Tvp, typename Ty>
 void mult_segment3(const COOTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
                   const DenseSegment<Tvp> * segmentvp,
-                  DenseSegment<Ty>* segmenty, int output_rank,
+                  DenseSegment<Ty>* segmenty,
                   void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();

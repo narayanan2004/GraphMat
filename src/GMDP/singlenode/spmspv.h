@@ -224,7 +224,7 @@ void my_coospmspv(Ta* a, int* ia, int* ja, int num_partitions, int * partition_s
 
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const DCSCTile<Ta>* tile, DenseSegment<Tx>* segmentx,
-                  DenseSegment<Ty>* segmenty, int output_rank,
+                  DenseSegment<Ty>* segmenty, 
                   void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
@@ -239,7 +239,7 @@ void mult_segment(const DCSCTile<Ta>* tile, DenseSegment<Tx>* segmentx,
 
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const HybridTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
-                  DenseSegment<Ty>* segmenty, int output_rank,
+                  DenseSegment<Ty>* segmenty, 
                   void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
@@ -263,7 +263,7 @@ void mult_segment(const HybridTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
 
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const CSRTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
-                  DenseSegment<Ty>* segmenty, int output_rank,
+                  DenseSegment<Ty>* segmenty, 
                   void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
@@ -280,7 +280,7 @@ void mult_segment(const CSRTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
 
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const COOTile<Ta>* tile, const DenseSegment<Tx>* segmentx,
-                  DenseSegment<Ty>* segmenty, int output_rank,
+                  DenseSegment<Ty>* segmenty, 
                   void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
@@ -297,7 +297,7 @@ void mult_segment(const COOTile<Ta>* tile, const DenseSegment<Tx>* segmentx,
 
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const COOSIMD32Tile<Ta>* tile, const DenseSegment<Tx>* segmentx,
-                  DenseSegment<Ty>* segmenty, int output_rank,
+                  DenseSegment<Ty>* segmenty, 
                   void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();

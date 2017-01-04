@@ -328,22 +328,6 @@ class COOSIMD32Tile {
 
   ~COOSIMD32Tile(void) {}
 
-  void send_tile_metadata(int myrank, int dst_rank, int output_rank) {
-    assert(0);
-  }
-
-  void recv_tile_metadata(int myrank, int src_rank, int output_rank) {
-    assert(0);
-  }
-
-  void send_tile(int myrank, int dst_rank, int output_rank, bool block, std::vector<MPI_Request>* reqs) {
-    assert(0);
-  }
-
-  void recv_tile(int myrank, int src_rank, int output_rank, bool block,
-                 std::vector<MPI_Request>* reqs) {
-    assert(0);
-  }
 };
 
 #endif  // SRC_COOSIMD32TILE_H_
