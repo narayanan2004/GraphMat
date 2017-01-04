@@ -40,13 +40,13 @@
 
 template <template <typename> class SpTile, template<typename> class SpSegment, typename Ta, typename Tx,
           typename Ty>
-void SpMSpV(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >* vecx,
+void SpMSpV(const SpMat<SpTile<Ta> > * grida, SpVec<SpSegment<Tx> >* vecx,
                  SpVec<SpSegment<Ty> >* vecy, void (*mul_fp)(Ta, Tx, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
   int output_rank = 0;
   int start_m = 0;
   int start_n = 0;
-  int end_m = grida.ntiles_y;
-  int end_n = grida.ntiles_x;
+  int end_m = grida->ntiles_y;
+  int end_n = grida->ntiles_x;
 
   // Build list of row/column partners
   std::vector<std::set<int> > row_ranks;
@@ -122,8 +122,8 @@ void SpMSpV(const SpMat<SpTile<Ta> >& grida, SpVec<SpSegment<Tx> >* vecx,
   // Multiply all tiles
   for (int i = start_m; i < end_m; i++) {
     for (int j = start_n; j < end_n; j++) {
-      if (global_myrank == grida.nodeIds[i + j * grida.ntiles_y]) {
-        mult_segment(grida.tiles[i][j], vecx->segments[j], vecy->segments[i],
+      if (global_myrank == grida->nodeIds[i + j * grida->ntiles_y]) {
+        mult_segment(grida->tiles[i][j], vecx->segments[j], vecy->segments[i],
                      output_rank, mul_fp, add_fp, vsp);
       }
     }

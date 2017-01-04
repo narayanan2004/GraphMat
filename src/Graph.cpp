@@ -64,8 +64,8 @@ class Graph {
     bool vertexID_randomization;
 
 
-    GMDP::SpMat<GMDP::DCSCTile<E> > A;
-    GMDP::SpMat<GMDP::DCSCTile<E> > AT;
+    GMDP::SpMat<GMDP::DCSCTile<E> > *A;
+    GMDP::SpMat<GMDP::DCSCTile<E> > *AT;
     GMDP::SpVec<GMDP::DenseSegment<V> > * vertexproperty;
     GMDP::SpVec<GMDP::DenseSegment<bool> > * active;
 
@@ -156,17 +156,17 @@ void Graph<V,E>::MTXFromEdgelist(GMDP::edgelist_t<E> A_edges) {
       A_edges.edges[i].dst = vertexToNative(A_edges.edges[i].dst, tiles_per_dim, A_edges.m);
     }
 
-    GMDP::AssignSpMat(A_edges, &A, tiles_per_dim, tiles_per_dim, GMDP::partition_fn_2d);
+    A = new GMDP::SpMat<GMDP::DCSCTile<E> >(A_edges, tiles_per_dim, tiles_per_dim, GMDP::partition_fn_2d);
     GMDP::Transpose(A, &AT, tiles_per_dim, tiles_per_dim, GMDP::partition_fn_2d);
 
-    int m_ = A.m;
-    assert(A.m == A.n);
-    nnz = A.getNNZ();
-      vertexproperty = new GMDP::SpVec<GMDP::DenseSegment<V> >(A.m, tiles_per_dim, GMDP::vector_partition_fn);
+    int m_ = A->m;
+    assert(A->m == A->n);
+    nnz = A->getNNZ();
+      vertexproperty = new GMDP::SpVec<GMDP::DenseSegment<V> >(A->m, tiles_per_dim, GMDP::vector_partition_fn);
       V *__v = new V;
       vertexproperty->setAll(*__v);
       delete __v;
-      active = new GMDP::SpVec<GMDP::DenseSegment<bool> >(A.m, tiles_per_dim, GMDP::vector_partition_fn);
+      active = new GMDP::SpVec<GMDP::DenseSegment<bool> >(A->m, tiles_per_dim, GMDP::vector_partition_fn);
       active->setAll(false);
 
     nvertices = m_;
@@ -324,6 +324,10 @@ Graph<V,E>::~Graph() {
   if (vertexpropertyowner) {
     //if(vertexproperty) delete [] vertexproperty;
   }
+  delete A;
+  delete AT;
+  delete vertexproperty;
+  delete active;
   //if (active) delete [] active;
   //if (id) delete [] id;
   //if (start_src_vertices) delete [] start_src_vertices;

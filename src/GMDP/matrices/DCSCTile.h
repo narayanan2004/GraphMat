@@ -309,7 +309,19 @@ class DCSCTile {
     nnz = 0;
   }
 
-  ~DCSCTile() {}
+  ~DCSCTile() 
+  {
+    if(nnz > 0)
+    {
+      _mm_free(row_inds);
+      _mm_free(col_ptrs);
+      _mm_free(col_indices);
+      _mm_free(vals);
+      _mm_free(row_pointers);
+      _mm_free(edge_pointers);
+      _mm_free(col_starts);
+    }
+  }
 
   void send_tile_metadata(int myrank, int dst_rank, int output_rank) {
     if (myrank == output_rank)

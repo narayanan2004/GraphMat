@@ -50,7 +50,7 @@ bool compare_tile_id(const tedge_t<T>& a, const tedge_t<T>& b) {
 template <typename SpTile>
 class SpMat {
  public:
-  SpTile** tiles;
+  SpTile*** tiles;
 
   int* start_idx;
   int* start_idy;
@@ -65,12 +65,6 @@ class SpMat {
   int num_tiles_y;
   int (*pfn)(int, int, int, int, int);
   int global_nrank, global_myrank;
-
-  SpMat() { 
-    empty = true; 
-    global_nrank = get_global_nrank();
-    global_myrank = get_global_myrank();
-  }
 
   void set(int _m, int _n, int _ntiles_x, int _ntiles_y, int* _nodeIds,
            int* _start_idx, int* _start_idy) {
@@ -95,21 +89,9 @@ class SpMat {
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Allocate space for tiles
-    tiles = new SpTile* [ntiles_y];
+    tiles = new SpTile** [ntiles_y];
     for (int i = 0; i < ntiles_y; i++) {
-      tiles[i] = new SpTile[ntiles_x];
-    }
-
-    // Set metadata
-    for (int tile_j = 0; tile_j < ntiles_x; tile_j++) {
-      for (int tile_i = 0; tile_i < ntiles_y; tile_i++) {
-        int tile_m = start_idy[tile_i + 1] - start_idy[tile_i];
-        int tile_n = start_idx[tile_j + 1] - start_idx[tile_j];
-        tiles[tile_i][tile_j] = SpTile(tile_m, tile_n);
-        std::stringstream ss;
-        ss << "Created_" << tile_i << "," << tile_j;
-        tiles[tile_i][tile_j].name = ss.str();
-      }
+      tiles[i] = new SpTile*[ntiles_x];
     }
   }
 
@@ -293,17 +275,11 @@ class SpMat {
             nnz = (end_nz+1) - start_nz;
           }
           if (nnz <= 0) {
-            tiles[tile_i][tile_j] = SpTile(tile_m, tile_n);
-            std::stringstream ss;
-            ss << "LoadedEmpty_" << tile_i << "," << tile_j;
-            tiles[tile_i][tile_j].name = ss.str();
+            tiles[tile_i][tile_j] = new SpTile(tile_m, tile_n);
           } else {
             tiles[tile_i][tile_j] =
-                SpTile(received_edges + start_nz, tile_m, tile_n, nnz, start_idy[tile_i],
+                new SpTile(received_edges + start_nz, tile_m, tile_n, nnz, start_idy[tile_i],
                        start_idx[tile_j]);
-            std::stringstream ss;
-            ss << "Loaded_" << tile_i << "," << tile_j;
-            tiles[tile_i][tile_j].name = ss.str();
           }
         }
       }
@@ -372,31 +348,36 @@ class SpMat {
     starty[num_tiles_y] = m;
 
     set(m, n, num_tiles_x, num_tiles_y, nodeIds, startx, starty);
+    _mm_free(nodeIds);
+    _mm_free(startx);
+    _mm_free(starty);
   }
 
-  template<typename T>
-  void setElement(const int idx, const int idy, T val)
+  template <typename T>
+  SpMat(edgelist_t<T> edgelist, int ntx,
+                   int nty, int (*pfn)(int, int, int, int, int)) {
+    global_nrank = get_global_nrank();
+    global_myrank = get_global_myrank();
+    Allocate2DPartitioned(edgelist.m, edgelist.n, ntx, nty, pfn);
+    ingestEdgelist(edgelist);
+  }
+
+  ~SpMat()
   {
-    assert(!empty);
-    int ival, jval;
-    int tile = getPartition(idy, idx, &ival, &jval);
-    assert(tile != -1);
-    if(nodeIds[ival + jval * ntiles_y] == global_myrank)
-    {
-      tiles[ival][jval].set(idx - start_idx[jval], idy - start_idy[ival], val);
+    for (int tile_i = 0; tile_i < ntiles_y; tile_i++) {
+      for (int tile_j = 0; tile_j < ntiles_x; tile_j++) {
+        if (nodeIds[tile_i + tile_j * ntiles_y] == global_myrank) {
+          delete tiles[tile_i][tile_j];
+        }
+      }
+      delete [] tiles[tile_i];
     }
-  }
+    delete [] tiles;
 
-  template<typename T>
-  T getElement(const int idx, const int idy) const {
-    assert(!empty);
-    int ival, jval;
-    int tile = getPartition(idy, idx, &ival, &jval); // Is this right?
-    assert(tile != -1);
-    if(nodeIds[ival + jval * ntiles_y] == global_myrank)
-    {
-      return tiles[ival][jval].get(idx - start_idx[jval], idy - start_idy[ival]);
-    }
+    _mm_free(start_idx);
+    _mm_free(start_idy);
+    _mm_free(nodeIds);
+
   }
 
   template <typename T>
@@ -409,7 +390,7 @@ class SpMat {
     for (int i = 0; i < ntiles_y; i++) {
       for (int j = 0; j < ntiles_x; j++) {
         if (nodeIds[i + j * ntiles_y] == global_myrank) {
-          nnzs += tiles[i][j].nnz;
+          nnzs += tiles[i][j]->nnz;
         }
       }
     }
@@ -426,8 +407,8 @@ class SpMat {
         for (int j = 0; j < ntiles_x; j++) {
           if (nodeIds[i + j * ntiles_y] == global_myrank) {
             tiles[i][j]
-                .get_edges(edgelist->edges + nnzs, start_idy[i], start_idx[j]);
-            nnzs += tiles[i][j].nnz;
+                ->get_edges(edgelist->edges + nnzs, start_idy[i], start_idx[j]);
+            nnzs += tiles[i][j]->nnz;
           }
         }
       }
@@ -444,7 +425,7 @@ class SpMat {
       {
         if(nodeIds[i + j * ntiles_y] == global_myrank)
         {
-          total_nnz += tiles[i][j].nnz;
+          total_nnz += tiles[i][j]->nnz;
         }
       }
     }
@@ -455,42 +436,35 @@ class SpMat {
 };
 
 template <template <typename> class SpTile, typename T>
-void get_row_ranks(const SpMat<SpTile<T> >& mat,
+void get_row_ranks(const SpMat<SpTile<T> >* mat,
                    std::vector<std::set<int> >* row_ranks_out,
                    std::vector<std::set<int> >* col_ranks_out) {
-  for (int i = 0; i < mat.ntiles_y; i++) {
+  for (int i = 0; i < mat->ntiles_y; i++) {
     // Create set of row nodeIDs
     std::set<int> row_ranks;
-    for (int j = 0; j < mat.ntiles_x; j++) {
-      row_ranks.insert(mat.nodeIds[i + j * mat.ntiles_y]);
+    for (int j = 0; j < mat->ntiles_x; j++) {
+      row_ranks.insert(mat->nodeIds[i + j * mat->ntiles_y]);
     }
     row_ranks_out->push_back(row_ranks);
   }
 
-  for (int j = 0; j < mat.ntiles_x; j++) {
+  for (int j = 0; j < mat->ntiles_x; j++) {
     // Create set of col nodeIDs
     std::set<int> col_ranks;
-    for (int i = 0; i < mat.ntiles_y; i++) {
-      col_ranks.insert(mat.nodeIds[i + j * mat.ntiles_y]);
+    for (int i = 0; i < mat->ntiles_y; i++) {
+      col_ranks.insert(mat->nodeIds[i + j * mat->ntiles_y]);
     }
     col_ranks_out->push_back(col_ranks);
   }
 }
 
-template <template <typename> class SpTile, typename T>
-void AssignSpMat(edgelist_t<T> edgelist, SpMat<SpTile<T> >* mat, int ntx,
-                 int nty, int (*pfn)(int, int, int, int, int)) {
-  mat->Allocate2DPartitioned(edgelist.m, edgelist.n, ntx, nty, pfn);
-  mat->ingestEdgelist(edgelist);
-  mat->print_tiles("A", 0);
-}
 
 template <template <typename> class SpTile, typename T>
-void Transpose(const SpMat<SpTile<T> >& mat, SpMat<SpTile<T> >* matc, int ntx,
+void Transpose(const SpMat<SpTile<T> >* mat, SpMat<SpTile<T> >** matc, int ntx,
                int nty, int (*pfn)(int, int, int, int, int)) {
 
   edgelist_t<T> edgelist;
-  mat.get_edges(&edgelist);
+  mat->get_edges(&edgelist);
 #pragma omp parallel for
   for (int i = 0; i < edgelist.nnz; i++) {
     int tmp = edgelist.edges[i].src;
@@ -500,14 +474,12 @@ void Transpose(const SpMat<SpTile<T> >& mat, SpMat<SpTile<T> >* matc, int ntx,
   int tmp = edgelist.m;
   edgelist.m = edgelist.n;
   edgelist.n = tmp;
-  SpMat<SpTile<T> > C;
+  (*matc) = new SpMat<SpTile<T> >(edgelist, ntx, nty, pfn);
 
-  AssignSpMat(edgelist, &C, ntx, nty, pfn);
   if(edgelist.nnz > 0)
   {
     _mm_free(edgelist.edges);
   }
-  *matc = C;
 }
 
 

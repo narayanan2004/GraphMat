@@ -39,8 +39,7 @@ template <typename TILE_T, typename EDGE_T>
 void create_spmv_identity_test(int N) {
   // create identity matrix
   auto E1 = generate_identity_edgelist<EDGE_T>(N);
-  GMDP::SpMat<TILE_T> A;
-  GMDP::AssignSpMat(E1, &A, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
+  GMDP::SpMat<TILE_T> A(E1, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
 
   //create random sparse vector
   auto E2 = generate_random_vector_edgelist<EDGE_T>(N, N/10);
@@ -52,7 +51,7 @@ void create_spmv_identity_test(int N) {
   GMDP::Clear(&y);
 
   //do SPMV: y = A * x
-  GMDP::SpMSpV(A, &x, &y, mul, add, NULL);
+  GMDP::SpMSpV(&A, &x, &y, mul, add, NULL);
 
   //Collect elements of y
   GMDP::edgelist_t<EDGE_T> E3;
