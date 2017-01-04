@@ -82,7 +82,7 @@ class DenseSegment {
   int num_ints;
 
   segment_props<T> properties;
-  std::vector<segment_props<T> > to_be_received_properties;
+  std::vector<int > to_be_received_properties;
   std::vector<segment_props<T> > received_properties;
   std::vector<segment_props<T> > uninitialized_properties;
 
@@ -346,33 +346,29 @@ class DenseSegment {
     return properties.value[idx - 1];
   }
 
-  void send_tile_metadata(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
+  void send_nnz(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     MPI_Send(&(properties.nnz), 1, MPI_INT, dst_rank, 0, MPI_COMM_WORLD);
   }
 
-  void recv_tile_metadata(int myrank, int src_rank,
+  void recv_nnz_queue(int myrank, int src_rank,
                  std::vector<MPI_Request>* requests) {
 
     // Create new buffer
-    segment_props<T> new_properties;
-    if(uninitialized_properties.size() > 0) 
-    {
-      new_properties = uninitialized_properties.back();
-      uninitialized_properties.pop_back();
-    }
-    MPI_Recv(&(new_properties.nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
+    int new_nnz;
+    MPI_Recv(&(new_nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
              MPI_STATUS_IGNORE);
-    to_be_received_properties.push_back(new_properties);
+    to_be_received_properties.push_back(new_nnz);
+
   }
 
-  void recv_tile_metadata_overwrite(int myrank, int src_rank,
+  void recv_nnz(int myrank, int src_rank,
                  std::vector<MPI_Request>* requests) {
 
     MPI_Recv(&(properties.nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
                MPI_STATUS_IGNORE);
   }
 
-  void send_tile(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
+  void send_segment(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     MPI_Request r1;
     if(!should_compress(properties.nnz))
     {
@@ -387,12 +383,20 @@ class DenseSegment {
     requests->push_back(r1);
   }
 
-  void recv_tile(int myrank, int src_rank, 
+  void recv_segment_queue(int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
+
+    segment_props<T> new_properties;
+    if(uninitialized_properties.size() > 0) 
+    {
+      new_properties = uninitialized_properties.back();
+      uninitialized_properties.pop_back();
+    }
+    new_properties.nnz = to_be_received_properties[0];
+    to_be_received_properties.erase(to_be_received_properties.begin());
+
     MPI_Request r1;
     alloc();
-    segment_props<T> new_properties = to_be_received_properties[0];
-    to_be_received_properties.erase(to_be_received_properties.begin());
     new_properties.alloc(capacity, num_ints);
     if(!should_compress(new_properties.nnz))
     {
@@ -409,7 +413,7 @@ class DenseSegment {
     requests->push_back(r1);
   }
 
-  void recv_tile_overwrite(int myrank, int src_rank, 
+  void recv_segment(int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
     MPI_Request r1;
     alloc();
