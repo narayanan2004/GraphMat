@@ -275,7 +275,22 @@ class DenseSegment {
     received_properties.clear();
   }
 
+  void dealloc_uninitialized()
+  {
+    for(auto it = uninitialized_properties.begin() ; it != uninitialized_properties.end() ; it++)
+    {
+      if(it->allocated)
+      {
+        _mm_free(it->value);
+        _mm_free(it->compressed_data);
+      }
+    }
+    uninitialized_properties.clear();
+  }
+
+
   void dealloc() {
+    dealloc_uninitialized();
     dealloc_received();
     if (properties.allocated) {
       _mm_free(properties.value);

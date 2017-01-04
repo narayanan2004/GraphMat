@@ -229,6 +229,13 @@ class SpMat {
   
       MPI_Waitall(2 * global_nrank, mpi_req, mpi_status);
       MPI_Barrier(MPI_COMM_WORLD);
+
+      delete [] mpi_status;
+      delete [] mpi_req;
+      delete [] positions;
+      delete [] counts;
+      delete [] recv_positions;
+      delete [] recv_counts;
     }
 
     printf("Rank %d: After shuffle %ld edges\n", global_myrank, new_nnz);
