@@ -40,8 +40,6 @@ void clear_dense_segment(T* v1, int * bitvector, int num_ints) {
 
 template <typename T>
 void clear_segment(DenseSegment<T> * s1) {
-  //s1->alloc();
-  //clear_dense_segment(s1->properties.value, s1->properties.bit_vector, s1->num_ints);
   s1->set_uninitialized();
 }
 

@@ -149,11 +149,11 @@ void mult_segment3(const DCSCTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
   int nnz = 0;
   my_spmspv3(tile->row_inds, tile->col_ptrs, tile->col_indices, tile->vals,
             tile->num_partitions, tile->row_pointers, tile->col_starts,
-            tile->edge_pointers, segmentx->properties.value, segmentx->properties.bit_vector,
-     	    segmentvp->properties.value, segmentvp->properties.bit_vector,
-            segmenty->properties.value, segmenty->properties.bit_vector, tile->m, tile->n, (&nnz),
+            tile->edge_pointers, segmentx->properties->value, segmentx->properties->bit_vector,
+     	    segmentvp->properties->value, segmentvp->properties->bit_vector,
+            segmenty->properties->value, segmenty->properties->bit_vector, tile->m, tile->n, (&nnz),
             mul_fp, add_fp, vsp);
-  segmenty->properties.nnz = segmenty->compute_nnz();
+  segmenty->properties->nnz = segmenty->compute_nnz();
 }
 
 template <typename Ta, typename Tx, typename Tvp, typename Ty>
@@ -165,11 +165,11 @@ void mult_segment3(const COOTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
   segmenty->initialize();
   int nnz = 0;
   my_coospmspv3(tile->a, tile->ia, tile->ja, tile->num_partitions, tile->partition_start,
-               segmentx->properties.value, segmentx->properties.bit_vector,
-     	       segmentvp->properties.value, segmentvp->properties.bit_vector,
-               segmenty->properties.value, segmenty->properties.bit_vector, tile->m, tile->n, (&nnz),
+               segmentx->properties->value, segmentx->properties->bit_vector,
+     	       segmentvp->properties->value, segmentvp->properties->bit_vector,
+               segmenty->properties->value, segmenty->properties->bit_vector, tile->m, tile->n, (&nnz),
                mul_fp, add_fp, vsp);
-  segmenty->properties.nnz = segmenty->compute_nnz();
+  segmenty->properties->nnz = segmenty->compute_nnz();
 }
 
 

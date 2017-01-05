@@ -209,7 +209,7 @@ void Graph<V,E>::setAllInactive() {
     if(active->nodeIds[segmentId] == global_myrank)
     {
       GMDP::DenseSegment<bool>* s1 = active->segments[segmentId];
-      GMDP::clear_dense_segment(s1->properties.value, s1->properties.bit_vector, s1->num_ints);
+      GMDP::clear_dense_segment(s1->properties->value, s1->properties->bit_vector, s1->num_ints);
     }
   }
 }
