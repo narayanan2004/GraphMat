@@ -153,6 +153,8 @@ class DenseSegment {
 
   void compress()
   {
+    alloc();
+    initialize();
     if(!should_compress(properties->nnz))
     {
       return;
