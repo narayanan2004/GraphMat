@@ -41,21 +41,22 @@ void matrix_test(GMDP::edgelist_t<EDGE_T> E)
     std::sort(E.edges, E.edges + E.nnz, edge_compare<EDGE_T>);
 
   // Create identity matrix from generator
-    GMDP::SpMat<TILE_T> A(E, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
+    GMDP::SpMat<TILE_T>* A = new GMDP::SpMat<TILE_T>(E, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
+    //GMDP::SpMat<TILE_T> A(E, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
 
     //collect all edges
     GMDP::edgelist_t<EDGE_T> EAll;
     collect_edges(E, EAll);
     std::sort(EAll.edges, EAll.edges + EAll.nnz, edge_compare<EDGE_T>);
 
-    REQUIRE(A.getNNZ() == EAll.nnz);
-    REQUIRE(A.m == E.m);
-    REQUIRE(A.n == E.n);
-    REQUIRE(A.empty == false);
+    REQUIRE(A->getNNZ() == EAll.nnz);
+    REQUIRE(A->m == E.m);
+    REQUIRE(A->n == E.n);
+    REQUIRE(A->empty == false);
 
     // Get new edgelist from matrix
     GMDP::edgelist_t<EDGE_T> OE;
-    A.get_edges(&OE);
+    A->get_edges(&OE);
 
     //collect all edges
     GMDP::edgelist_t<EDGE_T> OEAll;
@@ -74,7 +75,7 @@ void matrix_test(GMDP::edgelist_t<EDGE_T> E)
 
     // Test transpose
     GMDP::SpMat<TILE_T>* AT;
-    GMDP::Transpose(&A, &AT, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
+    GMDP::Transpose(A, &AT, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
     REQUIRE(AT->getNNZ() == EAll.nnz);
     REQUIRE(AT->m == E.n);
     REQUIRE(AT->n == E.m);
@@ -104,6 +105,9 @@ void matrix_test(GMDP::edgelist_t<EDGE_T> E)
             REQUIRE(EAll.edges[i].dst == OETAll.edges[i].dst);
             REQUIRE(EAll.edges[i].val == OETAll.edges[i].val);
     }
+    delete A;
+    delete AT;
+    delete ATT;
     E.clear();
     OE.clear();
     EAll.clear();

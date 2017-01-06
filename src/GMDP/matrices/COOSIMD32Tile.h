@@ -316,17 +316,16 @@ class COOSIMD32Tile {
     this->simd_nnz = other.simd_nnz;
   }
 
-  void clear() {
+  ~COOSIMD32Tile(void) {
     if (!isEmpty()) {
       _mm_free(a);
       _mm_free(ja);
       _mm_free(ia);
       delete [] partition_start;
+      delete [] simd_nnz;
     }
     nnz = 0;
   }
-
-  ~COOSIMD32Tile(void) {}
 
 };
 
