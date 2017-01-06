@@ -5,9 +5,10 @@ TESTBINDIR=./testbin
 
 MPICXX=mpiicpc
 CXX=icpc
+#CXX=g++
 
 ifeq (${CXX}, icpc)
-  CXX_OPTIONS=-qopenmp -std=c++11 
+  CXX_OPTIONS=-qopenmp -std=c++11
 else
   CXX_OPTIONS=-fopenmp --std=c++11 -I/usr/include/mpi/
 endif
@@ -35,6 +36,8 @@ ifeq (${timing}, 1)
   CXX_OPTIONS += -D__TIMING
 else
 endif
+
+CXX_OPTIONS += -lboost_serialization
 
 SRCDIR=src
 DIST_PRIMITIVES_PATH=$(SRCDIR)/GMDP

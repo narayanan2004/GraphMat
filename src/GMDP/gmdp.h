@@ -54,6 +54,9 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+
 
 namespace GMDP {
 
@@ -90,6 +93,7 @@ inline double get_compression_threshold() {
 #include "GMDP/multinode/spmspv3.h"
 #include "GMDP/multinode/apply.h"
 #include "GMDP/multinode/clear.h"
+
 
 }  // namespace GMDP
 
