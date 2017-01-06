@@ -104,6 +104,12 @@ void matrix_test(GMDP::edgelist_t<EDGE_T> E)
             REQUIRE(EAll.edges[i].dst == OETAll.edges[i].dst);
             REQUIRE(EAll.edges[i].val == OETAll.edges[i].val);
     }
+    E.clear();
+    OE.clear();
+    EAll.clear();
+    OEAll.clear();
+    OET.clear();
+    OETAll.clear();
 }
 
 template <typename TILE_T, typename EDGE_T>

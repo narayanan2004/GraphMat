@@ -40,6 +40,7 @@ void create_spmv_identity_test(int N) {
   // create identity matrix
   auto E1 = generate_identity_edgelist<EDGE_T>(N);
   GMDP::SpMat<TILE_T> A(E1, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
+  E1.clear();
 
   //create random sparse vector
   auto E2 = generate_random_vector_edgelist<EDGE_T>(N, N/10);
@@ -59,11 +60,13 @@ void create_spmv_identity_test(int N) {
   y.get_edges(&E3);
   collect_edges(E3, E4);
   std::sort(E4.edges, E4.edges + E4.nnz, edge_compare<EDGE_T>);
+  E3.clear();
 
   //Collect elements of x
   GMDP::edgelist_t<EDGE_T> E5;
   collect_edges(E2, E5);
   std::sort(E5.edges, E5.edges + E5.nnz, edge_compare<EDGE_T>);
+  E2.clear();
 
   //Compare x == y
   REQUIRE(x.getNNZ() == y.getNNZ());
@@ -73,6 +76,8 @@ void create_spmv_identity_test(int N) {
     REQUIRE(E5.edges[i].src == E4.edges[i].src);
     REQUIRE(E5.edges[i].val == E4.edges[i].val);
   }
+  E4.clear();
+  E5.clear();
 }
 
 

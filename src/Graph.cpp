@@ -183,7 +183,7 @@ void Graph<V,E>::ReadMTX(const char* filename, int grid_size) {
   GMDP::edgelist_t<E> A_edges;
   GMDP::ReadEdgesBin(&A_edges, filename, false);
   MTXFromEdgelist(A_edges);
-  _mm_free(A_edges.edges);
+  A_edges.clear();
 }
 
 
@@ -282,7 +282,7 @@ void Graph<V,E>::saveVertexproperty(std::string fname, bool includeHeader) const
   }
   GMDP::SpVec<GMDP::DenseSegment<V> > * vertexproperty2 = new GMDP::SpVec<GMDP::DenseSegment<V> >(nvertices, tiles_per_dim, GMDP::vector_partition_fn);
   vertexproperty2->ingestEdgelist(myedges);
-  _mm_free(myedges.edges);
+  myedges.clear();
   vertexproperty2->save(fname, includeHeader);
   delete vertexproperty2;
 }

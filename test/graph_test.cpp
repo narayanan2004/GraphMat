@@ -57,6 +57,7 @@ void test_graph_getset(int n) {
   auto E = generate_random_edgelist<int>(n, 16);
   Graph<custom_vertex_type> G;
   G.MTXFromEdgelist(E);
+  E.clear();
 
   REQUIRE(G.getNumberOfVertices() == n);
   REQUIRE(G.nnz == n*16);
@@ -87,6 +88,7 @@ void test_graph_size(int n) {
     auto E = generate_random_edgelist<int>(n, 16);
     Graph<custom_vertex_type> G;
     G.MTXFromEdgelist(E);
+    E.clear();
 
     REQUIRE(G.getNumberOfVertices() == n);
     REQUIRE(G.nnz == n*16);
@@ -96,6 +98,7 @@ void test_graph_size(int n) {
     auto E = generate_dense_edgelist<int>(n);
     Graph<custom_vertex_type> G;
     G.MTXFromEdgelist(E);
+    E.clear();
 
     REQUIRE(G.getNumberOfVertices() == n);
     REQUIRE(G.nnz == n*n);
@@ -105,6 +108,7 @@ void test_graph_size(int n) {
     auto E = generate_upper_triangular_edgelist<int>(n);
     Graph<custom_vertex_type> G;
     G.MTXFromEdgelist(E);
+    E.clear();
 
     REQUIRE(G.getNumberOfVertices() == n);
     REQUIRE(G.nnz == n*(n-1)/2);

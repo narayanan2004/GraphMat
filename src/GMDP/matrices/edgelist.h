@@ -59,9 +59,20 @@ struct edgelist_t {
     m = _m;
     n = _n;
     nnz = _nnz;
-    edges = (edge_t<T>*)_mm_malloc(nnz * sizeof(edge_t<T>), 64);
+    if(nnz > 0) {
+      edges = (edge_t<T>*)_mm_malloc(nnz * sizeof(edge_t<T>), 64);
+    }
   }
   edgelist_t(edge_t<T>* edges, int m, int n, int nnz) : edges(edges), m(m), n(n), nnz(nnz) {}
+  void clear() {
+    if (nnz > 0) {
+      _mm_free(edges);
+    }
+    edges = NULL;
+    nnz = 0;
+    m = 0;
+    n = 0;
+  }
 };
 
 template <typename T>

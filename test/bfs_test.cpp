@@ -98,6 +98,7 @@ void test_ut_bfs(int n) {
   auto E = generate_upper_triangular_edgelist<int>(n);
   Graph<BFSD> G;
   G.MTXFromEdgelist(E);
+  E.clear();
 
   BFS bfs_program;
 
@@ -144,6 +145,7 @@ void test_dense_bfs(int n) {
   auto E = generate_dense_edgelist<int>(n);
   Graph<BFSD> G;
   G.MTXFromEdgelist(E);
+  E.clear();
 
   BFS bfs_program;
 
