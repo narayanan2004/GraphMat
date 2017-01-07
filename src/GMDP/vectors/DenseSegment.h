@@ -164,6 +164,7 @@ class DenseSegment {
 
   int compute_nnz() const
   {
+    if(properties == NULL) return 0;
     if(properties->uninitialized) return 0;
     int len = 0;
     #pragma omp parallel for reduction(+:len)
@@ -176,6 +177,7 @@ class DenseSegment {
   
   int compute_nnz(int start, int finish) const
   {
+    if(properties == NULL) return 0;
     if(properties->uninitialized) return 0;
     int len = 0;
     #pragma omp parallel for reduction(+:len)
