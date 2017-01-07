@@ -33,15 +33,38 @@
 #ifndef SRC_DENSESEGMENT_H_
 #define SRC_DENSESEGMENT_H_
 
-#include <string>
 #include "GMDP/matrices/edgelist.h"
 #include "GMDP/utils/bitvector.h"
 #include "GMDP/singlenode/unionreduce.h"
 
+#include <string>
+#include <vector>
+#include <queue>
+#include <sstream>
+
 inline double get_compression_threshold();
 
+enum compression_decision
+{
+  NONE,
+  COMPRESSED,
+  SERIALIZED
+};
+
+//http://stackoverflow.com/questions/87372/check-if-a-class-has-a-member-function-of-a-given-signature
+template<typename T>
+struct HasBoostSerializeMethod
+{
+    //template<typename U, void (U::*)(char*) const> struct SFINAE {};
+    //template<typename U> static char Test(SFINAE<U, &U::serialize>*);
+    template<typename U, void (U::*)(boost::archive::binary_iarchive&, const unsigned int) > struct SFINAE {};
+    template<typename U> static char Test(SFINAE<U, &U::serialize >*);
+    template<typename U> static int Test(...);
+    static const bool Check = sizeof(Test<T>(0)) == sizeof(char);
+};
+
 template <typename T>
-class segment_props
+class buffer
 {
   public:
     T * value;
@@ -52,14 +75,17 @@ class segment_props
     T * compressed_data;
     int * compressed_indices;
 
-    segment_props(int capacity, int num_ints)
+    std::stringstream serialized_data;
+    int * serialized_indices;
+
+    buffer(int capacity, int num_ints)
     {
       value = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + num_ints*sizeof(int), 64));
       bit_vector = reinterpret_cast<int*>( value + capacity);
       compressed_data = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + capacity*sizeof(int), 64));
       uninitialized = true;
     }
-    ~segment_props()
+    ~buffer()
     {
       _mm_free(value);
       _mm_free(compressed_data);
@@ -73,10 +99,10 @@ class DenseSegment {
   int capacity;
   int num_ints;
 
-  segment_props<T> *properties;
-  std::vector<int > to_be_received;
-  std::vector<segment_props<T> * > received;
-  std::vector<segment_props<T> * > uninitialized;
+  buffer<T> *properties;
+  std::queue<int > to_be_received;
+  std::vector<buffer<T> * > received;
+  std::vector<buffer<T> * > uninitialized;
 
   DenseSegment(int n) {
     capacity = n;
@@ -142,117 +168,115 @@ class DenseSegment {
     return len;
   }
 
-  bool should_compress(int test_nnz)
+  compression_decision should_compress(int test_nnz)
   {
     if(test_nnz > get_compression_threshold() * capacity)
     {
-      return false;
+      return NONE;
     }
-    return true;
+    return COMPRESSED;
   }
 
   void compress()
   {
     alloc();
     initialize();
-    if(!should_compress(properties->nnz))
+    if(should_compress(properties->nnz) == COMPRESSED)
     {
-      return;
-    }
-    properties->compressed_indices = reinterpret_cast<int*>(properties->compressed_data + properties->nnz);
-
-    int npartitions = omp_get_max_threads() * 16;
-    int * partition_nnz = new int[npartitions];
-    int * partition_nnz_scan = new int[npartitions+1];
-    #pragma omp parallel for
-    for(int p = 0 ; p < npartitions ; p++)
-    {
-      int i_per_partition = (num_ints + npartitions - 1) / npartitions;
-      int start_i = i_per_partition * p;
-      int end_i = i_per_partition * (p+1);
-      if(end_i > num_ints) end_i = num_ints;
-      partition_nnz[p] = compute_nnz(start_i, end_i);
-    }
-    partition_nnz_scan[0] = 0;
-    properties->nnz = 0;
-    for(int p = 0 ; p < npartitions ; p++)
-    {
-      partition_nnz_scan[p+1] = partition_nnz_scan[p] + partition_nnz[p];
-      properties->nnz += partition_nnz[p];
-    }
-
-    #pragma omp parallel for
-    for(int p = 0 ; p < npartitions ; p++)
-    {
-      int i_per_partition = (num_ints + npartitions - 1) / npartitions;
-      int start_i = i_per_partition * p;
-      int end_i = i_per_partition * (p+1);
-      if(end_i > num_ints) end_i = num_ints;
-      int nzcnt = partition_nnz_scan[p];
-      
-      for(int ii = start_i ; ii < end_i ; ii++)
+      properties->compressed_indices = reinterpret_cast<int*>(properties->compressed_data + properties->nnz);
+  
+      int npartitions = omp_get_max_threads() * 16;
+      int * partition_nnz = new int[npartitions];
+      int * partition_nnz_scan = new int[npartitions+1];
+      #pragma omp parallel for
+      for(int p = 0 ; p < npartitions ; p++)
       {
-        if(_popcnt32(properties->bit_vector[ii]) == 0) continue;
-        for(int i = ii*32 ; i < (ii+1)*32 ; i++)
+        int i_per_partition = (num_ints + npartitions - 1) / npartitions;
+        int start_i = i_per_partition * p;
+        int end_i = i_per_partition * (p+1);
+        if(end_i > num_ints) end_i = num_ints;
+        partition_nnz[p] = compute_nnz(start_i, end_i);
+      }
+      partition_nnz_scan[0] = 0;
+      properties->nnz = 0;
+      for(int p = 0 ; p < npartitions ; p++)
+      {
+        partition_nnz_scan[p+1] = partition_nnz_scan[p] + partition_nnz[p];
+        properties->nnz += partition_nnz[p];
+      }
+  
+      #pragma omp parallel for
+      for(int p = 0 ; p < npartitions ; p++)
+      {
+        int i_per_partition = (num_ints + npartitions - 1) / npartitions;
+        int start_i = i_per_partition * p;
+        int end_i = i_per_partition * (p+1);
+        if(end_i > num_ints) end_i = num_ints;
+        int nzcnt = partition_nnz_scan[p];
+        
+        for(int ii = start_i ; ii < end_i ; ii++)
         {
-          if(get_bitvector(i, properties->bit_vector))
+          if(_popcnt32(properties->bit_vector[ii]) == 0) continue;
+          for(int i = ii*32 ; i < (ii+1)*32 ; i++)
           {
-            properties->compressed_data[nzcnt] = properties->value[i];
-            properties->compressed_indices[nzcnt] = i;
-            nzcnt++;
+            if(get_bitvector(i, properties->bit_vector))
+            {
+              properties->compressed_data[nzcnt] = properties->value[i];
+              properties->compressed_indices[nzcnt] = i;
+              nzcnt++;
+            }
           }
         }
       }
+      delete [] partition_nnz;
+      delete [] partition_nnz_scan;
     }
-    delete [] partition_nnz;
-    delete [] partition_nnz_scan;
   }
 
   void decompress()
   {
-    if(!should_compress(properties->nnz))
+    if(should_compress(properties->nnz) == COMPRESSED)
     {
-      return;
-    }
-    assert(properties);
-    memset(properties->bit_vector, 0, num_ints* sizeof(int));
-    properties->compressed_indices = reinterpret_cast<int*>(properties->compressed_data + properties->nnz);
-    int npartitions = omp_get_max_threads();
-
-    int * start_nnzs = new int[npartitions];
-    int * end_nnzs = new int[npartitions];
-
-    int mystart = 0;
-    int my_nz_per = (properties->nnz + npartitions - 1) / npartitions;
-    my_nz_per = ((my_nz_per + 31) / 32) * 32;
-    for(int p = 0 ; p < npartitions ; p++)
-    {
-      start_nnzs[p] = mystart;
-      mystart += my_nz_per;
-      if(mystart > properties->nnz) mystart = properties->nnz;
-      if(mystart < properties->nnz)
+      assert(properties);
+      memset(properties->bit_vector, 0, num_ints* sizeof(int));
+      properties->compressed_indices = reinterpret_cast<int*>(properties->compressed_data + properties->nnz);
+      int npartitions = omp_get_max_threads();
+  
+      int * start_nnzs = new int[npartitions];
+      int * end_nnzs = new int[npartitions];
+  
+      int mystart = 0;
+      int my_nz_per = (properties->nnz + npartitions - 1) / npartitions;
+      my_nz_per = ((my_nz_per + 31) / 32) * 32;
+      for(int p = 0 ; p < npartitions ; p++)
       {
-        int start32 = properties->compressed_indices[mystart] / 32;
-        while((mystart < properties->nnz) && properties->compressed_indices[mystart] / 32  == start32) mystart++;
+        start_nnzs[p] = mystart;
+        mystart += my_nz_per;
+        if(mystart > properties->nnz) mystart = properties->nnz;
+        if(mystart < properties->nnz)
+        {
+          int start32 = properties->compressed_indices[mystart] / 32;
+          while((mystart < properties->nnz) && properties->compressed_indices[mystart] / 32  == start32) mystart++;
+        }
+        end_nnzs[p] = mystart;
       }
-      end_nnzs[p] = mystart;
-    }
-
-    #pragma omp parallel for
-    for(int p = 0 ; p < npartitions ; p++)
-    {
-      int start_nnz = start_nnzs[p];
-      int end_nnz = end_nnzs[p];
-      for(int i = start_nnz  ; i < end_nnz ; i++)
+  
+      #pragma omp parallel for
+      for(int p = 0 ; p < npartitions ; p++)
       {
-        int idx = properties->compressed_indices[i];
-        set_bitvector(idx, properties->bit_vector);
-        properties->value[idx] = properties->compressed_data[i];
+        int start_nnz = start_nnzs[p];
+        int end_nnz = end_nnzs[p];
+        for(int i = start_nnz  ; i < end_nnz ; i++)
+        {
+          int idx = properties->compressed_indices[i];
+          set_bitvector(idx, properties->bit_vector);
+          properties->value[idx] = properties->compressed_data[i];
+        }
       }
+  
+      delete [] start_nnzs;
+      delete [] end_nnzs;
     }
-
-    delete [] start_nnzs;
-    delete [] end_nnzs;
   }
 
 
@@ -278,7 +302,7 @@ class DenseSegment {
   void alloc() {
     if(properties == NULL)
     {
-      properties = new segment_props<T>(capacity, num_ints);
+      properties = new buffer<T>(capacity, num_ints);
     }
   }
 
@@ -344,7 +368,7 @@ class DenseSegment {
     int new_nnz;
     MPI_Recv(&(new_nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
              MPI_STATUS_IGNORE);
-    to_be_received.push_back(new_nnz);
+    to_be_received.push(new_nnz);
   }
   void recv_nnz(int myrank, int src_rank,
                 std::vector<MPI_Request>* requests) {
@@ -354,32 +378,32 @@ class DenseSegment {
   }
   void send_segment(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     MPI_Request r1;
-    if(!should_compress(properties->nnz))
+    if(should_compress(properties->nnz) == COMPRESSED)
     {
-      MPI_Isend(properties->value, capacity * sizeof(T) + num_ints * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
+      MPI_Isend(properties->compressed_data, properties->nnz * sizeof(T) + properties->nnz * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
                  &r1);
     }
     else
     {
-      MPI_Isend(properties->compressed_data, properties->nnz * sizeof(T) + properties->nnz * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
+      MPI_Isend(properties->value, capacity * sizeof(T) + num_ints * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
                  &r1);
     }
     requests->push_back(r1);
   }
 
-  void recv_buffer(segment_props<T> * p,
+  void recv_buffer(buffer<T> * p,
                    int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
 
     MPI_Request r1;
-    if(!should_compress(p->nnz))
+    if(should_compress(p->nnz) == COMPRESSED)
     {
-      MPI_Irecv(p->value, capacity * sizeof(T) + num_ints* sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+      MPI_Irecv(p->compressed_data, p->nnz * sizeof(T) + p->nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
              &r1);
     }
     else
     {
-      MPI_Irecv(p->compressed_data, p->nnz * sizeof(T) + p->nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+      MPI_Irecv(p->value, capacity * sizeof(T) + num_ints* sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
              &r1);
     }
     p->uninitialized = false;
@@ -389,7 +413,7 @@ class DenseSegment {
   void recv_segment_queue(int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
 
-    segment_props<T> * new_properties;
+    buffer<T> * new_properties;
     if(uninitialized.size() > 0) 
     {
       new_properties = uninitialized.back();
@@ -397,10 +421,10 @@ class DenseSegment {
     }
     else
     {
-      new_properties = new segment_props<T>(capacity, num_ints);
+      new_properties = new buffer<T>(capacity, num_ints);
     }
-    new_properties->nnz = to_be_received[0];
-    to_be_received.erase(to_be_received.begin());
+    new_properties->nnz = to_be_received.front();;
+    to_be_received.pop();
 
     recv_buffer(new_properties, myrank, src_rank, requests);
     received.push_back(new_properties);
@@ -451,7 +475,7 @@ class DenseSegment {
     initialize();
     for(auto it = received.begin() ; it != received.end() ; it++)
     {
-      if(should_compress((*it)->nnz))
+      if(should_compress((*it)->nnz) == COMPRESSED)
       {
         union_compressed((*it)->compressed_data, (*it)->nnz, capacity, num_ints, properties->value, properties->bit_vector, op_fp, vsp);
       }
