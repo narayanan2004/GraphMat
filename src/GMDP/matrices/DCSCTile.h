@@ -303,12 +303,6 @@ class DCSCTile {
 
   bool isEmpty() const { return nnz <= 0; }
 
-  void clear() {
-    if (!(isEmpty())) {
-    }
-    nnz = 0;
-  }
-
   ~DCSCTile() 
   {
     if(nnz > 0)
@@ -321,6 +315,7 @@ class DCSCTile {
       _mm_free(edge_pointers);
       _mm_free(col_starts);
     }
+    nnz = 0;
   }
 };
 

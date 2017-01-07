@@ -201,7 +201,7 @@ class CSRTile {
     this->ja = other.ja;
   }
 
-  void clear() {
+  ~CSRTile(void) {
     if (!isEmpty()) {
       _mm_free(a);
       _mm_free(ja);
@@ -209,8 +209,6 @@ class CSRTile {
     }
     nnz = 0;
   }
-
-  ~CSRTile(void) {}
 };
 
 #endif  // SRC_CSRTILE_H_

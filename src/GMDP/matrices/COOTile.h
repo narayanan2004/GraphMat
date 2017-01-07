@@ -148,6 +148,9 @@ class COOTile {
   }
 
   void clear() {
+  }
+
+  ~COOTile(void) {
     if (!isEmpty()) {
       _mm_free(a);
       _mm_free(ja);
@@ -155,9 +158,7 @@ class COOTile {
       delete [] partition_start;
     }
     nnz = 0;
-  }
-
-  ~COOTile(void) {}
+}
 
 };
 
