@@ -51,7 +51,13 @@ enum compression_decision
   SERIALIZED
 };
 
-//http://stackoverflow.com/questions/87372/check-if-a-class-has-a-member-function-of-a-given-signature
+struct send_metadata
+{
+  int nnz;
+  size_t serialized_nbytes;
+};
+
+/* begin http://stackoverflow.com/questions/87372/check-if-a-class-has-a-member-function-of-a-given-signature */
 template<typename T>
 struct HasBoostSerializeMethod
 {
@@ -62,6 +68,7 @@ struct HasBoostSerializeMethod
     template<typename U> static int Test(...);
     static const bool Check = sizeof(Test<T>(0)) == sizeof(char);
 };
+/* end http://stackoverflow.com/questions/87372/check-if-a-class-has-a-member-function-of-a-given-signature */
 
 template <typename T>
 class buffer
@@ -71,12 +78,12 @@ class buffer
     int * bit_vector;
     bool uninitialized;
     int nnz;
+    size_t serialized_nbytes;
 
     T * compressed_data;
     int * compressed_indices;
 
-    std::stringstream serialized_data;
-    int * serialized_indices;
+    char * serialized_data;
 
     buffer(int capacity, int num_ints)
     {
@@ -84,11 +91,22 @@ class buffer
       bit_vector = reinterpret_cast<int*>( value + capacity);
       compressed_data = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + capacity*sizeof(int), 64));
       uninitialized = true;
+      serialized_data = NULL;
+    }
+    void clear_serialized()
+    {
+      if(serialized_data != NULL) _mm_free(serialized_data);
+      serialized_data = NULL;
+    }
+    void alloc_serialized(size_t sz)
+    {
+      serialized_data = reinterpret_cast<char*>(_mm_malloc(sz, 64));
     }
     ~buffer()
     {
       _mm_free(value);
       _mm_free(compressed_data);
+      clear_serialized();
     }
 };
 
@@ -100,7 +118,7 @@ class DenseSegment {
   int num_ints;
 
   buffer<T> *properties;
-  std::queue<int > to_be_received;
+  std::queue<send_metadata> to_be_received;
   std::vector<buffer<T> * > received;
   std::vector<buffer<T> * > uninitialized;
 
@@ -170,13 +188,41 @@ class DenseSegment {
 
   compression_decision should_compress(int test_nnz)
   {
-    if(test_nnz > get_compression_threshold() * capacity)
-    {
+    if(HasBoostSerializeMethod<T>::Check) return SERIALIZED;
+    if(test_nnz > get_compression_threshold() * capacity) 
       return NONE;
-    }
     return COMPRESSED;
   }
 
+/* begin http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
+  template<bool M = HasBoostSerializeMethod<T>::Check, typename std::enable_if<M>::type* = nullptr>
+/* end http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
+  void compress()
+  {
+    alloc();
+    initialize();
+    std::stringstream ss;
+    boost::archive::binary_oarchive oa(ss);
+
+    int new_nnz = 0;
+    for(unsigned long int i = 0 ; i < capacity ; i++)
+    {
+      if(get_bitvector(i, properties->bit_vector))
+      {
+        oa << i << properties->value[i];
+        new_nnz++;
+      }
+    }
+
+    properties->alloc_serialized(ss.str().size());
+    memcpy(properties->serialized_data, ss.str().c_str(), ss.str().size());
+    properties->nnz = new_nnz;
+    properties->serialized_nbytes = ss.str().size();
+  }
+
+/* begin http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
+  template<bool M = HasBoostSerializeMethod<T>::Check, typename std::enable_if<!M>::type* = nullptr>
+/* end http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
   void compress()
   {
     alloc();
@@ -361,26 +407,35 @@ class DenseSegment {
   }
 
   void send_nnz(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
-    MPI_Send(&(properties->nnz), 1, MPI_INT, dst_rank, 0, MPI_COMM_WORLD);
+    send_metadata md = {properties->nnz, properties->serialized_nbytes};
+    MPI_Send(&md, sizeof(md), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD);
   }
   void recv_nnz_queue(int myrank, int src_rank,
                  std::vector<MPI_Request>* requests) {
-    int new_nnz;
-    MPI_Recv(&(new_nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
+    send_metadata md;
+    MPI_Recv(&md, sizeof(md), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
              MPI_STATUS_IGNORE);
-    to_be_received.push(new_nnz);
+    to_be_received.push(md);
   }
   void recv_nnz(int myrank, int src_rank,
                 std::vector<MPI_Request>* requests) {
    alloc();
-   MPI_Recv(&(properties->nnz), 1, MPI_INT, src_rank, 0, MPI_COMM_WORLD,
+   send_metadata md;
+   MPI_Recv(&md, sizeof(md), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
             MPI_STATUS_IGNORE);
+   properties->nnz = md.nnz;
+   properties->serialized_nbytes = md.serialized_nbytes;
   }
   void send_segment(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     MPI_Request r1;
     if(should_compress(properties->nnz) == COMPRESSED)
     {
       MPI_Isend(properties->compressed_data, properties->nnz * sizeof(T) + properties->nnz * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
+                 &r1);
+    }
+    else if(should_compress(properties->nnz) == SERIALIZED)
+    {
+      MPI_Isend(properties->serialized_data, properties->serialized_nbytes, MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
                  &r1);
     }
     else
@@ -399,6 +454,12 @@ class DenseSegment {
     if(should_compress(p->nnz) == COMPRESSED)
     {
       MPI_Irecv(p->compressed_data, p->nnz * sizeof(T) + p->nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+             &r1);
+    }
+    else if(should_compress(p->nnz) == SERIALIZED)
+    {
+      p->alloc_serialized(p->serialized_nbytes);
+      MPI_Irecv(p->serialized_data, p->serialized_nbytes, MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
              &r1);
     }
     else
@@ -423,8 +484,10 @@ class DenseSegment {
     {
       new_properties = new buffer<T>(capacity, num_ints);
     }
-    new_properties->nnz = to_be_received.front();;
+    send_metadata md = to_be_received.front();
     to_be_received.pop();
+    new_properties->nnz = md.nnz;
+    new_properties->serialized_nbytes = md.serialized_nbytes;
 
     recv_buffer(new_properties, myrank, src_rank, requests);
     received.push_back(new_properties);
