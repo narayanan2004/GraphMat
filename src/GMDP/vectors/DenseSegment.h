@@ -41,6 +41,7 @@
 #include <vector>
 #include <queue>
 #include <sstream>
+#include <cstdio>
 
 inline double get_compression_threshold();
 
@@ -79,14 +80,18 @@ class buffer
     bool uninitialized;
     int nnz;
     size_t serialized_nbytes;
+    int capacity;
+    int num_ints;
 
     T * compressed_data;
     int * compressed_indices;
 
     char * serialized_data;
 
-    buffer(int capacity, int num_ints)
+    buffer(int _capacity, int _num_ints)
     {
+      capacity = _capacity;
+      num_ints = _num_ints;
       value = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + num_ints*sizeof(int), 64));
       bit_vector = reinterpret_cast<int*>( value + capacity);
       compressed_data = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + capacity*sizeof(int), 64));
@@ -100,8 +105,72 @@ class buffer
     }
     void alloc_serialized(size_t sz)
     {
+      assert(serialized_data == NULL);
       serialized_data = reinterpret_cast<char*>(_mm_malloc(sz, 64));
     }
+
+   /* begin http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
+   template<bool M = HasBoostSerializeMethod<T>::Check, typename std::enable_if<M>::type* = nullptr>
+   /* end http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
+    void decompress()
+    {
+      std::stringstream ss;
+      ss.write(serialized_data, serialized_nbytes);
+      boost::archive::binary_iarchive ia(ss);
+      memset(bit_vector, 0, num_ints* sizeof(int));
+      for(unsigned long int i = 0 ; i < nnz ; i++)
+      {
+        int idx;
+        T val;
+        ia >> idx;
+        ia >> val;
+        set_bitvector(idx, bit_vector);
+        value[idx] = val;
+      }
+    }
+
+   /* begin http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
+   template<bool M = HasBoostSerializeMethod<T>::Check, typename std::enable_if<!M>::type* = nullptr>
+   /* end http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
+    void decompress()
+    {
+      memset(bit_vector, 0, num_ints* sizeof(int));
+      compressed_indices = reinterpret_cast<int*>(compressed_data + nnz);
+      int npartitions = omp_get_max_threads();
+      int * start_nnzs = new int[npartitions];
+      int * end_nnzs = new int[npartitions];
+      int mystart = 0;
+      int my_nz_per = (nnz + npartitions - 1) / npartitions;
+      my_nz_per = ((my_nz_per + 31) / 32) * 32;
+      for(int p = 0 ; p < npartitions ; p++)
+      {
+        start_nnzs[p] = mystart;
+        mystart += my_nz_per;
+        if(mystart > nnz) mystart = nnz;
+        if(mystart < nnz)
+        {
+          int start32 = compressed_indices[mystart] / 32;
+          while((mystart < nnz) && compressed_indices[mystart] / 32  == start32) mystart++;
+        }
+        end_nnzs[p] = mystart;
+      }
+  
+      #pragma omp parallel for
+      for(int p = 0 ; p < npartitions ; p++)
+      {
+        int start_nnz = start_nnzs[p];
+        int end_nnz = end_nnzs[p];
+        for(int i = start_nnz  ; i < end_nnz ; i++)
+        {
+          int idx = compressed_indices[i];
+          set_bitvector(idx, bit_vector);
+          value[idx] = compressed_data[i];
+        }
+      }
+      delete [] start_nnzs;
+      delete [] end_nnzs;
+    }
+
     ~buffer()
     {
       _mm_free(value);
@@ -204,22 +273,31 @@ class DenseSegment {
     alloc();
     initialize();
     std::stringstream ss;
+    int new_nnz = 0;
+    {
     boost::archive::binary_oarchive oa(ss);
 
-    int new_nnz = 0;
-    for(unsigned long int i = 0 ; i < capacity ; i++)
+    for(int i = 0 ; i < capacity ; i++)
     {
       if(get_bitvector(i, properties->bit_vector))
       {
-        oa << i << properties->value[i];
+        //oa << i << properties->value[i];
+        oa << i;
+	oa << properties->value[i];
         new_nnz++;
       }
     }
-
-    properties->alloc_serialized(ss.str().size());
-    memcpy(properties->serialized_data, ss.str().c_str(), ss.str().size());
+    }
+    
+    ss.seekg(0, ss.end);
+    size_t sz = ss.tellg();
+    ss.seekg(0, ss.beg);
+    properties->clear_serialized();
+    properties->alloc_serialized(sz);
+    ss.read(properties->serialized_data, sz);
     properties->nnz = new_nnz;
-    properties->serialized_nbytes = ss.str().size();
+    properties->serialized_nbytes = sz;
+
   }
 
 /* begin http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
@@ -283,50 +361,13 @@ class DenseSegment {
 
   void decompress()
   {
-    if(should_compress(properties->nnz) == COMPRESSED)
+    assert(properties);
+    if(should_compress(properties->nnz) == COMPRESSED ||
+       should_compress(properties->nnz) == SERIALIZED)
     {
-      assert(properties);
-      memset(properties->bit_vector, 0, num_ints* sizeof(int));
-      properties->compressed_indices = reinterpret_cast<int*>(properties->compressed_data + properties->nnz);
-      int npartitions = omp_get_max_threads();
-  
-      int * start_nnzs = new int[npartitions];
-      int * end_nnzs = new int[npartitions];
-  
-      int mystart = 0;
-      int my_nz_per = (properties->nnz + npartitions - 1) / npartitions;
-      my_nz_per = ((my_nz_per + 31) / 32) * 32;
-      for(int p = 0 ; p < npartitions ; p++)
-      {
-        start_nnzs[p] = mystart;
-        mystart += my_nz_per;
-        if(mystart > properties->nnz) mystart = properties->nnz;
-        if(mystart < properties->nnz)
-        {
-          int start32 = properties->compressed_indices[mystart] / 32;
-          while((mystart < properties->nnz) && properties->compressed_indices[mystart] / 32  == start32) mystart++;
-        }
-        end_nnzs[p] = mystart;
-      }
-  
-      #pragma omp parallel for
-      for(int p = 0 ; p < npartitions ; p++)
-      {
-        int start_nnz = start_nnzs[p];
-        int end_nnz = end_nnzs[p];
-        for(int i = start_nnz  ; i < end_nnz ; i++)
-        {
-          int idx = properties->compressed_indices[i];
-          set_bitvector(idx, properties->bit_vector);
-          properties->value[idx] = properties->compressed_data[i];
-        }
-      }
-  
-      delete [] start_nnzs;
-      delete [] end_nnzs;
+      properties->decompress();
     }
   }
-
 
   void set_uninitialized_received()
   {
@@ -460,6 +501,7 @@ class DenseSegment {
     }
     else if(should_compress(p->nnz) == SERIALIZED)
     {
+      p->clear_serialized();
       p->alloc_serialized(p->serialized_nbytes);
       MPI_Irecv(p->serialized_data, p->serialized_nbytes, MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
              &r1);
@@ -543,6 +585,11 @@ class DenseSegment {
       if(should_compress((*it)->nnz) == COMPRESSED)
       {
         union_compressed((*it)->compressed_data, (*it)->nnz, capacity, num_ints, properties->value, properties->bit_vector, op_fp, vsp);
+      }
+      else if(should_compress((*it)->nnz) == SERIALIZED)
+      {
+        (*it)->decompress();
+        union_dense((*it)->value, (*it)->bit_vector, capacity, num_ints, properties->value, properties->bit_vector, properties->value, properties->bit_vector, op_fp, vsp);
       }
       else
       {
