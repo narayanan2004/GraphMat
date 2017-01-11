@@ -92,8 +92,8 @@ class buffer
     {
       capacity = _capacity;
       num_ints = _num_ints;
-      value = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + num_ints*sizeof(int), 64));
-      bit_vector = reinterpret_cast<int*>( value + capacity);
+      value = new T[capacity]; 
+      bit_vector = new int[num_ints];
       compressed_data = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + capacity*sizeof(int), 64));
       uninitialized = true;
       serialized_data = NULL;
@@ -173,7 +173,8 @@ class buffer
 
     ~buffer()
     {
-      _mm_free(value);
+      delete [] value;
+      delete [] bit_vector;
       _mm_free(compressed_data);
       clear_serialized();
     }
@@ -470,49 +471,65 @@ class DenseSegment {
    properties->serialized_nbytes = md.serialized_nbytes;
   }
   void send_segment(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
-    MPI_Request r1;
     if(should_compress(properties->nnz) == COMPRESSED)
     {
+      MPI_Request r1;
       MPI_Isend(properties->compressed_data, properties->nnz * sizeof(T) + properties->nnz * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
                  &r1);
+      requests->push_back(r1);
     }
     else if(should_compress(properties->nnz) == SERIALIZED)
     {
+      MPI_Request r1;
       MPI_Isend(properties->serialized_data, properties->serialized_nbytes, MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
                  &r1);
+      requests->push_back(r1);
     }
     else
     {
-      MPI_Isend(properties->value, capacity * sizeof(T) + num_ints * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
+      MPI_Request r1;
+      MPI_Request r2;
+      MPI_Isend(properties->value, capacity * sizeof(T), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
                  &r1);
+      MPI_Isend(properties->bit_vector, num_ints * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
+                 &r2);
+      requests->push_back(r1);
+      requests->push_back(r2);
     }
-    requests->push_back(r1);
   }
 
   void recv_buffer(buffer<T> * p,
                    int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
 
-    MPI_Request r1;
     if(should_compress(p->nnz) == COMPRESSED)
     {
+      MPI_Request r1;
       MPI_Irecv(p->compressed_data, p->nnz * sizeof(T) + p->nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
              &r1);
+      requests->push_back(r1);
     }
     else if(should_compress(p->nnz) == SERIALIZED)
     {
+      MPI_Request r1;
       p->clear_serialized();
       p->alloc_serialized(p->serialized_nbytes);
       MPI_Irecv(p->serialized_data, p->serialized_nbytes, MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
              &r1);
+      requests->push_back(r1);
     }
     else
     {
-      MPI_Irecv(p->value, capacity * sizeof(T) + num_ints* sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+      MPI_Request r1;
+      MPI_Request r2;
+      MPI_Irecv(p->value, capacity * sizeof(T), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
              &r1);
+      MPI_Irecv(p->bit_vector, num_ints* sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+             &r2);
+      requests->push_back(r1);
+      requests->push_back(r2);
     }
     p->uninitialized = false;
-    requests->push_back(r1);
   }
 
   void recv_segment_queue(int myrank, int src_rank, 
