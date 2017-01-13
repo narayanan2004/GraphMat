@@ -66,10 +66,10 @@ void union_dense(Ta* v1, int * bv1, int nnz, int num_ints, Tb * v2, int * bv2, T
 }
 
 template <typename Ta, typename Tb>
-void union_compressed(Ta* v1, int nnz, int capacity, int num_ints, Tb * v2, int * bv2,
+void union_compressed(Ta* v1, int* indices, int nnz, int capacity, int num_ints, Tb * v2, int * bv2,
                           void (*op_fp)(Ta, Tb, Tb*, void*), void* vsp) 
 {
-  int * indices = reinterpret_cast<int*>(v1 + nnz);
+  //int * indices = reinterpret_cast<int*>(v1 + nnz);
   int npartitions = omp_get_max_threads() * 16;
   #pragma omp parallel for
   for(int p = 0 ; p < npartitions ; p++)

@@ -94,7 +94,9 @@ class buffer
       num_ints = _num_ints;
       value = new T[capacity]; 
       bit_vector = new int[num_ints];
-      compressed_data = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + capacity*sizeof(int), 64));
+      //compressed_data = reinterpret_cast<T*>(_mm_malloc(capacity * sizeof(T) + capacity*sizeof(int), 64));
+      compressed_data = new T[capacity];
+      compressed_indices = new int[capacity];
       uninitialized = true;
       serialized_data = NULL;
     }
@@ -135,7 +137,7 @@ class buffer
     void decompress()
     {
       memset(bit_vector, 0, num_ints* sizeof(int));
-      compressed_indices = reinterpret_cast<int*>(compressed_data + nnz);
+      //compressed_indices = reinterpret_cast<int*>(compressed_data + nnz);
       int npartitions = omp_get_max_threads();
       int * start_nnzs = new int[npartitions];
       int * end_nnzs = new int[npartitions];
@@ -175,7 +177,9 @@ class buffer
     {
       delete [] value;
       delete [] bit_vector;
-      _mm_free(compressed_data);
+      //_mm_free(compressed_data);
+      delete [] compressed_data;
+      delete [] compressed_indices;
       clear_serialized();
     }
 };
@@ -310,7 +314,7 @@ class DenseSegment {
     initialize();
     if(should_compress(properties->nnz) == COMPRESSED)
     {
-      properties->compressed_indices = reinterpret_cast<int*>(properties->compressed_data + properties->nnz);
+      //properties->compressed_indices = reinterpret_cast<int*>(properties->compressed_data + properties->nnz);
   
       int npartitions = omp_get_max_threads() * 16;
       int * partition_nnz = new int[npartitions];
@@ -474,9 +478,13 @@ class DenseSegment {
     if(should_compress(properties->nnz) == COMPRESSED)
     {
       MPI_Request r1;
-      MPI_Isend(properties->compressed_data, properties->nnz * sizeof(T) + properties->nnz * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
+      MPI_Request r2;
+      MPI_Isend(properties->compressed_data, properties->nnz * sizeof(T), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
                  &r1);
+      MPI_Isend(properties->compressed_indices, properties->nnz * sizeof(int), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
+                 &r2);
       requests->push_back(r1);
+      requests->push_back(r2);
     }
     else if(should_compress(properties->nnz) == SERIALIZED)
     {
@@ -505,9 +513,13 @@ class DenseSegment {
     if(should_compress(p->nnz) == COMPRESSED)
     {
       MPI_Request r1;
-      MPI_Irecv(p->compressed_data, p->nnz * sizeof(T) + p->nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+      MPI_Request r2;
+      MPI_Irecv(p->compressed_data, p->nnz * sizeof(T), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
              &r1);
+      MPI_Irecv(p->compressed_indices, p->nnz * sizeof(int), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+             &r2);
       requests->push_back(r1);
+      requests->push_back(r2);
     }
     else if(should_compress(p->nnz) == SERIALIZED)
     {
@@ -601,7 +613,7 @@ class DenseSegment {
     {
       if(should_compress((*it)->nnz) == COMPRESSED)
       {
-        union_compressed((*it)->compressed_data, (*it)->nnz, capacity, num_ints, properties->value, properties->bit_vector, op_fp, vsp);
+        union_compressed((*it)->compressed_data, (*it)->compressed_indices, (*it)->nnz, capacity, num_ints, properties->value, properties->bit_vector, op_fp, vsp);
       }
       else if(should_compress((*it)->nnz) == SERIALIZED)
       {
