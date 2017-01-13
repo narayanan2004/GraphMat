@@ -135,6 +135,20 @@ GMDP::edgelist_t<T> generate_dense_edgelist(int n) {
   return dense_edgelist;
 }
 
+template <typename T=int>
+GMDP::edgelist_t<T> generate_linear_chain_edgelist(int n) {
+  int global_myrank = GMDP::get_global_myrank();
+  GMDP::edgelist_t<T> chain_edgelist(n, n, 0);
+  if (global_myrank == 0) {
+    chain_edgelist = GMDP::edgelist_t<T>(n, n, n); 
+    for (int i = 0; i < n; i++) {
+      chain_edgelist.edges[i].src = i+1;
+      chain_edgelist.edges[i].dst = (i+1)%(n)+1;
+      chain_edgelist.edges[i].val = 1;
+    }
+  }
+  return chain_edgelist;
+}
 
 //////////////////////////////////////////
 // Sparse Vector generators //////////////

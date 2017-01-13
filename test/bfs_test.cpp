@@ -188,7 +188,52 @@ void test_dense_bfs(int n) {
   }
 }
 
+void test_chain_bfs(int n) {
+  auto E = generate_linear_chain_edgelist<int>(n);
+  Graph<BFSD> G;
+  G.MTXFromEdgelist(E);
+  E.clear();
 
+  BFS bfs_program;
+
+  SECTION ("Running BFS on node 1") {
+    BFSD v;
+    v.depth = 0;
+    G.setVertexproperty(1, v);
+    G.setAllInactive();
+    G.setActive(1);
+
+    run_graph_program(&bfs_program, G, -1); 
+
+    if (G.vertexNodeOwner(1)) 
+      REQUIRE(G.getVertexproperty(1).depth == 0);
+    for (int i = 2; i <= n; i++) {
+      if (G.vertexNodeOwner(i)) 
+        REQUIRE(G.getVertexproperty(i).depth == i-1);
+    }
+  }
+
+  SECTION ("Running BFS on node n/2") {
+    BFSD v;
+    v.depth = 0;
+    G.setVertexproperty(n/2, v);
+    G.setAllInactive();
+    G.setActive(n/2);
+
+    run_graph_program(&bfs_program, G, -1); 
+
+    for (int i = 1; i < n/2; i++) {
+      if (G.vertexNodeOwner(i)) 
+        REQUIRE(G.getVertexproperty(i).depth == n/2+i);
+    }
+    if (G.vertexNodeOwner(n/2)) 
+      REQUIRE(G.getVertexproperty(n/2).depth == 0);
+    for (int i = n/2 + 1; i <= n; i++) {
+      if (G.vertexNodeOwner(i)) 
+        REQUIRE(G.getVertexproperty(i).depth == (i-n/2));
+    }
+  }
+}
 
 TEST_CASE("BFS tests", "[bfs][uppertriangular][dense]")
 {
@@ -203,5 +248,11 @@ TEST_CASE("BFS tests", "[bfs][uppertriangular][dense]")
   }
   SECTION("BFS dense size 1000") {
     test_dense_bfs(1000);
+  }
+  SECTION("BFS chain size 500") {
+    test_chain_bfs(500);
+  }
+  SECTION("BFS chain size 1000") {
+    test_chain_bfs(1000);
   }
 }
