@@ -70,6 +70,7 @@ void MapReduce(SpVec<SpSegment<VT> > * vec, T* res,
 
   // Broadcast to all nodes
   MPI_Bcast(res, sizeof(T), MPI_CHAR, 0, MPI_COMM_WORLD);
+  delete [] all_res;
 }
 
 
