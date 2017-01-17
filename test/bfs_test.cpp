@@ -189,7 +189,7 @@ void test_dense_bfs(int n) {
 }
 
 void test_chain_bfs(int n) {
-  auto E = generate_linear_chain_edgelist<int>(n);
+  auto E = generate_circular_chain_edgelist<int>(n);
   Graph<BFSD> G;
   G.MTXFromEdgelist(E);
   E.clear();

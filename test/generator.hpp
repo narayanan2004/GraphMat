@@ -136,7 +136,7 @@ GMDP::edgelist_t<T> generate_dense_edgelist(int n) {
 }
 
 template <typename T=int>
-GMDP::edgelist_t<T> generate_linear_chain_edgelist(int n) {
+GMDP::edgelist_t<T> generate_circular_chain_edgelist(int n) {
   int global_myrank = GMDP::get_global_myrank();
   GMDP::edgelist_t<T> chain_edgelist(n, n, 0);
   if (global_myrank == 0) {
