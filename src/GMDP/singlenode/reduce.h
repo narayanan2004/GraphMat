@@ -41,8 +41,8 @@ void reduce_dense_segment(T* value, int * bitvector, int nnz, T* result, bool* r
   {
     if(get_bitvector(i, bitvector))
     {
-      T temp_result = *result;
-	  op_fp(temp_result, value[i], result, vsp);
+      //T temp_result = *result;
+      op_fp(*result, value[i], result, vsp);
     }
   }
 }
@@ -90,8 +90,8 @@ void mapreduce_dense_segment(VT* value, int * bitvector, int nnz, T* result, boo
   {
     if(firstSet[p*16])
     {
-      T temp_result = *result;
-  	  op_fp(temp_result, local_reduced[p*16], result, vsp);
+      //T temp_result = *result;
+      op_fp(*result, local_reduced[p*16], result, vsp);
     }
   }
   delete [] local_reduced;
