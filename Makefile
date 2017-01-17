@@ -86,10 +86,10 @@ test_src = $(wildcard $(TESTDIR)/*.cpp)
 test_objects = $(patsubst $(TESTDIR)/%.cpp, $(TESTBINDIR)/%.o, $(test_src))
 
 $(TESTBINDIR)/%.o : $(TESTDIR)/%.cpp $(DEPS) $(test_headers) 
-	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include $(CXX_OPTIONS) -c $< -o $@
+	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include -c $< -o $@
 
 $(TESTBINDIR)/test: $(test_objects) 
-	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include $(CXX_OPTIONS) -o $(TESTBINDIR)/test $(test_objects)
+	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include -o $(TESTBINDIR)/test $(test_objects)
 
 # --- clean --- #
 
