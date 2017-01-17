@@ -405,6 +405,7 @@ class DenseSegment {
     if(properties->uninitialized)
     {
       memset(properties->bit_vector, 0, num_ints* sizeof(int));
+      properties->nnz = 0;
     }
     properties->uninitialized = false;
   }

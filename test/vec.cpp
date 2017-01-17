@@ -65,7 +65,46 @@ TEST_CASE("vector", "vector")
       v1.set(200, 1);
       v1.set(300, 1);
       REQUIRE(v1.compute_nnz() == 4);
+   }
 
+  SECTION("DenseSegment send/recv tests", "DenseSegment send/recv tests") {
+      if(GMDP::get_global_nrank() % 2 == 0)
+      {
+        GMDP::DenseSegment<int> v1(1000);
+        std::vector<MPI_Request> requests;
+
+        if(GMDP::get_global_myrank() % 2 == 1)
+        {
+          REQUIRE(v1.compute_nnz() == 0);
+          v1.recv_nnz(GMDP::get_global_myrank(),
+                      GMDP::get_global_myrank() - 1,
+                      &requests);
+          v1.recv_segment(GMDP::get_global_myrank(),
+                          GMDP::get_global_myrank() - 1,
+                          &requests);
+        }
+        else
+        {
+          v1.set(1, 1);
+          v1.set(10, 1);
+          v1.set(200, 1);
+          v1.set(300, 1);
+          REQUIRE(v1.compute_nnz() == 4);
+          v1.compress();
+          v1.send_nnz(GMDP::get_global_myrank(),
+                      GMDP::get_global_myrank() + 1,
+                      &requests);
+          v1.send_segment(GMDP::get_global_myrank(),
+                          GMDP::get_global_myrank() + 1,
+                          &requests);
+
+        }
+
+        MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
+        requests.clear();
+        v1.decompress();
+        REQUIRE(v1.compute_nnz() == 4);
+      }
    }
 }
 
