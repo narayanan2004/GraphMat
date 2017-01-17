@@ -81,7 +81,8 @@ class GetNeighbors : public GraphProgram<int, serializable_vector, neighbors_vp>
   }
 
   void reduce_function(serializable_vector& a, const serializable_vector& b) const {
-    a.push_back(b.v[0]);
+    //a.push_back(b.v[0]);
+    a.v.insert(a.v.end(), b.v.begin(), b.v.end());
   }
 
   void process_message(const int& message, const int edge_val, const neighbors_vp& vertexprop, serializable_vector &res) const {
