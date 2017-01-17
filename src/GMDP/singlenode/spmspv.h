@@ -66,8 +66,9 @@ void my_spmspv(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
           op_mul(Aval, Xval, &temp_mul_result, vsp);
           if(get_bitvector(row_ind, ybit_vector))
 	  {
-	    Ty temp_y_copy = yvalue[row_ind];
-            op_add(temp_y_copy, temp_mul_result, &(yvalue[row_ind]), vsp);
+	    //Ty temp_y_copy = yvalue[row_ind];
+            //op_add(temp_y_copy, temp_mul_result, &(yvalue[row_ind]), vsp);
+            op_add(yvalue[row_ind], temp_mul_result, &(yvalue[row_ind]), vsp);
 	  }
 	  else
 	  {

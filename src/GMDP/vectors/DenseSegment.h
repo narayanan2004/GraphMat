@@ -123,11 +123,9 @@ class buffer
       for(unsigned long int i = 0 ; i < nnz ; i++)
       {
         int idx;
-        T val;
         ia >> idx;
-        ia >> val;
+        ia >> value[idx];
         set_bitvector(idx, bit_vector);
-        value[idx] = val;
       }
     }
 

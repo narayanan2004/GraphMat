@@ -60,22 +60,23 @@ void my_spmspv3(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
         int nz_idx = col_ptrs_cur[j];
         for (; nz_idx < col_ptrs_cur[j + 1]; nz_idx++) {
           int row_ind = partitioned_row_offset[nz_idx];
-	      Tvp VPVal = vpvalue[row_ind];
-	      assert(get_bitvector(row_ind, vpbit_vector));
+	  //Tvp VPVal = vpvalue[row_ind];
+	  assert(get_bitvector(row_ind, vpbit_vector));
           Ta Aval = partitioned_val_offset[nz_idx];
           if(get_bitvector(row_ind, ybit_vector))
 	  {
             Ty tmp_mul;
-            Ty tmp_add;
-            op_mul(Aval, Xval, VPVal, &tmp_mul, vsp);
-            op_add(yvalue[row_ind], tmp_mul, &tmp_add, vsp);
-            yvalue[row_ind] = tmp_add;
+            //Ty tmp_add;
+            op_mul(Aval, Xval, vpvalue[row_ind], &tmp_mul, vsp);
+            op_add(yvalue[row_ind], tmp_mul, &yvalue[row_ind], vsp);
+            //yvalue[row_ind] = tmp_add;
 	  }
 	  else
 	  {
-            Ty tmp_mul;
-            op_mul(Aval, Xval, VPVal, &tmp_mul, vsp);
-            yvalue[row_ind] = tmp_mul;
+            //Ty tmp_mul;
+            //op_mul(Aval, Xval, VPVal, &tmp_mul, vsp);
+            op_mul(Aval, Xval, vpvalue[row_ind], &yvalue[row_ind], vsp);
+            //yvalue[row_ind] = tmp_mul;
             set_bitvector(row_ind, ybit_vector);
 	  }
         }
