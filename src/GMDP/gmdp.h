@@ -76,6 +76,8 @@ inline double get_compression_threshold() {
   return 0.5;
 }
 
+class Serializable {};
+
 #include "GMDP/matrices/edgelist.h"
 #include "GMDP/matrices/SpMat.h"
 #include "GMDP/matrices/layouts.h"

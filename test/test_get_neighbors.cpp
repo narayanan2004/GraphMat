@@ -52,7 +52,7 @@ class neighbors_vp {
     
 };
 
-class serializable_vector {
+class serializable_vector : public GMDP::Serializable {
   public:
     std::vector<int> v;
   public:

@@ -58,19 +58,6 @@ struct send_metadata
   size_t serialized_nbytes;
 };
 
-/* begin http://stackoverflow.com/questions/87372/check-if-a-class-has-a-member-function-of-a-given-signature */
-template<typename T>
-struct HasBoostSerializeMethod
-{
-    //template<typename U, void (U::*)(char*) const> struct SFINAE {};
-    //template<typename U> static char Test(SFINAE<U, &U::serialize>*);
-    template<typename U, void (U::*)(boost::archive::binary_iarchive&, const unsigned int) > struct SFINAE {};
-    template<typename U> static char Test(SFINAE<U, &U::serialize >*);
-    template<typename U> static int Test(...);
-    static const bool Check = sizeof(Test<T>(0)) == sizeof(char);
-};
-/* end http://stackoverflow.com/questions/87372/check-if-a-class-has-a-member-function-of-a-given-signature */
-
 template <typename T>
 class buffer
 {
@@ -111,9 +98,30 @@ class buffer
       serialized_data = reinterpret_cast<char*>(_mm_malloc(sz, 64));
     }
 
-   /* begin http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
-   template<bool M = HasBoostSerializeMethod<T>::Check, typename std::enable_if<M>::type* = nullptr>
-   /* end http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
+    int compute_nnz() const
+    {
+      int len = 0;
+      #pragma omp parallel for reduction(+:len)
+      for (int ii = 0 ; ii < num_ints ; ii++) {
+        int p = _popcnt32(bit_vector[ii]);
+        len += p;
+      }
+      return len;
+    }
+  
+    int compute_nnz(int start, int finish) const
+    {
+      int len = 0;
+      #pragma omp parallel for reduction(+:len)
+      for (int ii = start  ; ii < finish ; ii++) {
+        int p = _popcnt32(bit_vector[ii]);
+        len += p;
+      }
+      return len;
+    }  
+
+    template<bool EXTENDS_SERIALIZABLE = std::is_base_of<Serializable,T>::value, 
+             typename std::enable_if<EXTENDS_SERIALIZABLE>::type* = nullptr>
     void decompress()
     {
       std::stringstream ss;
@@ -129,9 +137,8 @@ class buffer
       }
     }
 
-   /* begin http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
-   template<bool M = HasBoostSerializeMethod<T>::Check, typename std::enable_if<!M>::type* = nullptr>
-   /* end http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
+    template<bool EXTENDS_SERIALIZABLE = std::is_base_of<Serializable,T>::value, 
+             typename std::enable_if<!EXTENDS_SERIALIZABLE>::type* = nullptr>
     void decompress()
     {
       memset(bit_vector, 0, num_ints* sizeof(int));
@@ -169,6 +176,89 @@ class buffer
       }
       delete [] start_nnzs;
       delete [] end_nnzs;
+    }
+
+    template<bool EXTENDS_SERIALIZABLE = std::is_base_of<Serializable,T>::value, 
+             typename std::enable_if<EXTENDS_SERIALIZABLE>::type* = nullptr>
+    void compress()
+    {
+      std::stringstream ss;
+      int new_nnz = 0;
+      {
+        boost::archive::binary_oarchive oa(ss);
+        for(int i = 0 ; i < capacity ; i++)
+        {
+          if(get_bitvector(i, bit_vector))
+          {
+            oa << i;
+  	        oa << value[i];
+            new_nnz++;
+          }
+        }
+      }
+      
+      ss.seekg(0, ss.end);
+      size_t sz = ss.tellg();
+      ss.seekg(0, ss.beg);
+      clear_serialized();
+      alloc_serialized(sz);
+      ss.read(serialized_data, sz);
+      nnz = new_nnz;
+      serialized_nbytes = sz;
+  
+    }
+  
+    template<bool EXTENDS_SERIALIZABLE = std::is_base_of<Serializable,T>::value, 
+             typename std::enable_if<!EXTENDS_SERIALIZABLE>::type* = nullptr>
+    void compress()
+    {
+      //compressed_indices = reinterpret_cast<int*>(compressed_data + nnz);
+  
+      int npartitions = omp_get_max_threads() * 16;
+      int * partition_nnz = new int[npartitions];
+      int * partition_nnz_scan = new int[npartitions+1];
+      #pragma omp parallel for
+      for(int p = 0 ; p < npartitions ; p++)
+      {
+        int i_per_partition = (num_ints + npartitions - 1) / npartitions;
+        int start_i = i_per_partition * p;
+        int end_i = i_per_partition * (p+1);
+        if(end_i > num_ints) end_i = num_ints;
+        partition_nnz[p] = compute_nnz(start_i, end_i);
+      }
+      partition_nnz_scan[0] = 0;
+      nnz = 0;
+      for(int p = 0 ; p < npartitions ; p++)
+      {
+        partition_nnz_scan[p+1] = partition_nnz_scan[p] + partition_nnz[p];
+        nnz += partition_nnz[p];
+      }
+  
+      #pragma omp parallel for
+      for(int p = 0 ; p < npartitions ; p++)
+      {
+        int i_per_partition = (num_ints + npartitions - 1) / npartitions;
+        int start_i = i_per_partition * p;
+        int end_i = i_per_partition * (p+1);
+        if(end_i > num_ints) end_i = num_ints;
+        int nzcnt = partition_nnz_scan[p];
+        
+        for(int ii = start_i ; ii < end_i ; ii++)
+        {
+          if(_popcnt32(bit_vector[ii]) == 0) continue;
+          for(int i = ii*32 ; i < (ii+1)*32 ; i++)
+          {
+            if(get_bitvector(i, bit_vector))
+            {
+              compressed_data[nzcnt] = value[i];
+              compressed_indices[nzcnt] = i;
+              nzcnt++;
+            }
+          }
+        }
+      }
+      delete [] partition_nnz;
+      delete [] partition_nnz_scan;
     }
 
     ~buffer()
@@ -238,130 +328,33 @@ class DenseSegment {
   {
     if(properties == NULL) return 0;
     if(properties->uninitialized) return 0;
-    int len = 0;
-    #pragma omp parallel for reduction(+:len)
-    for (int ii = 0 ; ii < num_ints ; ii++) {
-      int p = _popcnt32(properties->bit_vector[ii]);
-      len += p;
-    }
-    return len;
+    return properties->compute_nnz();
   }
   
   int compute_nnz(int start, int finish) const
   {
     if(properties == NULL) return 0;
     if(properties->uninitialized) return 0;
-    int len = 0;
-    #pragma omp parallel for reduction(+:len)
-    for (int ii = start  ; ii < finish ; ii++) {
-      int p = _popcnt32(properties->bit_vector[ii]);
-      len += p;
-    }
-    return len;
+    return properties->compute_nnz(start, finish);
   }
 
   compression_decision should_compress(int test_nnz)
   {
-    if(HasBoostSerializeMethod<T>::Check) return SERIALIZED;
+    if(std::is_base_of<Serializable,T>::value) return SERIALIZED;
     if(test_nnz > get_compression_threshold() * capacity) 
       return NONE;
     return COMPRESSED;
   }
-
-/* begin http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
-  template<bool M = HasBoostSerializeMethod<T>::Check, typename std::enable_if<M>::type* = nullptr>
-/* end http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
   void compress()
   {
     alloc();
     initialize();
-    std::stringstream ss;
-    int new_nnz = 0;
+    if(should_compress(properties->nnz) == COMPRESSED ||
+       should_compress(properties->nnz) == SERIALIZED)
     {
-    boost::archive::binary_oarchive oa(ss);
-
-    for(int i = 0 ; i < capacity ; i++)
-    {
-      if(get_bitvector(i, properties->bit_vector))
-      {
-        //oa << i << properties->value[i];
-        oa << i;
-	oa << properties->value[i];
-        new_nnz++;
-      }
-    }
-    }
-    
-    ss.seekg(0, ss.end);
-    size_t sz = ss.tellg();
-    ss.seekg(0, ss.beg);
-    properties->clear_serialized();
-    properties->alloc_serialized(sz);
-    ss.read(properties->serialized_data, sz);
-    properties->nnz = new_nnz;
-    properties->serialized_nbytes = sz;
-
-  }
-
-/* begin http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
-  template<bool M = HasBoostSerializeMethod<T>::Check, typename std::enable_if<!M>::type* = nullptr>
-/* end http://stackoverflow.com/questions/16529512/c-class-member-function-specialization-on-bool-values  */
-  void compress()
-  {
-    alloc();
-    initialize();
-    if(should_compress(properties->nnz) == COMPRESSED)
-    {
-      //properties->compressed_indices = reinterpret_cast<int*>(properties->compressed_data + properties->nnz);
-  
-      int npartitions = omp_get_max_threads() * 16;
-      int * partition_nnz = new int[npartitions];
-      int * partition_nnz_scan = new int[npartitions+1];
-      #pragma omp parallel for
-      for(int p = 0 ; p < npartitions ; p++)
-      {
-        int i_per_partition = (num_ints + npartitions - 1) / npartitions;
-        int start_i = i_per_partition * p;
-        int end_i = i_per_partition * (p+1);
-        if(end_i > num_ints) end_i = num_ints;
-        partition_nnz[p] = compute_nnz(start_i, end_i);
-      }
-      partition_nnz_scan[0] = 0;
-      properties->nnz = 0;
-      for(int p = 0 ; p < npartitions ; p++)
-      {
-        partition_nnz_scan[p+1] = partition_nnz_scan[p] + partition_nnz[p];
-        properties->nnz += partition_nnz[p];
-      }
-  
-      #pragma omp parallel for
-      for(int p = 0 ; p < npartitions ; p++)
-      {
-        int i_per_partition = (num_ints + npartitions - 1) / npartitions;
-        int start_i = i_per_partition * p;
-        int end_i = i_per_partition * (p+1);
-        if(end_i > num_ints) end_i = num_ints;
-        int nzcnt = partition_nnz_scan[p];
-        
-        for(int ii = start_i ; ii < end_i ; ii++)
-        {
-          if(_popcnt32(properties->bit_vector[ii]) == 0) continue;
-          for(int i = ii*32 ; i < (ii+1)*32 ; i++)
-          {
-            if(get_bitvector(i, properties->bit_vector))
-            {
-              properties->compressed_data[nzcnt] = properties->value[i];
-              properties->compressed_indices[nzcnt] = i;
-              nzcnt++;
-            }
-          }
-        }
-      }
-      delete [] partition_nnz;
-      delete [] partition_nnz_scan;
+      properties->compress();
     }
   }
-
   void decompress()
   {
     assert(properties);

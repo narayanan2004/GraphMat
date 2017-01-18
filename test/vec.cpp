@@ -37,7 +37,7 @@
 #include <vector>
 #include "boost/serialization/vector.hpp"
 
-class sv2 {
+class sv2 : public GMDP::Serializable {
   public:
     std::vector<int> v;
   public:

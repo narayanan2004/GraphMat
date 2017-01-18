@@ -46,7 +46,7 @@ void set_bit(unsigned int idx, int* bitvec) {
     }
 }
 
-class TC {
+class TC : public GMDP::Serializable {
   public:
     int id;
     int triangles;
@@ -80,7 +80,7 @@ class TC {
 };
 
 template<typename T>
-class serializable_vector {
+class serializable_vector : public GMDP::Serializable {
   public:
     std::vector<T> v;
   public:
