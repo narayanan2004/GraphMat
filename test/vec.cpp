@@ -34,6 +34,26 @@
 #include "generator.hpp"
 #include <algorithm>
 #include "test_utils.hpp"
+#include <vector>
+#include "boost/serialization/vector.hpp"
+
+class sv2 {
+  public:
+    std::vector<int> v;
+  public:
+    sv2() {}
+    void clear() {
+      v.clear();
+    }
+    void push_back(int t) {
+      v.push_back(t);
+    }
+    friend boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive &ar, const unsigned int version) {
+      ar & v;
+    }
+};
 
 TEST_CASE("vector", "vector")
 {
@@ -86,9 +106,9 @@ TEST_CASE("vector", "vector")
         else
         {
           v1.set(1, 1);
-          v1.set(10, 1);
-          v1.set(200, 1);
-          v1.set(300, 1);
+          v1.set(10, 2);
+          v1.set(200, 3);
+          v1.set(300, 4);
           REQUIRE(v1.compute_nnz() == 4);
           v1.compress();
           v1.send_nnz(GMDP::get_global_myrank(),
@@ -103,6 +123,79 @@ TEST_CASE("vector", "vector")
         MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
         requests.clear();
         v1.decompress();
+        REQUIRE(v1.compute_nnz() == 4);
+        REQUIRE(v1.get(1) == 1);
+        REQUIRE(v1.get(10) == 2);
+        REQUIRE(v1.get(200) == 3);
+        REQUIRE(v1.get(300) == 4);
+      }
+   }
+
+  SECTION("DenseSegment send/recv tests serialized", "DenseSegment send/recv tests serialized") {
+      if(GMDP::get_global_nrank() % 2 == 0)
+      {
+        GMDP::DenseSegment<sv2> v1(1000);
+        std::vector<MPI_Request> requests;
+
+        if(GMDP::get_global_myrank() % 2 == 1)
+        {
+          REQUIRE(v1.compute_nnz() == 0);
+          v1.recv_nnz(GMDP::get_global_myrank(),
+                      GMDP::get_global_myrank() - 1,
+                      &requests);
+          v1.recv_segment(GMDP::get_global_myrank(),
+                          GMDP::get_global_myrank() - 1,
+                          &requests);
+        }
+        else
+        {
+          {
+            sv2 a;
+            a.v.push_back(1);
+            v1.set(1, a);
+          }
+          {
+            sv2 a;
+            a.v.push_back(2);
+            v1.set(10, a);
+          }
+          {
+            sv2 a;
+            a.v.push_back(3);
+            v1.set(200, a);
+          }
+          {
+            sv2 a;
+            a.v.push_back(4);
+            v1.set(300, a);
+          }
+          REQUIRE(v1.compute_nnz() == 4);
+          v1.compress();
+          v1.send_nnz(GMDP::get_global_myrank(),
+                      GMDP::get_global_myrank() + 1,
+                      &requests);
+          v1.send_segment(GMDP::get_global_myrank(),
+                          GMDP::get_global_myrank() + 1,
+                          &requests);
+
+        }
+
+        MPI_Waitall(requests.size(), requests.data(), MPI_STATUS_IGNORE);
+        requests.clear();
+        v1.decompress();
+        sv2 a;
+        a = v1.get(1);
+        REQUIRE(a.v.size() == 1);
+        REQUIRE(a.v[0] == 1);
+        a = v1.get(10);
+        REQUIRE(a.v.size() == 1);
+        REQUIRE(a.v[0] == 2);
+        a = v1.get(200);
+        REQUIRE(a.v.size() == 1);
+        REQUIRE(a.v[0] == 3);
+        a = v1.get(300);
+        REQUIRE(a.v.size() == 1);
+        REQUIRE(a.v[0] == 4);
         REQUIRE(v1.compute_nnz() == 4);
       }
    }
