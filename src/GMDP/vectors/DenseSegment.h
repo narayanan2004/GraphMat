@@ -56,6 +56,7 @@ struct send_metadata
 {
   int nnz;
   size_t serialized_nbytes;
+  size_t serialized_npartitions;
 };
 
 template <typename T>
@@ -66,7 +67,6 @@ class buffer
     int * bit_vector;
     bool uninitialized;
     int nnz;
-    size_t serialized_nbytes;
     int capacity;
     int num_ints;
 
@@ -74,6 +74,10 @@ class buffer
     int * compressed_indices;
 
     char * serialized_data;
+    int serialized_npartitions;
+    size_t * serialized_partition_nbytes_scan;
+    size_t * serialized_partition_nnz_scan;
+    size_t serialized_nbytes;
 
     buffer(int _capacity, int _num_ints)
     {
@@ -85,7 +89,11 @@ class buffer
       compressed_data = new T[capacity];
       compressed_indices = new int[capacity];
       uninitialized = true;
+
       serialized_data = NULL;
+      serialized_npartitions = omp_get_max_threads() * 16;
+      serialized_partition_nbytes_scan = new size_t[serialized_npartitions+1];
+      serialized_partition_nnz_scan = new size_t[serialized_npartitions+1];
     }
     void clear_serialized()
     {
@@ -124,17 +132,28 @@ class buffer
              typename std::enable_if<EXTENDS_SERIALIZABLE>::type* = nullptr>
     void decompress()
     {
-      std::stringstream ss;
-      ss.write(serialized_data, serialized_nbytes);
-      boost::archive::binary_iarchive ia(ss);
       memset(bit_vector, 0, num_ints* sizeof(int));
-      for(unsigned long int i = 0 ; i < nnz ; i++)
+      std::stringstream * sss = new std::stringstream[serialized_npartitions];
+      #pragma omp parallel for
+      for(int p = 0 ; p < serialized_npartitions ; p++)
       {
-        int idx;
-        ia >> idx;
-        ia >> value[idx];
-        set_bitvector(idx, bit_vector);
+        int i_per_partition = (num_ints + serialized_npartitions - 1) / serialized_npartitions;
+        int start_i = i_per_partition * p;
+        int end_i = i_per_partition * (p+1);
+        if(end_i > num_ints) end_i = num_ints;
+        sss[p].write(serialized_data + serialized_partition_nbytes_scan[p], 
+                     (serialized_partition_nbytes_scan[p+1]-serialized_partition_nbytes_scan[p]));
+        boost::archive::binary_iarchive ia(sss[p]);
+        for(unsigned long int i = 0 ; i < (serialized_partition_nnz_scan[p+1] - 
+                                           serialized_partition_nnz_scan[p]) ; i++)
+        {
+          int idx;
+          ia >> idx;
+          ia >> value[idx];
+          set_bitvector(idx, bit_vector);
+        }
       }
+      delete [] sss;
     }
 
     template<bool EXTENDS_SERIALIZABLE = std::is_base_of<Serializable,T>::value, 
@@ -182,38 +201,68 @@ class buffer
              typename std::enable_if<EXTENDS_SERIALIZABLE>::type* = nullptr>
     void compress()
     {
-      std::stringstream ss;
-      int new_nnz = 0;
+      size_t * serialized_partition_nbytes = new size_t[serialized_npartitions];
+      size_t * serialized_partition_nnz = new size_t[serialized_npartitions];
+      std::stringstream * sss = new std::stringstream[serialized_npartitions];
+
+      #pragma omp parallel for
+      for(int p = 0 ; p < serialized_npartitions ; p++)
       {
-        boost::archive::binary_oarchive oa(ss);
-        for(int i = 0 ; i < capacity ; i++)
+        int i_per_partition = (num_ints + serialized_npartitions - 1) / serialized_npartitions;
+        int start_i = i_per_partition * p;
+        int end_i = i_per_partition * (p+1);
+        if(end_i > num_ints) end_i = num_ints;
+        serialized_partition_nnz[p] = 0;
+        boost::archive::binary_oarchive oa(sss[p]);
+        
+        for(int ii = start_i ; ii < end_i ; ii++)
         {
-          if(get_bitvector(i, bit_vector))
+          if(_popcnt32(bit_vector[ii]) == 0) continue;
+          for(int i = ii*32 ; i < (ii+1)*32 ; i++)
           {
-            oa << i;
-  	        oa << value[i];
-            new_nnz++;
+            if(get_bitvector(i, bit_vector))
+            {
+              oa << i;
+              oa << value[i];
+              serialized_partition_nnz[p]++;
+            }
           }
         }
+
+        sss[p].seekg(0, sss[p].end);
+        size_t sz = sss[p].tellg();
+        sss[p].seekg(0, sss[p].beg);
+        serialized_partition_nbytes[p] = sz;
       }
-      
-      ss.seekg(0, ss.end);
-      size_t sz = ss.tellg();
-      ss.seekg(0, ss.beg);
+
+      serialized_partition_nnz_scan[0] = 0;
+      serialized_partition_nbytes_scan[0] = 0;
+      for(int p = 0 ; p < serialized_npartitions ; p++)
+      {
+        serialized_partition_nnz_scan[p+1] = serialized_partition_nnz_scan[p] + serialized_partition_nnz[p];
+        serialized_partition_nbytes_scan[p+1] = serialized_partition_nbytes_scan[p] + serialized_partition_nbytes[p];
+      }
+      serialized_nbytes = serialized_partition_nbytes_scan[serialized_npartitions];
+
       clear_serialized();
-      alloc_serialized(sz);
-      ss.read(serialized_data, sz);
-      nnz = new_nnz;
-      serialized_nbytes = sz;
-  
+      alloc_serialized(serialized_nbytes);
+
+      #pragma omp parallel for
+      for(int p = 0 ; p < serialized_npartitions ; p++)
+      {
+        sss[p].read(serialized_data + serialized_partition_nbytes_scan[p], serialized_partition_nbytes[p]);
+      }
+
+      delete [] serialized_partition_nnz;
+      delete [] serialized_partition_nbytes;
+      delete [] sss;
+
     }
   
     template<bool EXTENDS_SERIALIZABLE = std::is_base_of<Serializable,T>::value, 
              typename std::enable_if<!EXTENDS_SERIALIZABLE>::type* = nullptr>
     void compress()
     {
-      //compressed_indices = reinterpret_cast<int*>(compressed_data + nnz);
-  
       int npartitions = omp_get_max_threads() * 16;
       int * partition_nnz = new int[npartitions];
       int * partition_nnz_scan = new int[npartitions+1];
@@ -268,6 +317,8 @@ class buffer
       //_mm_free(compressed_data);
       delete [] compressed_data;
       delete [] compressed_indices;
+      delete [] serialized_partition_nbytes_scan;
+      delete [] serialized_partition_nnz_scan;
       clear_serialized();
     }
 };
@@ -447,7 +498,7 @@ class DenseSegment {
   }
 
   void send_nnz(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
-    send_metadata md = {properties->nnz, properties->serialized_nbytes};
+    send_metadata md = {properties->nnz, properties->serialized_nbytes, properties->serialized_npartitions};
     MPI_Send(&md, sizeof(md), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD);
   }
   void recv_nnz_queue(int myrank, int src_rank,
@@ -465,6 +516,7 @@ class DenseSegment {
             MPI_STATUS_IGNORE);
    properties->nnz = md.nnz;
    properties->serialized_nbytes = md.serialized_nbytes;
+   properties->serialized_npartitions = md.serialized_npartitions;
   }
   void send_segment(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     if(should_compress(properties->nnz) == COMPRESSED)
@@ -481,9 +533,14 @@ class DenseSegment {
     else if(should_compress(properties->nnz) == SERIALIZED)
     {
       MPI_Request r1;
-      MPI_Isend(properties->serialized_data, properties->serialized_nbytes, MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD,
-                 &r1);
+      MPI_Request r2;
+      MPI_Request r3;
+      MPI_Isend(properties->serialized_data, properties->serialized_nbytes, MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD, &r1);
+      MPI_Isend(properties->serialized_partition_nnz_scan, (properties->serialized_npartitions+1) * sizeof(size_t), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD, &r2);
+      MPI_Isend(properties->serialized_partition_nbytes_scan, (properties->serialized_npartitions+1) * sizeof(size_t), MPI_BYTE, dst_rank, 0, MPI_COMM_WORLD, &r3);
       requests->push_back(r1);
+      requests->push_back(r2);
+      requests->push_back(r3);
     }
     else
     {
@@ -516,11 +573,16 @@ class DenseSegment {
     else if(should_compress(p->nnz) == SERIALIZED)
     {
       MPI_Request r1;
+      MPI_Request r2;
+      MPI_Request r3;
       p->clear_serialized();
       p->alloc_serialized(p->serialized_nbytes);
-      MPI_Irecv(p->serialized_data, p->serialized_nbytes, MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
-             &r1);
+      MPI_Irecv(p->serialized_data, p->serialized_nbytes, MPI_BYTE, src_rank, 0, MPI_COMM_WORLD, &r1);
+      MPI_Irecv(p->serialized_partition_nnz_scan, (p->serialized_npartitions+1) * sizeof(size_t), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD, &r2);
+      MPI_Irecv(p->serialized_partition_nbytes_scan, (p->serialized_npartitions+1) * sizeof(size_t), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD, &r3);
       requests->push_back(r1);
+      requests->push_back(r2);
+      requests->push_back(r3);
     }
     else
     {
