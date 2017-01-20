@@ -13,3 +13,7 @@ Changes in v2.0 from both v1.0-single-node and v1.0-distributed
 - Major code refactoring for the backend
 - Code cleanup in src/
 - Cleanup Makefile
+
+Changes in v2.0 from v1.0-single-node only
+- Use of global variable nthreads deprecated
+- User does not have the specify number of paritions (as a multiple of nthreads). Paritioning is fully automatic now.
