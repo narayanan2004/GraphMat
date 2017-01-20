@@ -42,32 +42,26 @@
 #include <assert.h>
 #endif
 
-//#include "class_MatrixDC.cpp"
-#include "Graph.cpp"
-#include "GraphProgram.cpp"
-//#include "SparseVector.cpp"
-#include "SPMV.cpp"
+#include "Graph.h"
+#include "GraphProgram.h"
+#include "SPMV.h"
 
-//int nthreads;
+namespace GraphMat {
 
 template<class T, class U, class V>
 struct run_graph_program_temp_structure {
-  //SparseInVector<T>* px;
-  //SparseOutVector<U>* py;
-   GMDP::SpVec<GMDP::DenseSegment<T> >* px;
-   GMDP::SpVec<GMDP::DenseSegment<U> >* py;
+   GraphMat::SpVec<GraphMat::DenseSegment<T> >* px;
+   GraphMat::SpVec<GraphMat::DenseSegment<U> >* py;
 };
 
 template<class T, class U, class V, class E>
 struct run_graph_program_temp_structure<T,U,V> graph_program_init(const GraphProgram<T,U,V,E>& gp, const Graph<V, E>& g) {
 
   struct run_graph_program_temp_structure<T,U,V> rgpts;
-  //rgpts.px = new SparseInVector<T>(g.nvertices);
-  //rgpts.py = new SparseOutVector<U>(g.nvertices);
-    rgpts.px = new GMDP::SpVec<GMDP::DenseSegment<T> >(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
+    rgpts.px = new GraphMat::SpVec<GraphMat::DenseSegment<T> >(g.nvertices, GraphMat::get_global_nrank(), GraphMat::vector_partition_fn);
     T _t;
     rgpts.px->setAll(_t);
-    rgpts.py = new GMDP::SpVec<GMDP::DenseSegment<U> >(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
+    rgpts.py = new GraphMat::SpVec<GraphMat::DenseSegment<U> >(g.nvertices, GraphMat::get_global_nrank(), GraphMat::vector_partition_fn);
     U _u;
     rgpts.py->setAll(_u);
   return rgpts;
@@ -101,28 +95,27 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
 
   struct timeval start, end, init_start, init_end, iteration_start, iteration_end;
   double time;
-  int global_myrank = GMDP::get_global_myrank();
+  int global_myrank = GraphMat::get_global_myrank();
   
-  //unsigned long long int init_start = __rdtsc();
   gettimeofday(&init_start, 0);
   
 
   auto act = gp->getActivity();
 
-  GMDP::SpVec<GMDP::DenseSegment<T> >* px;
-  GMDP::SpVec<GMDP::DenseSegment<U> >* py;
+  GraphMat::SpVec<GraphMat::DenseSegment<T> >* px;
+  GraphMat::SpVec<GraphMat::DenseSegment<U> >* py;
 
   if (rgpts == NULL) {
-    px = new GMDP::SpVec<GMDP::DenseSegment<T> >(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
+    px = new GraphMat::SpVec<GraphMat::DenseSegment<T> >(g.nvertices, GraphMat::get_global_nrank(), GraphMat::vector_partition_fn);
     T _t;
     px->setAll(_t);
-    py = new GMDP::SpVec<GMDP::DenseSegment<U> >(g.nvertices, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
+    py = new GraphMat::SpVec<GraphMat::DenseSegment<U> >(g.nvertices, GraphMat::get_global_nrank(), GraphMat::vector_partition_fn);
     U _u;
     py->setAll(_u);
   }
 
-  GMDP::SpVec<GMDP::DenseSegment<T> >& x = (rgpts==NULL)?(*px):*(rgpts->px);//*px;
-  GMDP::SpVec<GMDP::DenseSegment<U> >& y = (rgpts==NULL)?(*py):*(rgpts->py);//*py;
+  GraphMat::SpVec<GraphMat::DenseSegment<T> >& x = (rgpts==NULL)?(*px):*(rgpts->px);//*px;
+  GraphMat::SpVec<GraphMat::DenseSegment<U> >& y = (rgpts==NULL)?(*py):*(rgpts->py);//*py;
 
   if (act == ALL_VERTICES) {
     g.setAllActive();
@@ -141,13 +134,13 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
   while(1) {
     gettimeofday(&iteration_start, 0);
 
-    GMDP::Clear(&x);
-    GMDP::Clear(&y);
+    GraphMat::Clear(&x);
+    GraphMat::Clear(&y);
     converged = 1;
 
     gettimeofday(&start, 0);
 
-    GMDP::IntersectReduce(g.active, g.vertexproperty, &x, send_message<T,U,V,E>, (void*)gp);
+    GraphMat::IntersectReduce(g.active, g.vertexproperty, &x, send_message<T,U,V,E>, (void*)gp);
 
     #ifdef __TIMING
     printf("x.length = %d \n", x.getNNZ());
@@ -194,9 +187,9 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
     int local_converged = 1;
     converged = 1;
 
-    //GMDP::IntersectReduce(g.active, y, &g.vertexproperty, set_y<U,V>);
+    //GraphMat::IntersectReduce(g.active, y, &g.vertexproperty, set_y<U,V>);
     //auto apply_func  = set_y_apply<U,V>;
-    //GMDP::Apply(y, &g.vertexproperty, apply_func<T,U,V>, (void*)gp);
+    //GraphMat::Apply(y, &g.vertexproperty, apply_func<T,U,V>, (void*)gp);
     for(int segmentId = 0 ; segmentId < y.nsegments ; segmentId++)
     {
       if(y.nodeIds[segmentId] == global_myrank)
@@ -218,7 +211,7 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
             gp->apply(segment->value[idx], vpValueArray[idx]);
             if (old_prop != vpValueArray[idx]) {
               g.active->segments[segmentId]->properties->value[idx] = true;
-              GMDP::set_bitvector(idx, g.active->segments[segmentId]->properties->bit_vector);
+              GraphMat::set_bitvector(idx, g.active->segments[segmentId]->properties->bit_vector);
               local_converged = 0;
             }
 
@@ -241,7 +234,6 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
     gettimeofday(&iteration_end, 0);
     #ifdef __TIMING
     time = (iteration_end.tv_sec-iteration_start.tv_sec)*1e3+(iteration_end.tv_usec-iteration_start.tv_usec)*1e-3;
-    //printf("Number of vertices that changed state = %d \n", g.active->getNNZ());
     printf("Iteration %d :: %f msec :: updated %d vertices :: changed %d vertices \n", it, time, y.getNNZ(), g.active->getNNZ());
     #endif
 
@@ -276,3 +268,4 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
 
 }
 
+} //namespace GraphMat

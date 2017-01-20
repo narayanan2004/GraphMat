@@ -30,10 +30,10 @@
  * ******************************************************************************/
 
 #include "catch.hpp"
-#include "generator.hpp"
+#include "generator.h"
 #include <algorithm>
 #include <climits>
-#include "GraphMatRuntime.cpp"
+#include "GraphMatRuntime.h"
 
 typedef unsigned int depth_type;
 depth_type MAX_DIST = std::numeric_limits<depth_type>::max();
@@ -55,7 +55,7 @@ class BFSD {
     }
 };
 
-class BFS : public GraphProgram<unsigned long long int, unsigned long long int, BFSD> {
+class BFS : public GraphMat::GraphProgram<unsigned long long int, unsigned long long int, BFSD> {
 
   public:
     depth_type current_depth;
@@ -64,7 +64,7 @@ class BFS : public GraphProgram<unsigned long long int, unsigned long long int, 
 
   BFS() {
     current_depth = 1;
-    this->order = OUT_EDGES;
+    this->order = GraphMat::OUT_EDGES;
     this->process_message_requires_vertexprop = false;
   }
 
@@ -96,7 +96,7 @@ class BFS : public GraphProgram<unsigned long long int, unsigned long long int, 
 
 void test_ut_bfs(int n) {
   auto E = generate_upper_triangular_edgelist<int>(n);
-  Graph<BFSD> G;
+  GraphMat::Graph<BFSD> G;
   G.MTXFromEdgelist(E);
   E.clear();
 
@@ -109,7 +109,7 @@ void test_ut_bfs(int n) {
     G.setAllInactive();
     G.setActive(1);
 
-    run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, -1); 
 
     if (G.vertexNodeOwner(1)) 
       REQUIRE(G.getVertexproperty(1).depth == 0);
@@ -126,7 +126,7 @@ void test_ut_bfs(int n) {
     G.setAllInactive();
     G.setActive(n/2);
 
-    run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, -1); 
 
     for (int i = 1; i < n/2; i++) {
       if (G.vertexNodeOwner(i)) 
@@ -143,7 +143,7 @@ void test_ut_bfs(int n) {
 
 void test_dense_bfs(int n) {
   auto E = generate_dense_edgelist<int>(n);
-  Graph<BFSD> G;
+  GraphMat::Graph<BFSD> G;
   G.MTXFromEdgelist(E);
   E.clear();
 
@@ -156,7 +156,7 @@ void test_dense_bfs(int n) {
     G.setAllInactive();
     G.setActive(1);
 
-    run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, -1); 
 
     if (G.vertexNodeOwner(1)) 
       REQUIRE(G.getVertexproperty(1).depth == 0);
@@ -173,7 +173,7 @@ void test_dense_bfs(int n) {
     G.setAllInactive();
     G.setActive(n/2);
 
-    run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, -1); 
 
     for (int i = 1; i < n/2; i++) {
       if (G.vertexNodeOwner(i)) 
@@ -190,7 +190,7 @@ void test_dense_bfs(int n) {
 
 void test_chain_bfs(int n) {
   auto E = generate_circular_chain_edgelist<int>(n);
-  Graph<BFSD> G;
+  GraphMat::Graph<BFSD> G;
   G.MTXFromEdgelist(E);
   E.clear();
 
@@ -203,7 +203,7 @@ void test_chain_bfs(int n) {
     G.setAllInactive();
     G.setActive(1);
 
-    run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, -1); 
 
     if (G.vertexNodeOwner(1)) 
       REQUIRE(G.getVertexproperty(1).depth == 0);
@@ -220,7 +220,7 @@ void test_chain_bfs(int n) {
     G.setAllInactive();
     G.setActive(n/2);
 
-    run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, -1); 
 
     for (int i = 1; i < n/2; i++) {
       if (G.vertexNodeOwner(i)) 

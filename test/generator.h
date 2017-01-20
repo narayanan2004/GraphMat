@@ -40,11 +40,11 @@
 #include "GMDP/gmdp.h"
 
 template <typename T=int>
-GMDP::edgelist_t<T> generate_identity_edgelist(int n) {
-  int global_myrank = GMDP::get_global_myrank();
-  GMDP::edgelist_t<T> identity_edgelist(n, n, 0);
+GraphMat::edgelist_t<T> generate_identity_edgelist(int n) {
+  int global_myrank = GraphMat::get_global_myrank();
+  GraphMat::edgelist_t<T> identity_edgelist(n, n, 0);
   if (global_myrank == 0) {
-    identity_edgelist = GMDP::edgelist_t<T>(n, n, n); 
+    identity_edgelist = GraphMat::edgelist_t<T>(n, n, n); 
     for (int i = 0; i < n; i++) {
       identity_edgelist.edges[i].src = i+1;
       identity_edgelist.edges[i].dst = i+1;
@@ -55,7 +55,7 @@ GMDP::edgelist_t<T> generate_identity_edgelist(int n) {
 }
 
 template <typename T>
-bool dst_present(int dst, const GMDP::edgelist_t<T>& e, const int start, const int end) {
+bool dst_present(int dst, const GraphMat::edgelist_t<T>& e, const int start, const int end) {
   bool retval = false;
   for (int i = start; i < end; i++) {
     if (e.edges[i].dst == dst) {
@@ -67,14 +67,14 @@ bool dst_present(int dst, const GMDP::edgelist_t<T>& e, const int start, const i
 }
 
 template <typename T=int>
-GMDP::edgelist_t<T> generate_random_edgelist(int n, int avg_nnz_per_row) {
-  int global_myrank = GMDP::get_global_myrank();
-  GMDP::edgelist_t<T> random_edgelist(n, n, 0);
+GraphMat::edgelist_t<T> generate_random_edgelist(int n, int avg_nnz_per_row) {
+  int global_myrank = GraphMat::get_global_myrank();
+  GraphMat::edgelist_t<T> random_edgelist(n, n, 0);
   if (global_myrank == 0) {
     if (avg_nnz_per_row > n) { 
       avg_nnz_per_row = n;
     }
-    random_edgelist = GMDP::edgelist_t<T>(n, n, n*avg_nnz_per_row); 
+    random_edgelist = GraphMat::edgelist_t<T>(n, n, n*avg_nnz_per_row); 
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(1, n);
@@ -98,11 +98,11 @@ GMDP::edgelist_t<T> generate_random_edgelist(int n, int avg_nnz_per_row) {
 }
 
 template <typename T=int>
-GMDP::edgelist_t<T> generate_upper_triangular_edgelist(int n) {
-  int global_myrank = GMDP::get_global_myrank();
-  GMDP::edgelist_t<T> ut_edgelist(n, n, 0);
+GraphMat::edgelist_t<T> generate_upper_triangular_edgelist(int n) {
+  int global_myrank = GraphMat::get_global_myrank();
+  GraphMat::edgelist_t<T> ut_edgelist(n, n, 0);
   if (global_myrank == 0) {
-    ut_edgelist = GMDP::edgelist_t<T>(n, n, n*(n-1)/2); 
+    ut_edgelist = GraphMat::edgelist_t<T>(n, n, n*(n-1)/2); 
     int k = 0;
     for (int i = 0; i < n; i++) {
       for (int j = i+1; j < n; j++) {
@@ -117,11 +117,11 @@ GMDP::edgelist_t<T> generate_upper_triangular_edgelist(int n) {
 }
 
 template <typename T=int>
-GMDP::edgelist_t<T> generate_dense_edgelist(int n) {
-  int global_myrank = GMDP::get_global_myrank();
-  GMDP::edgelist_t<T> dense_edgelist(n, n, 0);
+GraphMat::edgelist_t<T> generate_dense_edgelist(int n) {
+  int global_myrank = GraphMat::get_global_myrank();
+  GraphMat::edgelist_t<T> dense_edgelist(n, n, 0);
   if (global_myrank == 0) {
-    dense_edgelist = GMDP::edgelist_t<T>(n, n, n*n); 
+    dense_edgelist = GraphMat::edgelist_t<T>(n, n, n*n); 
     int k = 0;
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
@@ -136,11 +136,11 @@ GMDP::edgelist_t<T> generate_dense_edgelist(int n) {
 }
 
 template <typename T=int>
-GMDP::edgelist_t<T> generate_circular_chain_edgelist(int n) {
-  int global_myrank = GMDP::get_global_myrank();
-  GMDP::edgelist_t<T> chain_edgelist(n, n, 0);
+GraphMat::edgelist_t<T> generate_circular_chain_edgelist(int n) {
+  int global_myrank = GraphMat::get_global_myrank();
+  GraphMat::edgelist_t<T> chain_edgelist(n, n, 0);
   if (global_myrank == 0) {
-    chain_edgelist = GMDP::edgelist_t<T>(n, n, n); 
+    chain_edgelist = GraphMat::edgelist_t<T>(n, n, n); 
     for (int i = 0; i < n; i++) {
       chain_edgelist.edges[i].src = i+1;
       chain_edgelist.edges[i].dst = (i+1)%(n)+1;
@@ -156,11 +156,11 @@ GMDP::edgelist_t<T> generate_circular_chain_edgelist(int n) {
 
 
 template <typename T=int>
-GMDP::edgelist_t<T> generate_dense_vector_edgelist(int n) {
-  int global_myrank = GMDP::get_global_myrank();
-  GMDP::edgelist_t<T> dense_edgelist(n, 1, 0);
+GraphMat::edgelist_t<T> generate_dense_vector_edgelist(int n) {
+  int global_myrank = GraphMat::get_global_myrank();
+  GraphMat::edgelist_t<T> dense_edgelist(n, 1, 0);
   if (global_myrank == 0) {
-    dense_edgelist = GMDP::edgelist_t<T>(n, 1, n); 
+    dense_edgelist = GraphMat::edgelist_t<T>(n, 1, n); 
     for (int i = 0; i < n; i++) {
       dense_edgelist.edges[i].src = i+1;
       dense_edgelist.edges[i].dst = 1;
@@ -171,16 +171,16 @@ GMDP::edgelist_t<T> generate_dense_vector_edgelist(int n) {
 }
 
 template <typename T=int>
-GMDP::edgelist_t<T> generate_random_vector_edgelist(int n, int nnz) {
+GraphMat::edgelist_t<T> generate_random_vector_edgelist(int n, int nnz) {
   if (nnz > n) { 
     nnz = n;
     return generate_dense_vector_edgelist<T>(n);
   }
 
-  int global_myrank = GMDP::get_global_myrank();
-  GMDP::edgelist_t<T> random_edgelist(n, 1, 0);
+  int global_myrank = GraphMat::get_global_myrank();
+  GraphMat::edgelist_t<T> random_edgelist(n, 1, 0);
   if (global_myrank == 0) {
-    random_edgelist = GMDP::edgelist_t<T>(n, 1, nnz); 
+    random_edgelist = GraphMat::edgelist_t<T>(n, 1, nnz); 
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(1, n);

@@ -26,68 +26,72 @@
 ** NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS        **
 ** SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * ******************************************************************************/
-/* Narayanan Sundaram (Intel Corp.), Michael Anderson (Intel Corp.)
+/* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
+#include <climits>
+#include <cassert>
 
 #include <iostream>
-#include "catch.hpp"
-#include <algorithm>
+#include <sstream>
+#include <cstdlib>
+#include <cstring>
 
+namespace GraphMat {
 
-template<typename T>
-bool edge_compare(const GMDP::edge_t<T> &e1,
-                  const GMDP::edge_t<T> &e2)
-{
-        if( (e1.src < e2.src) ||
-            ((e1.src == e2.src) && (e1.dst < e2.dst)) ||
-            ((e1.src == e2.src) && (e1.dst == e2.dst) && (e1.val < e2.val)) )
-        {
-                return true;
-        }
-        return false;
+template <class T, class U, class V, class E>
+void Mulfn(E a, T b, U * c, void* gpv) { 
+  GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
+  V dummy;
+  gp->process_message(b, a, dummy, *c); 
 }
 
-template <typename EDGE_T>
-void collect_edges(const GMDP::edgelist_t<EDGE_T>& in_edges, GMDP::edgelist_t<EDGE_T>& out_edges) {
-
-    REQUIRE(sizeof(EDGE_T)%sizeof(int) == 0);
-    int T_by_int = sizeof(in_edges.edges[0])/sizeof(int);
-
-    int* OERecvCount = new int[GMDP::get_global_nrank()];
-    MPI_Allgather(&in_edges.nnz, 1, MPI_INT, OERecvCount, 1, MPI_INT, MPI_COMM_WORLD);
-
-    int* OERecvOffset = new int[GMDP::get_global_nrank()];
-    int* OERecvCountInt = new int[GMDP::get_global_nrank()];
-    OERecvOffset[0] = 0;
-    for (int i = 1; i < GMDP::get_global_nrank(); i++) {
-      OERecvOffset[i] = OERecvOffset[i-1] + T_by_int*OERecvCount[i-1];      
-    }
-    for (int i = 0; i < GMDP::get_global_nrank(); i++) {
-      OERecvCountInt[i] = T_by_int*OERecvCount[i];
-    }
-
-    int nnz = 0;
-    for (int i = 0; i < GMDP::get_global_nrank(); i++) {
-      nnz += OERecvCount[i];
-    }
-    out_edges = GMDP::edgelist_t<EDGE_T>(in_edges.m, in_edges.n, nnz);
-
-    MPI_Allgatherv(in_edges.edges, in_edges.nnz*T_by_int, MPI_INT, out_edges.edges, OERecvCountInt, OERecvOffset, MPI_INT, MPI_COMM_WORLD);
-
-    delete [] OERecvCount;
-    delete [] OERecvCountInt;
-    delete [] OERecvOffset;
+template <class T, class U, class V, class E>
+void Mulfn(E a, T b, V v, U * c, void* gpv) { 
+  GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
+  gp->process_message(b, a, v, *c); 
 }
 
-template <typename T>
-void mul(T a, T b, T * c, void* vsp) {*c = a*b;}
+template <class T, class U, class V, class E>
+void Addfn(U a, U b, U * c, void* gpv) { 
+  GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv; 
+  *c = a;
+  gp->reduce_function(*c, b);
+}
 
-template <typename T>
-void add(T a, T b, T * c, void* vsp) {*c = a+b;}
 
-template <typename T>
-void max(T a, T b, T * c, void* vsp) {*c = std::max(a,b);}
+template <class T, class U, class V, class E>
+void SpMSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GraphMat::SpVec<GraphMat::DenseSegment<T> > * x, GraphMat::SpVec<GraphMat::DenseSegment<U> >* y) {
+  struct timeval start, end;
+  gettimeofday(&start, 0);
 
-template <typename T>
-void min(T a, T b, T * c, void* vsp) {*c = std::min(a,b);}
+  if (gp->getProcessMessageRequiresVertexprop()) {
+    GraphMat::SpMSpV3(G.A, x, G.vertexproperty, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  } else {
+    GraphMat::SpMSpV(G.A, x, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  }
 
+  #ifdef __TIMING
+  gettimeofday(&end, 0);
+  double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
+  printf("SPMSPV: time = %.3f ms \n", time);
+  #endif
+}
+template <class T, class U, class V, class E>
+void SpMTSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GraphMat::SpVec<GraphMat::DenseSegment<T> >* x, GraphMat::SpVec<GraphMat::DenseSegment<U> >* y) {
+  struct timeval start, end;
+  gettimeofday(&start, 0);
+
+  if (gp->getProcessMessageRequiresVertexprop()) {
+    GraphMat::SpMSpV3(G.AT, x, G.vertexproperty, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  } else {
+    GraphMat::SpMSpV(G.AT, x, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  }
+
+  #ifdef __TIMING
+  gettimeofday(&end, 0);
+  double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
+  printf("SPMTSPV: time = %.3f ms \n", time);
+  #endif
+}
+
+} //namespace GraphMat

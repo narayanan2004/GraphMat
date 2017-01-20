@@ -29,6 +29,8 @@
 /* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
 
+namespace GraphMat {
+
 enum edge_direction {OUT_EDGES, IN_EDGES, ALL_EDGES};
 //enum execution_direction {PUSH, PULL};
 enum activity_type {ACTIVE_ONLY, ALL_VERTICES};
@@ -98,4 +100,5 @@ class GraphProgram {
 
 };
 
+} // namespace GraphMat
 //-------------------------------------------------------------------------

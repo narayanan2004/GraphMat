@@ -31,13 +31,13 @@
 
 #include <iostream>
 #include "catch.hpp"
-#include "generator.hpp"
+#include "generator.h"
 #include <algorithm>
-#include "test_utils.hpp"
+#include "test_utils.h"
 #include <vector>
 #include "boost/serialization/vector.hpp"
 
-class sv2 : public GMDP::Serializable {
+class sv2 : public GraphMat::Serializable {
   public:
     std::vector<int> v;
   public:
@@ -60,8 +60,8 @@ TEST_CASE("vector", "vector")
   SECTION(" SpVec basic tests", "SpVec basic tests") {
       int tiles_per_dim;
       int (*partition_fn)(int,int,int,int,int);
-      GMDP::get_fn_and_tiles(1, GMDP::get_global_nrank(), &partition_fn, &tiles_per_dim);
-      GMDP::SpVec<GMDP::DenseSegment<int> > myvec(1000, tiles_per_dim, GMDP::vector_partition_fn);
+      GraphMat::get_fn_and_tiles(1, GraphMat::get_global_nrank(), &partition_fn, &tiles_per_dim);
+      GraphMat::SpVec<GraphMat::DenseSegment<int> > myvec(1000, tiles_per_dim, GraphMat::vector_partition_fn);
       REQUIRE(myvec.getNNZ() == 0);
 
       myvec.set(1, 1);
@@ -74,12 +74,12 @@ TEST_CASE("vector", "vector")
       myvec.setAll(2);
       REQUIRE(myvec.getNNZ() == 1000);
 
-      GMDP::Clear(&myvec);
+      GraphMat::Clear(&myvec);
       REQUIRE(myvec.getNNZ() == 0);
   }
 
   SECTION(" DenseSegment basic tests", "DenseSegment basic tests") {
-      GMDP::DenseSegment<int> v1(1000);
+      GraphMat::DenseSegment<int> v1(1000);
       v1.set(1, 1);
       v1.set(10, 1);
       v1.set(200, 1);
@@ -88,19 +88,19 @@ TEST_CASE("vector", "vector")
    }
 
   SECTION("DenseSegment send/recv tests", "DenseSegment send/recv tests") {
-      if(GMDP::get_global_nrank() % 2 == 0)
+      if(GraphMat::get_global_nrank() % 2 == 0)
       {
-        GMDP::DenseSegment<int> v1(1000);
+        GraphMat::DenseSegment<int> v1(1000);
         std::vector<MPI_Request> requests;
 
-        if(GMDP::get_global_myrank() % 2 == 1)
+        if(GraphMat::get_global_myrank() % 2 == 1)
         {
           REQUIRE(v1.compute_nnz() == 0);
-          v1.recv_nnz(GMDP::get_global_myrank(),
-                      GMDP::get_global_myrank() - 1,
+          v1.recv_nnz(GraphMat::get_global_myrank(),
+                      GraphMat::get_global_myrank() - 1,
                       &requests);
-          v1.recv_segment(GMDP::get_global_myrank(),
-                          GMDP::get_global_myrank() - 1,
+          v1.recv_segment(GraphMat::get_global_myrank(),
+                          GraphMat::get_global_myrank() - 1,
                           &requests);
         }
         else
@@ -111,11 +111,11 @@ TEST_CASE("vector", "vector")
           v1.set(300, 4);
           REQUIRE(v1.compute_nnz() == 4);
           v1.compress();
-          v1.send_nnz(GMDP::get_global_myrank(),
-                      GMDP::get_global_myrank() + 1,
+          v1.send_nnz(GraphMat::get_global_myrank(),
+                      GraphMat::get_global_myrank() + 1,
                       &requests);
-          v1.send_segment(GMDP::get_global_myrank(),
-                          GMDP::get_global_myrank() + 1,
+          v1.send_segment(GraphMat::get_global_myrank(),
+                          GraphMat::get_global_myrank() + 1,
                           &requests);
 
         }
@@ -132,19 +132,19 @@ TEST_CASE("vector", "vector")
    }
 
   SECTION("DenseSegment send/recv tests serialized", "DenseSegment send/recv tests serialized") {
-      if(GMDP::get_global_nrank() % 2 == 0)
+      if(GraphMat::get_global_nrank() % 2 == 0)
       {
-        GMDP::DenseSegment<sv2> v1(1000);
+        GraphMat::DenseSegment<sv2> v1(1000);
         std::vector<MPI_Request> requests;
 
-        if(GMDP::get_global_myrank() % 2 == 1)
+        if(GraphMat::get_global_myrank() % 2 == 1)
         {
           REQUIRE(v1.compute_nnz() == 0);
-          v1.recv_nnz(GMDP::get_global_myrank(),
-                      GMDP::get_global_myrank() - 1,
+          v1.recv_nnz(GraphMat::get_global_myrank(),
+                      GraphMat::get_global_myrank() - 1,
                       &requests);
-          v1.recv_segment(GMDP::get_global_myrank(),
-                          GMDP::get_global_myrank() - 1,
+          v1.recv_segment(GraphMat::get_global_myrank(),
+                          GraphMat::get_global_myrank() - 1,
                           &requests);
         }
         else
@@ -171,11 +171,11 @@ TEST_CASE("vector", "vector")
           }
           REQUIRE(v1.compute_nnz() == 4);
           v1.compress();
-          v1.send_nnz(GMDP::get_global_myrank(),
-                      GMDP::get_global_myrank() + 1,
+          v1.send_nnz(GraphMat::get_global_myrank(),
+                      GraphMat::get_global_myrank() + 1,
                       &requests);
-          v1.send_segment(GMDP::get_global_myrank(),
-                          GMDP::get_global_myrank() + 1,
+          v1.send_segment(GraphMat::get_global_myrank(),
+                          GraphMat::get_global_myrank() + 1,
                           &requests);
 
         }

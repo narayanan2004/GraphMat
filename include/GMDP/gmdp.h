@@ -58,7 +58,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 
 
-namespace GMDP {
+namespace GraphMat {
 
 inline int get_global_nrank() {
   int global_nrank;

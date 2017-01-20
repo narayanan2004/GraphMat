@@ -41,6 +41,8 @@
 #include <omp.h>
 #include <cassert>
 
+namespace GraphMat {
+
 inline double sec(struct timeval start, struct timeval end)
 {
     return ((double)(((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec))))/1.0e6;
@@ -64,14 +66,14 @@ class Graph {
     bool vertexID_randomization;
 
 
-    GMDP::SpMat<GMDP::DCSCTile<E> > *A;
-    GMDP::SpMat<GMDP::DCSCTile<E> > *AT;
-    GMDP::SpVec<GMDP::DenseSegment<V> > * vertexproperty;
-    GMDP::SpVec<GMDP::DenseSegment<bool> > * active;
+    GraphMat::SpMat<GraphMat::DCSCTile<E> > *A;
+    GraphMat::SpMat<GraphMat::DCSCTile<E> > *AT;
+    GraphMat::SpVec<GraphMat::DenseSegment<V> > * vertexproperty;
+    GraphMat::SpVec<GraphMat::DenseSegment<bool> > * active;
 
   public:
-    void MTXFromEdgelist(GMDP::edgelist_t<E> A_edges);
-    void getVertexEdgelist(GMDP::edgelist_t<V> & myedges);
+    void MTXFromEdgelist(GraphMat::edgelist_t<E> A_edges);
+    void getVertexEdgelist(GraphMat::edgelist_t<V> & myedges);
     void ReadMTX(const char* filename, int grid_size=1); //grid_size is deprecated
     void setAllActive();
     void setAllInactive();
@@ -136,9 +138,9 @@ int Graph<V,E>::nativeToVertex(int vertex, int nsegments, int len) const
 }
 
 template<class V, class E>
-void Graph<V,E>::MTXFromEdgelist(GMDP::edgelist_t<E> A_edges) {
+void Graph<V,E>::MTXFromEdgelist(GraphMat::edgelist_t<E> A_edges) {
 
-  //if (GMDP::global_nrank == 1) {
+  //if (GraphMat::global_nrank == 1) {
   //  vertexID_randomization = false;
   //} else {
   vertexID_randomization = true;
@@ -147,7 +149,7 @@ void Graph<V,E>::MTXFromEdgelist(GMDP::edgelist_t<E> A_edges) {
   struct timeval start, end;
   gettimeofday(&start, 0);
   {
-    tiles_per_dim = GMDP::get_global_nrank();
+    tiles_per_dim = GraphMat::get_global_nrank();
     
     #pragma omp parallel for
     for(int i = 0 ; i < A_edges.nnz ; i++)
@@ -156,32 +158,32 @@ void Graph<V,E>::MTXFromEdgelist(GMDP::edgelist_t<E> A_edges) {
       A_edges.edges[i].dst = vertexToNative(A_edges.edges[i].dst, tiles_per_dim, A_edges.m);
     }
 
-    A = new GMDP::SpMat<GMDP::DCSCTile<E> >(A_edges, tiles_per_dim, tiles_per_dim, GMDP::partition_fn_2d);
-    GMDP::Transpose(A, &AT, tiles_per_dim, tiles_per_dim, GMDP::partition_fn_2d);
+    A = new GraphMat::SpMat<GraphMat::DCSCTile<E> >(A_edges, tiles_per_dim, tiles_per_dim, GraphMat::partition_fn_2d);
+    GraphMat::Transpose(A, &AT, tiles_per_dim, tiles_per_dim, GraphMat::partition_fn_2d);
 
     int m_ = A->m;
     assert(A->m == A->n);
     nnz = A->getNNZ();
-      vertexproperty = new GMDP::SpVec<GMDP::DenseSegment<V> >(A->m, tiles_per_dim, GMDP::vector_partition_fn);
+      vertexproperty = new GraphMat::SpVec<GraphMat::DenseSegment<V> >(A->m, tiles_per_dim, GraphMat::vector_partition_fn);
       V *__v = new V;
       vertexproperty->setAll(*__v);
       delete __v;
-      active = new GMDP::SpVec<GMDP::DenseSegment<bool> >(A->m, tiles_per_dim, GMDP::vector_partition_fn);
+      active = new GraphMat::SpVec<GraphMat::DenseSegment<bool> >(A->m, tiles_per_dim, GraphMat::vector_partition_fn);
       active->setAll(false);
 
     nvertices = m_;
     vertexpropertyowner = 1;
   }
   gettimeofday(&end, 0);
-  std::cout << "Finished GMDP read + construction, time: " << sec(start,end)  << std::endl;
+  std::cout << "Finished GraphMat read + construction, time: " << sec(start,end)  << std::endl;
 
 
 }
 
 template<class V, class E>
 void Graph<V,E>::ReadMTX(const char* filename, int grid_size) {
-  GMDP::edgelist_t<E> A_edges;
-  GMDP::ReadEdgesBin(&A_edges, filename, false);
+  GraphMat::edgelist_t<E> A_edges;
+  GraphMat::ReadEdgesBin(&A_edges, filename, false);
   MTXFromEdgelist(A_edges);
   A_edges.clear();
 }
@@ -193,23 +195,23 @@ void Graph<V,E>::setAllActive() {
   //  active[i] = true;
   //}
   //memset(active, 0xff, sizeof(bool)*(nvertices));
-  //GMDP::Apply(active, &active, set_all_true);
+  //GraphMat::Apply(active, &active, set_all_true);
   active->setAll(true);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setAllInactive() {
   //memset(active, 0x0, sizeof(bool)*(nvertices));
-  //GMDP::Apply(active, &active, set_all_false);
+  //GraphMat::Apply(active, &active, set_all_false);
   active->setAll(false);
-  int global_myrank = GMDP::get_global_myrank();
-  //GMDP::Clear(&active);
+  int global_myrank = GraphMat::get_global_myrank();
+  //GraphMat::Clear(&active);
   for(int segmentId = 0 ; segmentId < active->nsegments ; segmentId++)
   {
     if(active->nodeIds[segmentId] == global_myrank)
     {
-      GMDP::DenseSegment<bool>* s1 = active->segments[segmentId];
-      GMDP::clear_dense_segment(s1->properties->value, s1->properties->bit_vector, s1->num_ints);
+      GraphMat::DenseSegment<bool>* s1 = active->segments[segmentId];
+      GraphMat::clear_dense_segment(s1->properties->value, s1->properties->bit_vector, s1->num_ints);
     }
   }
 }
@@ -264,7 +266,7 @@ void Graph<V,E>::setVertexproperty(int v, const V& val) {
 }
 
 template<class V, class E> 
-void Graph<V,E>::getVertexEdgelist(GMDP::edgelist_t<V> & myedges) {
+void Graph<V,E>::getVertexEdgelist(GraphMat::edgelist_t<V> & myedges) {
   vertexproperty->get_edges(&myedges);
   for(unsigned int i = 0 ; i < myedges.nnz ; i++)
   {
@@ -274,13 +276,13 @@ void Graph<V,E>::getVertexEdgelist(GMDP::edgelist_t<V> & myedges) {
 
 template<class V, class E> 
 void Graph<V,E>::saveVertexproperty(std::string fname, bool includeHeader) const {
-  GMDP::edgelist_t<V> myedges;
+  GraphMat::edgelist_t<V> myedges;
   vertexproperty->get_edges(&myedges);
   for(unsigned int i = 0 ; i < myedges.nnz ; i++)
   {
     myedges.edges[i].src = nativeToVertex(myedges.edges[i].src, tiles_per_dim, nvertices);
   }
-  GMDP::SpVec<GMDP::DenseSegment<V> > * vertexproperty2 = new GMDP::SpVec<GMDP::DenseSegment<V> >(nvertices, tiles_per_dim, GMDP::vector_partition_fn);
+  GraphMat::SpVec<GraphMat::DenseSegment<V> > * vertexproperty2 = new GraphMat::SpVec<GraphMat::DenseSegment<V> >(nvertices, tiles_per_dim, GraphMat::vector_partition_fn);
   vertexproperty2->ingestEdgelist(myedges);
   myedges.clear();
   vertexproperty2->save(fname, includeHeader);
@@ -309,14 +311,14 @@ int Graph<V,E>::getNumberOfVertices() const {
 
 template<class V, class E> 
 void Graph<V,E>::applyToAllVertices( void (*ApplyFn)(V, V*, void*), void* param) {
-  GMDP::Apply(vertexproperty, vertexproperty, ApplyFn, param);
+  GraphMat::Apply(vertexproperty, vertexproperty, ApplyFn, param);
 }
 
 
 template<class V, class E> 
 template<class T> 
 void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*), void* param) {
-  GMDP::MapReduce(vertexproperty, val, ApplyFn, ReduceFn, param);
+  GraphMat::MapReduce(vertexproperty, val, ApplyFn, ReduceFn, param);
 }
 
 template<class V, class E> 
@@ -335,3 +337,4 @@ Graph<V,E>::~Graph() {
 
 }
 
+} //namespace GraphMat

@@ -30,10 +30,10 @@
  * ******************************************************************************/
 
 #include "catch.hpp"
-#include "generator.hpp"
+#include "generator.h"
 #include <algorithm>
 #include <climits>
-#include "GraphMatRuntime.cpp"
+#include "GraphMatRuntime.h"
 
 class custom_vertex_type {
   public: 
@@ -55,7 +55,7 @@ class custom_vertex_type {
 
 void test_graph_getset(int n) {
   auto E = generate_random_edgelist<int>(n, 16);
-  Graph<custom_vertex_type> G;
+  GraphMat::Graph<custom_vertex_type> G;
   G.MTXFromEdgelist(E);
   E.clear();
 
@@ -86,7 +86,7 @@ void test_graph_getset(int n) {
 void test_graph_size(int n) {
   {
     auto E = generate_random_edgelist<int>(n, 16);
-    Graph<custom_vertex_type> G;
+    GraphMat::Graph<custom_vertex_type> G;
     G.MTXFromEdgelist(E);
     E.clear();
 
@@ -96,7 +96,7 @@ void test_graph_size(int n) {
 
   {
     auto E = generate_dense_edgelist<int>(n);
-    Graph<custom_vertex_type> G;
+    GraphMat::Graph<custom_vertex_type> G;
     G.MTXFromEdgelist(E);
     E.clear();
 
@@ -106,7 +106,7 @@ void test_graph_size(int n) {
 
   {
     auto E = generate_upper_triangular_edgelist<int>(n);
-    Graph<custom_vertex_type> G;
+    GraphMat::Graph<custom_vertex_type> G;
     G.MTXFromEdgelist(E);
     E.clear();
 

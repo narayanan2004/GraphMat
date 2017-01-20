@@ -31,39 +31,39 @@
 
 #include <iostream>
 #include "catch.hpp"
-#include "generator.hpp"
+#include "generator.h"
 #include <algorithm>
-#include "test_utils.hpp"
+#include "test_utils.h"
 
 template <typename TILE_T, typename EDGE_T>
 void create_spmv_identity_test(int N) {
   // create identity matrix
   auto E1 = generate_identity_edgelist<EDGE_T>(N);
-  GMDP::SpMat<TILE_T> A(E1, GMDP::get_global_nrank(), GMDP::get_global_nrank(), GMDP::partition_fn_1d);
+  GraphMat::SpMat<TILE_T> A(E1, GraphMat::get_global_nrank(), GraphMat::get_global_nrank(), GraphMat::partition_fn_1d);
   E1.clear();
 
   //create random sparse vector
   auto E2 = generate_random_vector_edgelist<EDGE_T>(N, N/10);
-  GMDP::SpVec<GMDP::DenseSegment<EDGE_T> > x(N, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
+  GraphMat::SpVec<GraphMat::DenseSegment<EDGE_T> > x(N, GraphMat::get_global_nrank(), GraphMat::vector_partition_fn);
   x.ingestEdgelist(E2);
 
   //create output vector
-  GMDP::SpVec<GMDP::DenseSegment<EDGE_T> > y(N, GMDP::get_global_nrank(), GMDP::vector_partition_fn);
-  GMDP::Clear(&y);
+  GraphMat::SpVec<GraphMat::DenseSegment<EDGE_T> > y(N, GraphMat::get_global_nrank(), GraphMat::vector_partition_fn);
+  GraphMat::Clear(&y);
 
   //do SPMV: y = A * x
-  GMDP::SpMSpV(&A, &x, &y, mul, add, NULL);
+  GraphMat::SpMSpV(&A, &x, &y, mul, add, NULL);
 
   //Collect elements of y
-  GMDP::edgelist_t<EDGE_T> E3;
-  GMDP::edgelist_t<EDGE_T> E4;
+  GraphMat::edgelist_t<EDGE_T> E3;
+  GraphMat::edgelist_t<EDGE_T> E4;
   y.get_edges(&E3);
   collect_edges(E3, E4);
   std::sort(E4.edges, E4.edges + E4.nnz, edge_compare<EDGE_T>);
   E3.clear();
 
   //Collect elements of x
-  GMDP::edgelist_t<EDGE_T> E5;
+  GraphMat::edgelist_t<EDGE_T> E5;
   collect_edges(E2, E5);
   std::sort(E5.edges, E5.edges + E5.nnz, edge_compare<EDGE_T>);
   E2.clear();
@@ -84,20 +84,20 @@ void create_spmv_identity_test(int N) {
 TEST_CASE("spmv", "spmv") 
 {
   SECTION("CSR mvm") {
-    create_spmv_identity_test<GMDP::CSRTile<double>, double>(5000);
-    create_spmv_identity_test<GMDP::CSRTile<double>, double>(10);
+    create_spmv_identity_test<GraphMat::CSRTile<double>, double>(5000);
+    create_spmv_identity_test<GraphMat::CSRTile<double>, double>(10);
   }
   SECTION("DCSC mvm") {
-    create_spmv_identity_test<GMDP::DCSCTile<double>, double>(5000);
-    create_spmv_identity_test<GMDP::DCSCTile<double>, double>(10);
+    create_spmv_identity_test<GraphMat::DCSCTile<double>, double>(5000);
+    create_spmv_identity_test<GraphMat::DCSCTile<double>, double>(10);
   }
   SECTION("COO mvm") {
-    create_spmv_identity_test<GMDP::COOTile<double>, double>(5000);
-    create_spmv_identity_test<GMDP::COOTile<double>, double>(10);
+    create_spmv_identity_test<GraphMat::COOTile<double>, double>(5000);
+    create_spmv_identity_test<GraphMat::COOTile<double>, double>(10);
   }
   SECTION("COOSIMD32 mvm") {
-    create_spmv_identity_test<GMDP::COOSIMD32Tile<double>, double>(5000);
-    create_spmv_identity_test<GMDP::COOSIMD32Tile<double>, double>(10);
+    create_spmv_identity_test<GraphMat::COOSIMD32Tile<double>, double>(5000);
+    create_spmv_identity_test<GraphMat::COOSIMD32Tile<double>, double>(10);
   }
 
 }

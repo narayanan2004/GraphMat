@@ -32,7 +32,7 @@
 #include <climits>
 #include <cfloat>
 
-#include "GraphMatRuntime.cpp"
+#include "GraphMatRuntime.h"
 
 //typedef unsigned char distance_type;
 typedef unsigned int distance_type;
@@ -41,14 +41,14 @@ typedef unsigned int distance_type;
 
 distance_type MAX_DIST = std::numeric_limits<distance_type>::max();
 
-class BFSD2 {
+class SSSP_vertex_type {
   public: 
     distance_type distance;
   public:
-    BFSD2() {
+    SSSP_vertex_type() {
       distance = MAX_DIST;
     }
-    bool operator != (const BFSD2& p) {
+    bool operator != (const SSSP_vertex_type& p) {
       return (this->distance != p.distance);
     }
     void print() const {
@@ -60,125 +60,36 @@ class BFSD2 {
     }
 };
 
-class SSSPD {
-  public: 
-    distance_type distance;
-    //long long int parent;
-    //long long int id;
-    int parent;
-    int id;
-
-  public:
-    SSSPD() {
-      distance = MAX_DIST;
-      parent = -1;
-      id = -1;
-    }
-    bool operator != (const SSSPD& p) {
-      return (this->distance != p.distance);
-    }
-    void print() {
-      if (distance < MAX_DIST) 
-        //printf("id %d\t distance %d\t parent %d\n", id, distance, parent);
-        //printf("id %d\t distance %.1f\t parent %d\n", id, distance, parent);
-        printf("id %d\t distance %d\t parent %d\n", id, distance, parent);
-      else
-        printf("id %d\t distance INF\t parent --\n", id);
-
-    }
-};
-
-class ID_dist {
-  public:
-    distance_type distance;
-    //long long int id;
-    int id;
-};
-
 template <class edge_type>
-class SSSP : public GraphProgram<distance_type, distance_type, BFSD2, edge_type> {
+class SSSP : public GraphMat::GraphProgram<distance_type, distance_type, SSSP_vertex_type, edge_type> {
 
-  public:
-    //char current_depth;
-    
   public:
 
   SSSP() {
-    //current_depth = 1;
-    this->order = OUT_EDGES;
+    this->order = GraphMat::OUT_EDGES;
     this->process_message_requires_vertexprop = false;
-    //async = true;
   }
 
   void reduce_function(distance_type& a, const distance_type& b) const {
-    //return std::min(a,b);
     a = (a<=b)?(a):(b);
   }
 
-  void process_message(const distance_type& message, const edge_type edge_val, const BFSD2& vertexprop, distance_type &res) const {
+  void process_message(const distance_type& message, const edge_type edge_val, const SSSP_vertex_type& vertexprop, distance_type &res) const {
     res = message + edge_val;
   }
 
-  bool send_message(const BFSD2& vertexprop, distance_type& message) const {
+  bool send_message(const SSSP_vertex_type& vertexprop, distance_type& message) const {
     message = vertexprop.distance;
     return true;
-    //return (vertexprop.depth == current_depth-1);
   }
 
-  void apply(const distance_type& message_out, BFSD2& vertexprop)  {
-    //if (vertexprop.depth == 255) {
-    //  vertexprop.depth = current_depth;
-    //}
+  void apply(const distance_type& message_out, SSSP_vertex_type& vertexprop)  {
     vertexprop.distance = std::min(vertexprop.distance, message_out);
   }
 
-  void do_every_iteration(int iteration_number) {
-    //current_depth++;
-  }
-
 };
 
-class SSSPwithParent : public GraphProgram<ID_dist, ID_dist, SSSPD> {
-
-  public:
-
-  SSSPwithParent() {
-    this->order = OUT_EDGES;
-    //this->order = ALL_EDGES;
-  }
-
-  void reduce_function(ID_dist& a, const ID_dist& b) const {
-    a = (a.distance<=b.distance)?(a):(b);
-  }
-
-  void process_message(const ID_dist& message, const int edge_val, const SSSPD& vertexprop, ID_dist& res) const {
-    res = message;
-    res.distance += edge_val;
-  }
-
-  bool send_message(const SSSPD& vertexprop, ID_dist& message) const {
-    message.id = vertexprop.id;
-    message.distance = vertexprop.distance;
-    return true;
-  }
-
-  void apply(const ID_dist& message_out, SSSPD& vertexprop)  {
-    //vertexprop.depth = std::min(vertexprop.depth, message_out);
-    if (vertexprop.distance > message_out.distance) {
-      vertexprop.distance = message_out.distance;
-      vertexprop.parent = message_out.id;
-    }
-  }
-
-  void do_every_iteration(int iteration_number) {
-    //current_depth++;
-  }
-
-};
-
-extern unsigned long long int edges_traversed;
-
-void reachable_or_not(BFSD2* v, int *result, void* params=nullptr) {
+void reachable_or_not(SSSP_vertex_type* v, int *result, void* params=nullptr) {
   int reachable = 0;
   if (v->distance < MAX_DIST) {
     reachable = 1;
@@ -189,37 +100,19 @@ void reachable_or_not(BFSD2* v, int *result, void* params=nullptr) {
 
 template<class edge_type>
 void run_sssp(const char* filename, int v) {
-  //__itt_pause();
 
-  Graph<BFSD2, edge_type> G;
-  //Graph<SSSPD> G;
-  //G.ReadMTX_sort(filename, nthreads*8); //8 nthread pieces of matrix
+  GraphMat::Graph<SSSP_vertex_type, edge_type> G;
   G.ReadMTX(filename); 
-  //G.ReadMTX(filename, 240*8); //8 nthread pieces of matrix
 
-  //BFS b;
-  //BFS2 b;
   SSSP<edge_type> b;
-  //SSSPwithParent b;
-  auto tmp_ds = graph_program_init(b, G);
+  auto tmp_ds = GraphMat::graph_program_init(b, G);
 
-  //for (int v = 0; v < 25; v++) { 
-  //G.reset(); 
-
-  //for (int i = 0; i <= G.nvertices; i++) 
-  //  G.vertexproperty[i].id = i;
-
-  BFSD2 init; 
+  SSSP_vertex_type init; 
   init.distance = 0; 
 
-  BFSD2 inf; 
-  //int v = 10;
-  //for (int v = 0; v < 25; v++) {
+  SSSP_vertex_type inf; 
   G.setAllVertexproperty(inf);
   G.setAllInactive();
-  //int v = 1758293;
-  //G.vertexproperty[v].distance = 0;
-  //G.active[v] = true;
 
   G.setVertexproperty(v, init);
   G.setActive(v);
@@ -227,67 +120,25 @@ void run_sssp(const char* filename, int v) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  //__itt_resume();
-
-  //run_graph_program(&b, G, -1);
-  run_graph_program(&b, G, -1, &tmp_ds);
-  //run_dense_graph_program(b, G, -1);
-
-  //__itt_pause();
+  GraphMat::run_graph_program(&b, G, -1, &tmp_ds);
 
   gettimeofday(&end, 0);
   printf("Time = %.3f ms \n", (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3);
   
  
   int reachable_vertices = 0;
-
-  /*for (int i = 1; i <= G.nvertices; i++) {
-    if (G.vertexproperty.node_owner(i) && G.getVertexproperty(i).distance < MAX_DIST) {
-      reachable_vertices++;
-    }
-  }
-  MPI_Allreduce(MPI_IN_PLACE, &reachable_vertices, 1,  MPI_INT, MPI_SUM, MPI_COMM_WORLD);*/
-  
   G.applyReduceAllVertices(&reachable_vertices, reachable_or_not); //default reduction = sum
 
-  if (GMDP::get_global_myrank() == 0) printf("Reachable vertices = %d \n", reachable_vertices);
+  if (GraphMat::get_global_myrank() == 0) printf("Reachable vertices = %d \n", reachable_vertices);
 
   for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.nvertices); i++) {
-  //for (int i = 1; i <= G.nvertices; i++) {
     if (G.vertexNodeOwner(i)) {
-    printf("%d : ", i);
-    //G.vertexproperty[i].print();
-    G.getVertexproperty(i).print();
+      printf("%d : ", i);
+      G.getVertexproperty(i).print();
     }
-    /*if (G.vertexproperty[i].distance < MAX_DIST) {
-      printf("PATH: ");
-      int par = i;
-      //while(par != -1) {
-      //  printf(" %d ", par);
-      //  par = G.vertexproperty[par].parent;
-      //}
-      printf("\n");
-    }*/
-    //if (G.vertexproperty[i].depth < MAX_DIST) {
-    //  printf("Depth %d : %d \n", i, G.vertexproperty[i].depth);
-    //}
-    //else {
-    //  printf("Depth %d : INF \n", i);
-    //}
   }
-  //}
   
-  graph_program_clear(tmp_ds);
-  //}
-  //}
-
-  /*FILE* f;
-  f = fopen("out", "w");
-  for (int i = 1; i <= G.nvertices; i++) {
-      fprintf(f, "Depth %d : %d \n", i, G.vertexproperty[i].depth);
-  }
-  fclose(f);*/
-
+  GraphMat::graph_program_clear(tmp_ds);
 }
 
 int main (int argc, char* argv[]) {
@@ -300,12 +151,9 @@ int main (int argc, char* argv[]) {
     return 0;
   }
 
-
   int source_vertex = atoi(argv[2]);
-  //run_sssp(input_filename, nthreads, source_vertex-1);
   run_sssp<int>(input_filename, source_vertex);
   MPI_Finalize();
- 
  
 }
 

@@ -30,8 +30,8 @@
  * ******************************************************************************/
 
 #include "catch.hpp"
-#include "generator.hpp"
-#include "test_utils.hpp"
+#include "generator.h"
+#include "test_utils.h"
 
 void mapdouble(int * a, int * b, void * vsp) { *b = 2 * (*a); }
 void sumreduce(int a, int b, int * c, void * vsp) { *c = a + b; } 
@@ -41,26 +41,26 @@ TEST_CASE("reduce", "reduce")
   SECTION("mapreduce basic", "mapreduce basic") {
       int tiles_per_dim;
       int (*partition_fn)(int,int,int,int,int);
-      GMDP::get_fn_and_tiles(1, GMDP::get_global_nrank(), &partition_fn, &tiles_per_dim);
-      GMDP::SpVec<GMDP::DenseSegment<int> > myvec(1000, tiles_per_dim, GMDP::vector_partition_fn);
+      GraphMat::get_fn_and_tiles(1, GraphMat::get_global_nrank(), &partition_fn, &tiles_per_dim);
+      GraphMat::SpVec<GraphMat::DenseSegment<int> > myvec(1000, tiles_per_dim, GraphMat::vector_partition_fn);
       REQUIRE(myvec.getNNZ() == 0);
       myvec.setAll(1);
       int res = 0;
-      GMDP::MapReduce(&myvec, &res, mapdouble, sumreduce, NULL);
+      GraphMat::MapReduce(&myvec, &res, mapdouble, sumreduce, NULL);
       REQUIRE(res == 2000);
   }
   SECTION("mapreduce empty", "mapreduce empty") {
       int tiles_per_dim;
       int (*partition_fn)(int,int,int,int,int);
-      GMDP::get_fn_and_tiles(1, GMDP::get_global_nrank(), &partition_fn, &tiles_per_dim);
-      GMDP::SpVec<GMDP::DenseSegment<int> > myvec(1000, tiles_per_dim, GMDP::vector_partition_fn);
+      GraphMat::get_fn_and_tiles(1, GraphMat::get_global_nrank(), &partition_fn, &tiles_per_dim);
+      GraphMat::SpVec<GraphMat::DenseSegment<int> > myvec(1000, tiles_per_dim, GraphMat::vector_partition_fn);
       REQUIRE(myvec.getNNZ() == 0);
       myvec.set(1, 1);
       myvec.set(10, 1);
       myvec.set(200, 1);
       myvec.set(300, 1);
       int res = 0;
-      GMDP::MapReduce(&myvec, &res, mapdouble, sumreduce, NULL);
+      GraphMat::MapReduce(&myvec, &res, mapdouble, sumreduce, NULL);
       REQUIRE(res == 8);
   }
 

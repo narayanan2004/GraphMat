@@ -30,11 +30,11 @@
  * ******************************************************************************/
 
 #include "catch.hpp"
-#include "generator.hpp"
+#include "generator.h"
 #include <algorithm>
 #include <climits>
 #include "boost/serialization/vector.hpp"
-#include "GraphMatRuntime.cpp"
+#include "GraphMatRuntime.h"
 
 
 class neighbors_vp {
@@ -52,17 +52,10 @@ class neighbors_vp {
     
 };
 
-class serializable_vector : public GMDP::Serializable {
+class serializable_vector : public GraphMat::Serializable {
   public:
     std::vector<int> v;
   public:
-    serializable_vector() {}
-    void clear() {
-      v.clear();
-    }
-    void push_back(int t) {
-      v.push_back(t);
-    }
     friend boost::serialization::access;
     template<class Archive>
     void serialize(Archive &ar, const unsigned int version) {
@@ -70,13 +63,13 @@ class serializable_vector : public GMDP::Serializable {
     }
 };
 
-class GetNeighbors : public GraphProgram<int, serializable_vector, neighbors_vp> {
+class GetNeighbors : public GraphMat::GraphProgram<int, serializable_vector, neighbors_vp> {
 
   public:
 
   GetNeighbors() {
-    this->activity = ALL_VERTICES;
-    this->order = IN_EDGES;
+    this->activity = GraphMat::ALL_VERTICES;
+    this->order = GraphMat::IN_EDGES;
     this->process_message_requires_vertexprop = false;
   }
 
@@ -86,8 +79,8 @@ class GetNeighbors : public GraphProgram<int, serializable_vector, neighbors_vp>
   }
 
   void process_message(const int& message, const int edge_val, const neighbors_vp& vertexprop, serializable_vector &res) const {
-    res.clear();
-    res.push_back(message);
+    res.v.clear();
+    res.v.push_back(message);
   }
 
   bool send_message(const neighbors_vp& vertexprop, int& message) const {
@@ -105,7 +98,7 @@ class GetNeighbors : public GraphProgram<int, serializable_vector, neighbors_vp>
 void test_get_neighbors(int n) {
   //auto E = generate_circular_chain_edgelist<int>(n);
   auto E = generate_dense_edgelist<int>(n);
-  Graph<neighbors_vp> G;
+  GraphMat::Graph<neighbors_vp> G;
   G.MTXFromEdgelist(E);
   E.clear();
 
@@ -117,12 +110,11 @@ void test_get_neighbors(int n) {
     }
   }
   GetNeighbors gn;
-  auto gn_tmp = graph_program_init(gn, G);
+  auto gn_tmp = GraphMat::graph_program_init(gn, G);
 
-  //run_graph_program(&gn, G, 1);
-  run_graph_program(&gn, G, 1, &gn_tmp);
+  GraphMat::run_graph_program(&gn, G, 1, &gn_tmp);
 
-  graph_program_clear(gn_tmp);
+  GraphMat::graph_program_clear(gn_tmp);
 
   std::vector<int> ref(n);
   std::iota(ref.begin(), ref.end(), 1);
