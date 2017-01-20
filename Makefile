@@ -71,4 +71,4 @@ $(TESTBINDIR)/test: $(test_objects)
 # --- clean --- #
 
 clean:
-	rm $(APPS) $(TESTBINDIR)/test $(test_objects)
+	rm -f $(APPS) $(TESTBINDIR)/test $(test_objects)
