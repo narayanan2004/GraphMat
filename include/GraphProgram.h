@@ -26,19 +26,79 @@
 ** NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS        **
 ** SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * ******************************************************************************/
-/* Narayanan Sundaram (Intel Corp.), Michael Anderson (Intel Corp.)
+/* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
 
-#define CATCH_CONFIG_RUNNER
-#include "catch.hpp"
-#include "GMDP/gmdp.h"
+namespace GraphMat {
 
-int main(int argc, char * argv[])
-{
-  MPI_Init(NULL,NULL);
+enum edge_direction {OUT_EDGES, IN_EDGES, ALL_EDGES};
+//enum execution_direction {PUSH, PULL};
+enum activity_type {ACTIVE_ONLY, ALL_VERTICES};
 
-  int res =  Catch::Session().run(argc, argv);
+template <class T, class U, class V, class E=int> //T::message_type, U::message_reduction_type, V::vertex_property_type, E::edge_type
+class GraphProgram {
+  protected:
+    edge_direction order;
+//    execution_direction push_or_pull;
+    activity_type activity;
 
-  MPI_Finalize();
-  return res;
-}
+    /* Strictly for optimization only */
+    bool process_message_requires_edge_value;
+    bool process_message_requires_vertexprop;
+
+  public:
+
+  GraphProgram() {
+    order = OUT_EDGES;
+//    push_or_pull = PUSH;
+    activity = ACTIVE_ONLY;
+    process_message_requires_edge_value = true;
+    process_message_requires_vertexprop = true;
+  }
+
+  edge_direction getOrder() const {
+    return order;
+  }
+  // execution_direction getPushOrPull() const {
+    // return push_or_pull;
+  // }
+  activity_type getActivity() const {
+    return activity;
+  }
+
+  bool getProcessMessageRequiresVertexprop() const {
+    return process_message_requires_vertexprop;
+  }
+
+  virtual void reduce_function(U& v, const U& w) const {
+    //v += w;
+    std::cout << "Trying to use default (null) reduce_function" << std::endl;
+    exit(1);
+  }
+
+  virtual void process_message(const T& message, const E edge_val, const V& vertexprop, U& res) const {
+    //res = message * edge_val;
+    std::cout << "Trying to use default (null) process_message " << std::endl;
+    exit(1);
+  }
+
+  virtual bool send_message(const V& vertexprop, T& message) const {
+    //message = (T)vertexprop;
+    std::cout << "Trying to use default (null) send_message " << std::endl;
+    exit(1);
+    return true;
+  }
+
+  virtual void apply(const U& message_out, V& vertexprop)  {
+    //vertexprop = (V)message_out;
+    std::cout << "Trying to use default (null) apply " << std::endl;
+    exit(1);
+  }
+
+  virtual void do_every_iteration(int iteration_number) {
+  }
+
+};
+
+} // namespace GraphMat
+//-------------------------------------------------------------------------

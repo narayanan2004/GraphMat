@@ -30,7 +30,7 @@
  * ******************************************************************************/
 #include <omp.h>
 #include <mpi.h>
-#include "GraphMatRuntime.cpp"
+#include "GraphMatRuntime.h"
 #include <algorithm>
 #include <iomanip>
 
@@ -68,12 +68,12 @@ class LatentVector {
 
 };
 template<unsigned int K>
-class LDAInitProgram : public GraphProgram<LatentVector<K>, LatentVector<K>, LatentVector<K> > {
+class LDAInitProgram : public GraphMat::GraphProgram<LatentVector<K>, LatentVector<K>, LatentVector<K> > {
 
   public:
     LDAInitProgram() {
-      this->order = ALL_EDGES;// check
-      this->activity = ALL_VERTICES;
+      this->order = GraphMat::ALL_EDGES;// check
+      this->activity = GraphMat::ALL_VERTICES;
       this->process_message_requires_vertexprop = false;
     }
 
@@ -128,27 +128,24 @@ void Add(LatentVector<K> v1, LatentVector<K> v2, LatentVector<K>* out, void* par
 }
 
 template<unsigned int K>
-class LDAProgram : public GraphProgram<LatentVector<K>, LatentVector<K>, LatentVector<K> > {
+class LDAProgram : public GraphMat::GraphProgram<LatentVector<K>, LatentVector<K>, LatentVector<K> > {
   public:
     double alpha;
     double eta;
     double vocab_size;
     LatentVector<K> global_N;
-    Graph<LatentVector<K> >& graph_ref;
+    GraphMat::Graph<LatentVector<K> >& graph_ref;
 
   public:
-    LDAProgram(Graph<LatentVector<K> >& G, double a, double e, double V) : 
+    LDAProgram(GraphMat::Graph<LatentVector<K> >& G, double a, double e, double V) : 
                 graph_ref(G), alpha(a), eta(e), vocab_size(V) {
-      this->order = ALL_EDGES;// check
-      this->activity = ALL_VERTICES;
+      this->order = GraphMat::ALL_EDGES;// check
+      this->activity = GraphMat::ALL_VERTICES;
     }
 
     void calcGlobalN() {
       for (int i = 0; i < K; i++) global_N.N[i] = 0;
       graph_ref.applyReduceAllVertices(&global_N, IfTerm, Add);
-      //std::cout << "global_N " <<std::endl;
-      //for (int i = 0; i < K; i++) std::cout << global_N.N[i] << " ";
-      //std::cout << std::endl;
     }
 
   void reduce_function(LatentVector<K>& v, const LatentVector<K>& w) const {
@@ -198,7 +195,7 @@ class LDAProgram : public GraphProgram<LatentVector<K>, LatentVector<K>, LatentV
 };
 
 template<unsigned int K>
-class LDALLProgram : public GraphProgram<LatentVector<K>, double, LatentVector<K> > {
+class LDALLProgram : public GraphMat::GraphProgram<LatentVector<K>, double, LatentVector<K> > {
 
   public:
     LatentVector<K> N_k;
@@ -207,8 +204,8 @@ class LDALLProgram : public GraphProgram<LatentVector<K>, double, LatentVector<K
 
     LDALLProgram(LatentVector<K> _N_k, double _eta, int _nterms) : 
     N_k(_N_k), eta(_eta), nterms(_nterms) {
-      this->activity = ALL_VERTICES;
-      this->order = OUT_EDGES;
+      this->activity = GraphMat::ALL_VERTICES;
+      this->order = GraphMat::OUT_EDGES;
       assert(eta > 1.0);
       //smoothed N_k
       for (int i = 0; i < K; i++) {
@@ -271,7 +268,7 @@ void return_ll(LatentVector<K>* v, double* out, void* param) {
 
 void run_lda(char* filename, int ndoc, int nterms, int niterations=10) {
   const int k = 20;
-  Graph< LatentVector<k> > G;
+  GraphMat::Graph< LatentVector<k> > G;
   G.ReadMTX(filename); 
   if (ndoc + nterms != G.getNumberOfVertices()) {
     std::cout << "Number of vertices in graph != NDOC + NTERMS" << std::endl;
@@ -288,21 +285,16 @@ void run_lda(char* filename, int ndoc, int nterms, int niterations=10) {
     G.setVertexproperty(i, v);
   }
 
-//  initializeWeights(G);
+  //  initializeWeights(G);
   LDAInitProgram<k> ldainit_program;
   G.setAllActive();
-  run_graph_program(&ldainit_program, G, 1);
-  /*for (int i = 1; i <= std::min(10, G.getNumberOfVertices()); i++) { 
-    printf("%d : ", i) ;
-    G.getVertexproperty(i).print();
-    printf("\n");
-  }*/
-
+  GraphMat::run_graph_program(&ldainit_program, G, 1);
+ 
   double alpha = 1.0;
   double eta = 5.0;
   LDAProgram<k> ldap(G, alpha, eta, nterms);
   ldap.calcGlobalN();
-  auto ldap_tmp = graph_program_init(ldap, G);
+  auto ldap_tmp = GraphMat::graph_program_init(ldap, G);
 
   printf("LDA Init over\n");
   
@@ -311,15 +303,14 @@ void run_lda(char* filename, int ndoc, int nterms, int niterations=10) {
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  run_graph_program(&ldap, G, niterations, &ldap_tmp);
-  //run_graph_program(&ldap, G, niterations);
+  GraphMat::run_graph_program(&ldap, G, niterations, &ldap_tmp);
 
   gettimeofday(&end, 0);
   
   double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
   printf("Time = %.3f ms \n", time);
 
-  graph_program_clear(ldap_tmp);
+  GraphMat::graph_program_clear(ldap_tmp);
 
   for (int i = 1; i <= std::min(5, ndoc); i++) { 
     if (G.vertexNodeOwner(i)) {
@@ -343,10 +334,10 @@ void run_lda(char* filename, int ndoc, int nterms, int niterations=10) {
   auto Nk = ldap.global_N;
   LDALLProgram<k> ldall(Nk, eta, nterms);
   G.setAllActive();
-  run_graph_program(&ldall, G, 1);
+  GraphMat::run_graph_program(&ldall, G, 1);
   double total_ll = 0.0;
   G.applyReduceAllVertices(&total_ll, return_ll<k>);
-  if (GraphPad::get_global_myrank() == 0) {
+  if (GraphMat::get_global_myrank() == 0) {
     printf("Total Loglikelihood = %lf \n", total_ll);
   }
 
@@ -390,7 +381,6 @@ int main(int argc, char* argv[]) {
     return 0;
   }
   MPI_Init(&argc, &argv);
-  GraphPad::GB_Init();
 
   int ndoc = atoi(argv[2]);
   int nterms = atoi(argv[3]);

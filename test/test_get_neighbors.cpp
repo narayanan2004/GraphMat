@@ -33,97 +33,105 @@
 #include "generator.h"
 #include <algorithm>
 #include <climits>
+#include "boost/serialization/vector.hpp"
 #include "GraphMatRuntime.h"
 
-class custom_vertex_type {
+
+class neighbors_vp {
   public: 
-    int  iprop;
-    float fprop;
+    int  id;
+    std::vector<int> v;
   public:
-    custom_vertex_type() {
-      iprop = 0;
-      fprop = 0.0f;
+    neighbors_vp() {
+      id = 0;
+      v = std::vector<int>(0);
     }
-  friend std::ostream &operator<<(std::ostream &outstream, const custom_vertex_type & val)
-    {
-      outstream << val.iprop << val.fprop; 
-      return outstream;
+    int operator!=(const neighbors_vp& t) {
+      return (id != t.id);
+    }
+    
+};
+
+class serializable_vector : public GraphMat::Serializable {
+  public:
+    std::vector<int> v;
+  public:
+    friend boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive &ar, const unsigned int version) {
+      ar & v;
     }
 };
 
+class GetNeighbors : public GraphMat::GraphProgram<int, serializable_vector, neighbors_vp> {
 
+  public:
 
-void test_graph_getset(int n) {
-  auto E = generate_random_edgelist<int>(n, 16);
-  GraphMat::Graph<custom_vertex_type> G;
+  GetNeighbors() {
+    this->activity = GraphMat::ALL_VERTICES;
+    this->order = GraphMat::IN_EDGES;
+    this->process_message_requires_vertexprop = false;
+  }
+
+  void reduce_function(serializable_vector& a, const serializable_vector& b) const {
+    //a.push_back(b.v[0]);
+    a.v.insert(a.v.end(), b.v.begin(), b.v.end());
+  }
+
+  void process_message(const int& message, const int edge_val, const neighbors_vp& vertexprop, serializable_vector &res) const {
+    res.v.clear();
+    res.v.push_back(message);
+  }
+
+  bool send_message(const neighbors_vp& vertexprop, int& message) const {
+    message = vertexprop.id; //dummy placeholder message
+    return true;
+  }
+
+  void apply(const serializable_vector& message_out, neighbors_vp& vertexprop)  {
+      vertexprop.v = message_out.v;
+      std::sort(vertexprop.v.begin(), vertexprop.v.end());
+  }
+
+};
+
+void test_get_neighbors(int n) {
+  //auto E = generate_circular_chain_edgelist<int>(n);
+  auto E = generate_dense_edgelist<int>(n);
+  GraphMat::Graph<neighbors_vp> G;
   G.MTXFromEdgelist(E);
   E.clear();
 
-  REQUIRE(G.getNumberOfVertices() == n);
-  REQUIRE(G.nnz == n*16);
+  for (int i = 1; i <= n; i++ ) {
+    if (G.vertexNodeOwner(i)) {
+      auto x = G.getVertexproperty(i);
+      x.id = i;
+      G.setVertexproperty(i, x);
+    }
+  }
+  GetNeighbors gn;
+  auto gn_tmp = GraphMat::graph_program_init(gn, G);
+
+  GraphMat::run_graph_program(&gn, G, 1, &gn_tmp);
+
+  GraphMat::graph_program_clear(gn_tmp);
+
+  std::vector<int> ref(n);
+  std::iota(ref.begin(), ref.end(), 1);
 
   for (int i = 1; i <= n; i++) {
     if (G.vertexNodeOwner(i)) {
-      custom_vertex_type v;
-      v.iprop = i;
-      v.fprop = i*2.5;
-      G.setVertexproperty(i, v);
+      //REQUIRE(G.getVertexproperty(i).v.size() == 1);
+      REQUIRE(G.getVertexproperty(i).v.size() == n);
+      REQUIRE(G.getVertexproperty(i).v == ref);
     }
-  }
-
-  for (int i = 1; i <= n; i++) {
-    if (G.vertexNodeOwner(i)) {
-      REQUIRE(G.getVertexproperty(i).iprop == i);
-      REQUIRE(G.getVertexproperty(i).fprop == Approx(2.5*i));
-    }
-  }
-
-  //std::string fname = "/dev/shm/vprop.txt";
-  //G.saveVertexproperty(fname);
-
-}
-
-void test_graph_size(int n) {
-  {
-    auto E = generate_random_edgelist<int>(n, 16);
-    GraphMat::Graph<custom_vertex_type> G;
-    G.MTXFromEdgelist(E);
-    E.clear();
-
-    REQUIRE(G.getNumberOfVertices() == n);
-    REQUIRE(G.nnz == n*16);
-  }
-
-  {
-    auto E = generate_dense_edgelist<int>(n);
-    GraphMat::Graph<custom_vertex_type> G;
-    G.MTXFromEdgelist(E);
-    E.clear();
-
-    REQUIRE(G.getNumberOfVertices() == n);
-    REQUIRE(G.nnz == n*n);
-  }
-
-  {
-    auto E = generate_upper_triangular_edgelist<int>(n);
-    GraphMat::Graph<custom_vertex_type> G;
-    G.MTXFromEdgelist(E);
-    E.clear();
-
-    REQUIRE(G.getNumberOfVertices() == n);
-    REQUIRE(G.nnz == n*(n-1)/2);
   }
 }
 
-TEST_CASE("Graph tests", "[random]")
+TEST_CASE("Get neighbors tests")
 {
-  SECTION("test get set", "[get][set]") {
-    test_graph_getset(500);
-    test_graph_getset(1000);
-  }
-  SECTION("test size", "[size]") {
-    test_graph_size(50);
-    test_graph_size(500);
-    test_graph_size(1000);
+  SECTION("getneighbors 1000") {
+    test_get_neighbors(1000);
   }
 }
+

@@ -29,16 +29,65 @@
 /* Narayanan Sundaram (Intel Corp.), Michael Anderson (Intel Corp.)
  * ******************************************************************************/
 
-#define CATCH_CONFIG_RUNNER
+#include <iostream>
 #include "catch.hpp"
-#include "GMDP/gmdp.h"
+#include <algorithm>
 
-int main(int argc, char * argv[])
+
+template<typename T>
+bool edge_compare(const GraphMat::edge_t<T> &e1,
+                  const GraphMat::edge_t<T> &e2)
 {
-  MPI_Init(NULL,NULL);
-
-  int res =  Catch::Session().run(argc, argv);
-
-  MPI_Finalize();
-  return res;
+        if( (e1.src < e2.src) ||
+            ((e1.src == e2.src) && (e1.dst < e2.dst)) ||
+            ((e1.src == e2.src) && (e1.dst == e2.dst) && (e1.val < e2.val)) )
+        {
+                return true;
+        }
+        return false;
 }
+
+template <typename EDGE_T>
+void collect_edges(const GraphMat::edgelist_t<EDGE_T>& in_edges, GraphMat::edgelist_t<EDGE_T>& out_edges) {
+
+    REQUIRE(sizeof(EDGE_T)%sizeof(int) == 0);
+    int T_by_int = sizeof(in_edges.edges[0])/sizeof(int);
+
+    int* OERecvCount = new int[GraphMat::get_global_nrank()];
+    MPI_Allgather(&in_edges.nnz, 1, MPI_INT, OERecvCount, 1, MPI_INT, MPI_COMM_WORLD);
+
+    int* OERecvOffset = new int[GraphMat::get_global_nrank()];
+    int* OERecvCountInt = new int[GraphMat::get_global_nrank()];
+    OERecvOffset[0] = 0;
+    for (int i = 1; i < GraphMat::get_global_nrank(); i++) {
+      OERecvOffset[i] = OERecvOffset[i-1] + T_by_int*OERecvCount[i-1];      
+    }
+    for (int i = 0; i < GraphMat::get_global_nrank(); i++) {
+      OERecvCountInt[i] = T_by_int*OERecvCount[i];
+    }
+
+    int nnz = 0;
+    for (int i = 0; i < GraphMat::get_global_nrank(); i++) {
+      nnz += OERecvCount[i];
+    }
+    out_edges = GraphMat::edgelist_t<EDGE_T>(in_edges.m, in_edges.n, nnz);
+
+    MPI_Allgatherv(in_edges.edges, in_edges.nnz*T_by_int, MPI_INT, out_edges.edges, OERecvCountInt, OERecvOffset, MPI_INT, MPI_COMM_WORLD);
+
+    delete [] OERecvCount;
+    delete [] OERecvCountInt;
+    delete [] OERecvOffset;
+}
+
+template <typename T>
+void mul(T a, T b, T * c, void* vsp) {*c = a*b;}
+
+template <typename T>
+void add(T a, T b, T * c, void* vsp) {*c = a+b;}
+
+template <typename T>
+void max(T a, T b, T * c, void* vsp) {*c = std::max(a,b);}
+
+template <typename T>
+void min(T a, T b, T * c, void* vsp) {*c = std::min(a,b);}
+

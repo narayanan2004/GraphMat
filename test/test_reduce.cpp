@@ -29,16 +29,40 @@
 /* Narayanan Sundaram (Intel Corp.), Michael Anderson (Intel Corp.)
  * ******************************************************************************/
 
-#define CATCH_CONFIG_RUNNER
 #include "catch.hpp"
-#include "GMDP/gmdp.h"
+#include "generator.h"
+#include "test_utils.h"
 
-int main(int argc, char * argv[])
+void mapdouble(int * a, int * b, void * vsp) { *b = 2 * (*a); }
+void sumreduce(int a, int b, int * c, void * vsp) { *c = a + b; } 
+
+TEST_CASE("reduce", "reduce")
 {
-  MPI_Init(NULL,NULL);
+  SECTION("mapreduce basic", "mapreduce basic") {
+      int tiles_per_dim;
+      int (*partition_fn)(int,int,int,int,int);
+      GraphMat::get_fn_and_tiles(1, GraphMat::get_global_nrank(), &partition_fn, &tiles_per_dim);
+      GraphMat::SpVec<GraphMat::DenseSegment<int> > myvec(1000, tiles_per_dim, GraphMat::vector_partition_fn);
+      REQUIRE(myvec.getNNZ() == 0);
+      myvec.setAll(1);
+      int res = 0;
+      GraphMat::MapReduce(&myvec, &res, mapdouble, sumreduce, NULL);
+      REQUIRE(res == 2000);
+  }
+  SECTION("mapreduce empty", "mapreduce empty") {
+      int tiles_per_dim;
+      int (*partition_fn)(int,int,int,int,int);
+      GraphMat::get_fn_and_tiles(1, GraphMat::get_global_nrank(), &partition_fn, &tiles_per_dim);
+      GraphMat::SpVec<GraphMat::DenseSegment<int> > myvec(1000, tiles_per_dim, GraphMat::vector_partition_fn);
+      REQUIRE(myvec.getNNZ() == 0);
+      myvec.set(1, 1);
+      myvec.set(10, 1);
+      myvec.set(200, 1);
+      myvec.set(300, 1);
+      int res = 0;
+      GraphMat::MapReduce(&myvec, &res, mapdouble, sumreduce, NULL);
+      REQUIRE(res == 8);
+  }
 
-  int res =  Catch::Session().run(argc, argv);
-
-  MPI_Finalize();
-  return res;
 }
+

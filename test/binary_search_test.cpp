@@ -30,55 +30,55 @@
  * ******************************************************************************/
 
 #include "catch.hpp"
-#include "generator.hpp"
+#include "generator.h"
 #include <algorithm>
 #include <climits>
-#include "GraphMatRuntime.cpp"
+#include "GraphMatRuntime.h"
 
 TEST_CASE("binary search tests", "binary search test")
 {
   SECTION("Binary search right border") {
     int vec[9] = {1,1,2,2,2,5,5,5,5};
-    REQUIRE(1 == GraphPad::binary_search_right_border(vec, 1, 0, 9, 9));
-    REQUIRE(4 == GraphPad::binary_search_right_border(vec, 2, 0, 9, 9));
-    REQUIRE(-1 == GraphPad::binary_search_right_border(vec, 0, 0, 9, 9));
-    REQUIRE(8 == GraphPad::binary_search_right_border(vec, 5, 0, 9, 9));
-    REQUIRE(-1 == GraphPad::binary_search_right_border(vec, 3, 0, 9, 9));
-    REQUIRE(8 == GraphPad::binary_search_right_border(vec, 5, 3, 9, 9));
-    REQUIRE(-1 == GraphPad::binary_search_right_border(vec, 5, 9, 9, 9));
+    REQUIRE(1 == GraphMat::binary_search_right_border(vec, 1, 0, 9, 9));
+    REQUIRE(4 == GraphMat::binary_search_right_border(vec, 2, 0, 9, 9));
+    REQUIRE(-1 == GraphMat::binary_search_right_border(vec, 0, 0, 9, 9));
+    REQUIRE(8 == GraphMat::binary_search_right_border(vec, 5, 0, 9, 9));
+    REQUIRE(-1 == GraphMat::binary_search_right_border(vec, 3, 0, 9, 9));
+    REQUIRE(8 == GraphMat::binary_search_right_border(vec, 5, 3, 9, 9));
+    REQUIRE(-1 == GraphMat::binary_search_right_border(vec, 5, 9, 9, 9));
   }
 
   SECTION("Binary search left border") {
     int vec[9] = {1,1,2,2,2,5,5,5,5};
-    REQUIRE(0 == GraphPad::binary_search_left_border(vec, 1, 0, 9, 9));
-    REQUIRE(2 == GraphPad::binary_search_left_border(vec, 2, 0, 9, 9));
-    REQUIRE(-1 == GraphPad::binary_search_left_border(vec, 0, 0, 9, 9));
-    REQUIRE(5 == GraphPad::binary_search_left_border(vec, 5, 0, 9, 9));
-    REQUIRE(-1 == GraphPad::binary_search_left_border(vec, 3, 0, 9, 9));
-    REQUIRE(5 == GraphPad::binary_search_left_border(vec, 5, 3, 9, 9));
-    REQUIRE(-1 == GraphPad::binary_search_left_border(vec, 5, 9, 9, 9));
-    REQUIRE(-1 == GraphPad::binary_search_left_border(vec, 6, 0, 9, 9));
-    REQUIRE(-1 == GraphPad::binary_search_left_border(vec, 6, 0, 8, 8));
+    REQUIRE(0 == GraphMat::binary_search_left_border(vec, 1, 0, 9, 9));
+    REQUIRE(2 == GraphMat::binary_search_left_border(vec, 2, 0, 9, 9));
+    REQUIRE(-1 == GraphMat::binary_search_left_border(vec, 0, 0, 9, 9));
+    REQUIRE(5 == GraphMat::binary_search_left_border(vec, 5, 0, 9, 9));
+    REQUIRE(-1 == GraphMat::binary_search_left_border(vec, 3, 0, 9, 9));
+    REQUIRE(5 == GraphMat::binary_search_left_border(vec, 5, 3, 9, 9));
+    REQUIRE(-1 == GraphMat::binary_search_left_border(vec, 5, 9, 9, 9));
+    REQUIRE(-1 == GraphMat::binary_search_left_border(vec, 6, 0, 9, 9));
+    REQUIRE(-1 == GraphMat::binary_search_left_border(vec, 6, 0, 8, 8));
   }
 
   SECTION("Binary search") {
     int vec[9] = {1,1,2,2,2,5,5,5,5};
-    REQUIRE(0 == GraphPad::l_binary_search(0, 9, vec, 1));
-    REQUIRE(2 == GraphPad::l_binary_search(0, 9, vec, 2));
-    REQUIRE(0 == GraphPad::l_binary_search(0, 9, vec, 0));
-    REQUIRE(5 == GraphPad::l_binary_search(0, 9, vec, 4));
-    REQUIRE(5 == GraphPad::l_binary_search(0, 9, vec, 5));
-    REQUIRE(9 == GraphPad::l_binary_search(0, 9, vec, 7));
+    REQUIRE(0 == GraphMat::l_binary_search(0, 9, vec, 1));
+    REQUIRE(2 == GraphMat::l_binary_search(0, 9, vec, 2));
+    REQUIRE(0 == GraphMat::l_binary_search(0, 9, vec, 0));
+    REQUIRE(5 == GraphMat::l_binary_search(0, 9, vec, 4));
+    REQUIRE(5 == GraphMat::l_binary_search(0, 9, vec, 5));
+    REQUIRE(9 == GraphMat::l_binary_search(0, 9, vec, 7));
   }
 
   SECTION("Linear search") {
     int vec[9] = {1,1,2,2,2,5,5,5,5};
-    REQUIRE(0 == GraphPad::l_linear_search(0, 9, vec, 1));
-    REQUIRE(2 == GraphPad::l_linear_search(0, 9, vec, 2));
-    REQUIRE(0 == GraphPad::l_linear_search(0, 9, vec, 0));
-    REQUIRE(5 == GraphPad::l_linear_search(0, 9, vec, 4));
-    REQUIRE(5 == GraphPad::l_linear_search(0, 9, vec, 5));
-    REQUIRE(9 == GraphPad::l_linear_search(0, 9, vec, 7));
+    REQUIRE(0 == GraphMat::l_linear_search(0, 9, vec, 1));
+    REQUIRE(2 == GraphMat::l_linear_search(0, 9, vec, 2));
+    REQUIRE(0 == GraphMat::l_linear_search(0, 9, vec, 0));
+    REQUIRE(5 == GraphMat::l_linear_search(0, 9, vec, 4));
+    REQUIRE(5 == GraphMat::l_linear_search(0, 9, vec, 5));
+    REQUIRE(9 == GraphMat::l_linear_search(0, 9, vec, 7));
   }
 
 }

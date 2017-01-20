@@ -26,19 +26,72 @@
 ** NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS        **
 ** SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * ******************************************************************************/
-/* Narayanan Sundaram (Intel Corp.), Michael Anderson (Intel Corp.)
+/* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
+#include <climits>
+#include <cassert>
 
-#define CATCH_CONFIG_RUNNER
-#include "catch.hpp"
-#include "GMDP/gmdp.h"
+#include <iostream>
+#include <sstream>
+#include <cstdlib>
+#include <cstring>
 
-int main(int argc, char * argv[])
-{
-  MPI_Init(NULL,NULL);
+namespace GraphMat {
 
-  int res =  Catch::Session().run(argc, argv);
-
-  MPI_Finalize();
-  return res;
+template <class T, class U, class V, class E>
+void Mulfn(E a, T b, U * c, void* gpv) { 
+  GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
+  V dummy;
+  gp->process_message(b, a, dummy, *c); 
 }
+
+template <class T, class U, class V, class E>
+void Mulfn(E a, T b, V v, U * c, void* gpv) { 
+  GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
+  gp->process_message(b, a, v, *c); 
+}
+
+template <class T, class U, class V, class E>
+void Addfn(U a, U b, U * c, void* gpv) { 
+  GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv; 
+  *c = a;
+  gp->reduce_function(*c, b);
+}
+
+
+template <class T, class U, class V, class E>
+void SpMSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GraphMat::SpVec<GraphMat::DenseSegment<T> > * x, GraphMat::SpVec<GraphMat::DenseSegment<U> >* y) {
+  struct timeval start, end;
+  gettimeofday(&start, 0);
+
+  if (gp->getProcessMessageRequiresVertexprop()) {
+    GraphMat::SpMSpV3(G.A, x, G.vertexproperty, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  } else {
+    GraphMat::SpMSpV(G.A, x, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  }
+
+  #ifdef __TIMING
+  gettimeofday(&end, 0);
+  double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
+  printf("SPMSPV: time = %.3f ms \n", time);
+  #endif
+}
+template <class T, class U, class V, class E>
+void SpMTSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GraphMat::SpVec<GraphMat::DenseSegment<T> >* x, GraphMat::SpVec<GraphMat::DenseSegment<U> >* y) {
+  struct timeval start, end;
+  gettimeofday(&start, 0);
+
+  if (gp->getProcessMessageRequiresVertexprop()) {
+    GraphMat::SpMSpV3(G.AT, x, G.vertexproperty, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  } else {
+    GraphMat::SpMSpV(G.AT, x, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+  }
+
+  #ifdef __TIMING
+  gettimeofday(&end, 0);
+  double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
+  printf("SPMTSPV: time = %.3f ms \n", time);
+  #endif
+}
+
+} //namespace GraphMat
