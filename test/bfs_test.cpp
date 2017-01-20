@@ -109,7 +109,7 @@ void test_ut_bfs(int n) {
     G.setAllInactive();
     G.setActive(1);
 
-    GraphMat::run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, GraphMat::UNTIL_CONVERGENCE); 
 
     if (G.vertexNodeOwner(1)) 
       REQUIRE(G.getVertexproperty(1).depth == 0);
@@ -126,7 +126,7 @@ void test_ut_bfs(int n) {
     G.setAllInactive();
     G.setActive(n/2);
 
-    GraphMat::run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, GraphMat::UNTIL_CONVERGENCE); 
 
     for (int i = 1; i < n/2; i++) {
       if (G.vertexNodeOwner(i)) 
@@ -156,7 +156,7 @@ void test_dense_bfs(int n) {
     G.setAllInactive();
     G.setActive(1);
 
-    GraphMat::run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, GraphMat::UNTIL_CONVERGENCE); 
 
     if (G.vertexNodeOwner(1)) 
       REQUIRE(G.getVertexproperty(1).depth == 0);
@@ -173,7 +173,7 @@ void test_dense_bfs(int n) {
     G.setAllInactive();
     G.setActive(n/2);
 
-    GraphMat::run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, GraphMat::UNTIL_CONVERGENCE); 
 
     for (int i = 1; i < n/2; i++) {
       if (G.vertexNodeOwner(i)) 
@@ -203,7 +203,7 @@ void test_chain_bfs(int n) {
     G.setAllInactive();
     G.setActive(1);
 
-    GraphMat::run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, GraphMat::UNTIL_CONVERGENCE); 
 
     if (G.vertexNodeOwner(1)) 
       REQUIRE(G.getVertexproperty(1).depth == 0);
@@ -220,7 +220,7 @@ void test_chain_bfs(int n) {
     G.setAllInactive();
     G.setActive(n/2);
 
-    GraphMat::run_graph_program(&bfs_program, G, -1); 
+    GraphMat::run_graph_program(&bfs_program, G, GraphMat::UNTIL_CONVERGENCE); 
 
     for (int i = 1; i < n/2; i++) {
       if (G.vertexNodeOwner(i)) 

@@ -141,7 +141,7 @@ void run_pagerank(const char* filename) {
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  GraphMat::run_graph_program(&pr, G, -1, &pr_tmp);
+  GraphMat::run_graph_program(&pr, G, GraphMat::UNTIL_CONVERGENCE, &pr_tmp);
   
   gettimeofday(&end, 0);
   time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;

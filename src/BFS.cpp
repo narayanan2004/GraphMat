@@ -131,7 +131,7 @@ void run_bfs(char* filename, int v) {
   struct timeval start, end;
   gettimeofday(&start, 0);
 
-  GraphMat::run_graph_program(&b, G, -1, &b_tmp);
+  GraphMat::run_graph_program(&b, G, GraphMat::UNTIL_CONVERGENCE, &b_tmp);
 
   gettimeofday(&end, 0);
   printf("Time = %.3f ms \n", (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3);

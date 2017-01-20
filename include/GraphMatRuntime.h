@@ -48,6 +48,8 @@
 
 namespace GraphMat {
 
+const int UNTIL_CONVERGENCE = -1;
+
 template<class T, class U, class V>
 struct run_graph_program_temp_structure {
    GraphMat::SpVec<GraphMat::DenseSegment<T> >* px;
