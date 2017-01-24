@@ -60,26 +60,23 @@ bool compare_dcsc(const tedge_t<T> &a, const tedge_t<T> &b) {
 template <typename T>
 class DCSCTile {
  public:
+  int nnz;
   std::string name;
   int m;
   int n;
-  int nnz;
   int num_cols;
-
-  int *row_inds;  // row_inds is nnz
-  int *col_ptrs;  // col_ptrs is ncols
-  int *col_indices;
-  T *vals;
   int num_partitions;
-  int *row_pointers;
-  int *edge_pointers;
-  int *col_starts;
 
-  // col_indices is ncols
-  // vals is nnz
-  // row_pointers is the partitioning info (num_partitions+1)
-  // edge_pointers is the partitioning info (num_partitions+1)
-  // col_starts is the partitioning info (num_partitions+1)
+  T *vals;        // nnz
+  int *row_inds;  // nnz
+  int *row_pointers; // num_partitions + 1
+  int *edge_pointers;  // num_partitions + 1
+  int *col_starts; // num_partitions + 1
+  int *col_ptrs;  // col_starts[num_partitions]
+  int *col_indices; // col_starts[num_partitions]
+
+  // Serialize
+
 
   DCSCTile() : name("TEMP"), m(0), n(0), nnz(0), num_partitions(0) {}
 
@@ -317,6 +314,7 @@ class DCSCTile {
     }
     nnz = 0;
   }
+
 };
 
 #endif  // SRC_DCSCTILE_H_
