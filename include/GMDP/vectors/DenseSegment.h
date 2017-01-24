@@ -74,7 +74,7 @@ class buffer
     int * compressed_indices;
 
     char * serialized_data;
-    int serialized_npartitions;
+    size_t serialized_npartitions;
     size_t * serialized_partition_nbytes_scan;
     size_t * serialized_partition_nnz_scan;
     size_t serialized_nbytes;

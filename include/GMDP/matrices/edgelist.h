@@ -100,7 +100,8 @@ void load_edgelist(const char* dir, int myrank, int nrank,
     if(!fp) break;
 
     int tmp_[3];
-    fread(tmp_, sizeof(int), 3, fp);
+    auto fread_bytes = fread(tmp_, sizeof(int), 3, fp);
+    assert(fread_bytes == 3);
     edgelist->m = tmp_[0];
     edgelist->n = tmp_[1];
     edgelist->nnz += tmp_[2];
@@ -126,11 +127,14 @@ void load_edgelist(const char* dir, int myrank, int nrank,
     if(!fp) break;
 
     int tmp_[3];
-    fread(tmp_, sizeof(int), 3, fp);
+    auto fread_bytes = fread(tmp_, sizeof(int), 3, fp);
+    assert(fread_bytes == 3);
     assert(tmp_[0] == edgelist->m);
     assert(tmp_[1] == edgelist->n);
 
-    fread(edgelist->edges + nnzcnt, sizeof(edge_t<T>), tmp_[2], fp);
+    fread_bytes = fread(edgelist->edges + nnzcnt, sizeof(edge_t<T>), tmp_[2], fp);
+    assert(fread_bytes == tmp_[2]);
+
     #ifdef __DEBUG
     for(int j = 0 ; j < tmp_[2] ; j++)
     {
@@ -181,10 +185,14 @@ void write_edgelist_bin(const char* dir, int myrank, int nrank,
   fname_ss << dir << global_myrank;
   printf("Opening file: %s\n", fname_ss.str().c_str());
   FILE * fp = fopen(fname_ss.str().c_str(), "wb");
-  fwrite(&(edgelist.m), sizeof(int), 1, fp);
-  fwrite(&(edgelist.n), sizeof(int), 1, fp);
-  fwrite(&(edgelist.nnz), sizeof(int), 1, fp);
-  fwrite(edgelist.edges, sizeof(edge_t<T>), edgelist.nnz, fp);
+  auto fwrite_bytes = fwrite(&(edgelist.m), sizeof(int), 1, fp);
+  assert(fwrite_bytes == 1);
+  fwrite_bytes = fwrite(&(edgelist.n), sizeof(int), 1, fp);
+  assert(fwrite_bytes == 1);
+  fwrite_bytes = fwrite(&(edgelist.nnz), sizeof(int), 1, fp);
+  assert(fwrite_bytes == 1);
+  fwrite_bytes = fwrite(edgelist.edges, sizeof(edge_t<T>), edgelist.nnz, fp);
+  assert(fwrite_bytes == edgelist.nnz);
   fclose(fp);
 }
 
