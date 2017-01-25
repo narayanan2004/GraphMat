@@ -89,5 +89,13 @@ TEST_CASE("matrix_serialization", "matrix_serialization")
         matrix_serialization_test<GraphMat::CSRTile<int>, int>(5);
         matrix_serialization_test<GraphMat::CSRTile<int>, int>(500);
   }
+  SECTION(" COOTile basic tests ", "COOTile basic tests") {
+        matrix_serialization_test<GraphMat::COOTile<int>, int>(5);
+        matrix_serialization_test<GraphMat::COOTile<int>, int>(500);
+  }
+  SECTION(" COOSIMD32Tile basic tests ", "COOSIMD32Tile basic tests") {
+        matrix_serialization_test<GraphMat::COOSIMD32Tile<int>, int>(5);
+        matrix_serialization_test<GraphMat::COOSIMD32Tile<int>, int>(500);
+  }
 }
 
