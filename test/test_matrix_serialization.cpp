@@ -58,21 +58,23 @@ void matrix_serialization_test(int N)
     bi >> B;
   }
 
-  GraphMat::edgelist_t<EDGE_T> OE;
-  B->get_edges(&OE);
+  GraphMat::edgelist_t<EDGE_T> OE1;
+  GraphMat::edgelist_t<EDGE_T> OE2;
+  A->get_edges(&OE1);
+  B->get_edges(&OE2);
 
   // Validate A == B;
-  std::sort(E.edges, E.edges + E.nnz, edge_compare<EDGE_T>);
-  std::sort(OE.edges, OE.edges + OE.nnz, edge_compare<EDGE_T>);
+  std::sort(OE1.edges, OE1.edges + OE1.nnz, edge_compare<EDGE_T>);
+  std::sort(OE2.edges, OE2.edges + OE2.nnz, edge_compare<EDGE_T>);
 
-  REQUIRE(E.nnz == OE.nnz);
-  REQUIRE(E.m == OE.m);
-  REQUIRE(E.n == OE.n);
-  for(int i = 0 ; i < E.nnz ; i++)
+  REQUIRE(OE1.nnz == OE2.nnz);
+  REQUIRE(OE1.m == OE2.m);
+  REQUIRE(OE1.n == OE2.n);
+  for(int i = 0 ; i < OE1.nnz ; i++)
   {
-          REQUIRE(E.edges[i].src == OE.edges[i].src);
-          REQUIRE(E.edges[i].dst == OE.edges[i].dst);
-          REQUIRE(E.edges[i].val == OE.edges[i].val);
+          REQUIRE(OE1.edges[i].src == OE2.edges[i].src);
+          REQUIRE(OE1.edges[i].dst == OE2.edges[i].dst);
+          REQUIRE(OE1.edges[i].val == OE2.edges[i].val);
   }
 }
 
@@ -82,6 +84,10 @@ TEST_CASE("matrix_serialization", "matrix_serialization")
   SECTION(" DCSCTile basic tests ", "CSRTile basic tests") {
         matrix_serialization_test<GraphMat::DCSCTile<int>, int>(5);
         matrix_serialization_test<GraphMat::DCSCTile<int>, int>(500);
+  }
+  SECTION(" CSRTile basic tests ", "CSRTile basic tests") {
+        matrix_serialization_test<GraphMat::CSRTile<int>, int>(5);
+        matrix_serialization_test<GraphMat::CSRTile<int>, int>(500);
   }
 }
 

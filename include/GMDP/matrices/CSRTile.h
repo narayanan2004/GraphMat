@@ -64,6 +64,61 @@ class CSRTile {
   int* ja;
   int* ia;
 
+  // Serialize
+  friend boost::serialization::access;
+  template<class Archive> 
+  void save(Archive& ar, const unsigned int version) const {
+    ar & name;
+    ar & m;
+    ar & n;
+    ar & nnz;
+    if(!isEmpty())
+    {
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & a[i];
+      }
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & ja[i];
+      }
+      for(int i = 0 ; i < m+1 ; i++)
+      {
+        ar & ia[i];
+      }
+    }
+  }
+
+  template<class Archive> 
+  void load(Archive& ar, const unsigned int version) {
+    ar & name;
+    ar & m;
+    ar & n;
+    ar & nnz;
+    if(!isEmpty())
+    {
+      a = reinterpret_cast<T*>(
+          _mm_malloc((uint64_t)nnz * (uint64_t)sizeof(T), 64));
+      ja = reinterpret_cast<int*>(
+          _mm_malloc((uint64_t)nnz * (uint64_t)sizeof(int), 64));
+      ia = reinterpret_cast<int*>(_mm_malloc((m + 1) * sizeof(int), 64));
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & a[i];
+      }
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & ja[i];
+      }
+      for(int i = 0 ; i < m+1 ; i++)
+      {
+        ar & ia[i];
+      }
+    }
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER()
+ 
+
   CSRTile() : name("TEMP"), m(0), n(0), nnz(0) {}
 
   CSRTile(int _m, int _n) : name("TEMP"), m(_m), n(_n), nnz(0) {}
