@@ -52,7 +52,6 @@ void matrix_test(GraphMat::edgelist_t<EDGE_T> E)
     REQUIRE(A->getNNZ() == EAll.nnz);
     REQUIRE(A->m == E.m);
     REQUIRE(A->n == E.n);
-    REQUIRE(A->empty == false);
 
     // Get new edgelist from matrix
     GraphMat::edgelist_t<EDGE_T> OE;
@@ -79,14 +78,12 @@ void matrix_test(GraphMat::edgelist_t<EDGE_T> E)
     REQUIRE(AT->getNNZ() == EAll.nnz);
     REQUIRE(AT->m == E.n);
     REQUIRE(AT->n == E.m);
-    REQUIRE(AT->empty == false);
 
     GraphMat::SpMat<TILE_T> *ATT;
     GraphMat::Transpose(AT, &ATT, GraphMat::get_global_nrank(), GraphMat::get_global_nrank(), GraphMat::partition_fn_1d);
     REQUIRE(ATT->getNNZ() == EAll.nnz);
     REQUIRE(ATT->m == E.m);
     REQUIRE(ATT->n == E.n);
-    REQUIRE(ATT->empty == false);
 
     GraphMat::edgelist_t<EDGE_T> OET;
     ATT->get_edges(&OET);

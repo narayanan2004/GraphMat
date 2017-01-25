@@ -141,6 +141,10 @@ class DCSCTile {
           _mm_malloc((num_partitions+1) * sizeof(int), 64));
       col_starts = reinterpret_cast<int *>(
           _mm_malloc((num_partitions+1) * sizeof(int), 64));
+      col_ptrs = reinterpret_cast<int *>(
+          _mm_malloc(num_cols * sizeof(int), 64));
+      col_indices = reinterpret_cast<int *>(
+          _mm_malloc(num_cols * sizeof(int), 64));
 
       for(int i = 0 ; i < nnz ; i++)
       {
@@ -162,16 +166,11 @@ class DCSCTile {
       {
         ar & col_starts[i];
       }
-      col_ptrs = reinterpret_cast<int *>(
-          _mm_malloc(col_starts[num_partitions] * sizeof(int), 64));
-      col_indices = reinterpret_cast<int *>(
-          _mm_malloc(col_starts[num_partitions] * sizeof(int), 64));
-
-      for(int i = 0 ; i < col_starts[num_partitions] ; i++)
+      for(int i = 0 ; i < num_cols ; i++)
       {
         ar & col_ptrs[i];
       }
-      for(int i = 0 ; i < col_starts[num_partitions] ; i++)
+      for(int i = 0 ; i < num_cols ; i++)
       {
         ar & col_indices[i];
       }

@@ -139,36 +139,6 @@ class CSRTile {
         }
       }
       ia[m] = nnz+1;
-
-/*
-      std::stringstream ss;
-      ss << "tile" << row_start << "_" << col_start;
-      FILE * f = fopen(ss.str().c_str(), "w");
-      unsigned long int total_nz_gt16 = 0;
-      unsigned long int total_nz = 0;
-      for(int i = 0 ; i < m ; i++)
-      {
-        int nz_per_row = ia[i+1] - ia[i];
-        total_nz += nz_per_row;
-        if(nz_per_row > 16)
-        {
-          total_nz_gt16 += nz_per_row;
-        }
-      }
-      fprintf(f, "ratio: %f\n", ((double)total_nz_gt16) / ((double)total_nz));
-      fclose(f);
-      */
-/*
-      int cnt = 0;
-      for(int row = 0 ; row < m ; row++)
-      {
-        for(int nz = ia[row] ; nz < ia[row+1] ; nz++)
-        {
-          assert(ja[nz] == edges[nz].dst - col_start);
-          cnt++;
-        }
-      }
-      */
       _mm_free(jia);
     }
   }
