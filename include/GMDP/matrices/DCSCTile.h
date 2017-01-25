@@ -76,8 +76,109 @@ class DCSCTile {
   int *col_indices; // col_starts[num_partitions]
 
   // Serialize
+  friend boost::serialization::access;
+  template<class Archive> 
+  void save(Archive& ar, const unsigned int version) const {
+    ar & nnz;
+    ar & name;
+    ar & m;
+    ar & n;
+    ar & num_cols;
+    ar & num_partitions;
+    if(nnz > 0)
+    {
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & vals[i];
+      }
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & row_inds[i];
+      }
+      for(int i = 0 ; i < num_partitions+1 ; i++)
+      {
+        ar & row_pointers[i];
+      }
+      for(int i = 0 ; i < num_partitions+1 ; i++)
+      {
+        ar & edge_pointers[i];
+      }
+      for(int i = 0 ; i < num_partitions+1 ; i++)
+      {
+        ar & col_starts[i];
+      }
+      for(int i = 0 ; i < col_starts[num_partitions] ; i++)
+      {
+        ar & col_ptrs[i];
+      }
+      for(int i = 0 ; i < col_starts[num_partitions] ; i++)
+      {
+        ar & col_indices[i];
+      }
+    }
+  }
 
+  template<class Archive> 
+  void load(Archive& ar, const unsigned int version) {
+    ar & nnz;
+    ar & name;
+    ar & m;
+    ar & n;
+    ar & num_cols;
+    ar & num_partitions;
 
+    std::cout << "Got nnz: " << nnz << std::endl;
+
+    if(nnz > 0)
+    {
+      vals = reinterpret_cast<T *>(
+          _mm_malloc(nnz * sizeof(T), 64));
+      row_inds = reinterpret_cast<int *>(
+          _mm_malloc(nnz * sizeof(int), 64));
+      row_pointers = reinterpret_cast<int *>(
+          _mm_malloc((num_partitions+1) * sizeof(int), 64));
+      edge_pointers = reinterpret_cast<int *>(
+          _mm_malloc((num_partitions+1) * sizeof(int), 64));
+      col_starts = reinterpret_cast<int *>(
+          _mm_malloc((num_partitions+1) * sizeof(int), 64));
+
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & vals[i];
+      }
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & row_inds[i];
+      }
+      for(int i = 0 ; i < num_partitions+1 ; i++)
+      {
+        ar & row_pointers[i];
+      }
+      for(int i = 0 ; i < num_partitions+1 ; i++)
+      {
+        ar & edge_pointers[i];
+      }
+      for(int i = 0 ; i < num_partitions+1 ; i++)
+      {
+        ar & col_starts[i];
+      }
+      col_ptrs = reinterpret_cast<int *>(
+          _mm_malloc(col_starts[num_partitions] * sizeof(int), 64));
+      col_indices = reinterpret_cast<int *>(
+          _mm_malloc(col_starts[num_partitions] * sizeof(int), 64));
+
+      for(int i = 0 ; i < col_starts[num_partitions] ; i++)
+      {
+        ar & col_ptrs[i];
+      }
+      for(int i = 0 ; i < col_starts[num_partitions] ; i++)
+      {
+        ar & col_indices[i];
+      }
+    }
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER()
+  
   DCSCTile() : name("TEMP"), m(0), n(0), nnz(0), num_partitions(0) {}
 
   DCSCTile(int _m, int _n) : name("TEMP"), m(_m), n(_n), nnz(0), num_partitions(0) {}

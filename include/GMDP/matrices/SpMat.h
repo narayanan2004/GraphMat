@@ -50,14 +50,27 @@ bool compare_tile_id(const tedge_t<T>& a, const tedge_t<T>& b) {
 template <typename SpTile>
 class SpMat {
  public:
-  std::vector<std::vector<SpTile*> > tiles;
-  std::vector<int> start_idx;
-  std::vector<int> start_idy;
-  std::vector<int> nodeIds;
   int ntiles_x;
   int ntiles_y;
   int m;
   int n;
+  std::vector<std::vector<SpTile*> > tiles;
+  std::vector<int> start_idx;
+  std::vector<int> start_idy;
+  std::vector<int> nodeIds;
+
+  friend boost::serialization::access;
+  template<class Archive> 
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & ntiles_x;
+    ar & ntiles_y;
+    ar & m;
+    ar & n;
+    ar & tiles;
+    ar & start_idx;
+    ar & start_idy;
+    ar & nodeIds;
+  }
 
   inline int getPartition(const int src, const int dst, int* ival, int* jval) const {
     (*ival) = -1;
@@ -307,6 +320,8 @@ class SpMat {
 
   }
 
+  SpMat() {}
+
   template <typename T>
   SpMat(edgelist_t<T> edgelist, int ntx,
                    int nty, int (*pfn)(int, int, int, int, int)) {
@@ -318,11 +333,11 @@ class SpMat {
   {
     int global_nrank = get_global_nrank();
     int global_myrank = get_global_myrank();
-    for (int tile_i = 0; tile_i < ntiles_y; tile_i++) {
-      for (int tile_j = 0; tile_j < ntiles_x; tile_j++) {
-        if (nodeIds[tile_i + tile_j * ntiles_y] == global_myrank) {
-          delete tiles[tile_i][tile_j];
-        }
+    for(auto it1 = tiles.begin() ; it1 != tiles.end() ; it1++)
+    {
+      for(auto it2 = it1->begin() ; it2 != it1->end() ; it2++)
+      {
+        delete *it2;
       }
     }
   }
