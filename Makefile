@@ -45,7 +45,7 @@ LD_OPTIONS += -lboost_serialization
 # --- Apps --- #
 SOURCES = $(wildcard $(SRCDIR)/*.cpp)
 
-include_headers = $(wildcard $(INCLUDEDIR)/*.hpp)
+include_headers = $(wildcard $(INCLUDEDIR)/*.h)
 dist_primitives_headers = $(wildcard $(DIST_PRIMITIVES_PATH)/*.h $(DIST_PRIMITIVES_PATH)/*/*.h)
 DEPS = $(include_headers) $(dist_primitives_headers)
 
@@ -58,7 +58,7 @@ $(BINDIR)/% : $(SRCDIR)/%.cpp $(DEPS)
 
 # --- Test --- #
 test: $(TESTBINDIR)/test 
-test_headers = $(wildcard $(TESTDIR)/*.hpp)
+test_headers = $(wildcard $(TESTDIR)/*.h)
 test_src = $(wildcard $(TESTDIR)/*.cpp)
 test_objects = $(patsubst $(TESTDIR)/%.cpp, $(TESTBINDIR)/%.o, $(test_src))
 
