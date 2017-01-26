@@ -95,6 +95,7 @@ class Serializable {};
 #include "GMDP/multinode/spmspv3.h"
 #include "GMDP/multinode/apply.h"
 #include "GMDP/multinode/clear.h"
+#include "GMDP/utils/edgelist_transformation.h"
 
 
 }  // namespace GMDP
