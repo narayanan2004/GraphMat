@@ -31,13 +31,14 @@
 
 
 
-#ifndef TEST_GENERATOR_HPP
-#define TEST_GENERATOR_HPP
+#ifndef TEST_GENERATOR_H_
+#define TEST_GENERATOR_H_
 
 #include <cstdio>
 #include <cstdlib>
 #include <random>
 #include "GMDP/gmdp.h"
+#include "test_utils.h"
 
 template <typename T=int>
 GraphMat::edgelist_t<T> generate_identity_edgelist(int n) {
@@ -51,7 +52,10 @@ GraphMat::edgelist_t<T> generate_identity_edgelist(int n) {
       identity_edgelist.edges[i].val = 1;
     }
   }
-  return identity_edgelist;
+  GraphMat::edgelist_t<T> dist_identity_edgelist;
+  distribute_edges(0, identity_edgelist, dist_identity_edgelist);
+  identity_edgelist.clear();
+  return dist_identity_edgelist;
 }
 
 template <typename T>
@@ -94,7 +98,10 @@ GraphMat::edgelist_t<T> generate_random_edgelist(int n, int avg_nnz_per_row) {
       }
     }
   }
-  return random_edgelist;
+  GraphMat::edgelist_t<T> dist_random_edgelist;
+  distribute_edges(0, random_edgelist, dist_random_edgelist);
+  random_edgelist.clear();
+  return dist_random_edgelist;
 }
 
 template <typename T=int>
@@ -113,7 +120,10 @@ GraphMat::edgelist_t<T> generate_upper_triangular_edgelist(int n) {
       }
     }
   }
-  return ut_edgelist;
+  GraphMat::edgelist_t<T> dist_ut_edgelist;
+  distribute_edges(0, ut_edgelist, dist_ut_edgelist);
+  ut_edgelist.clear();
+  return dist_ut_edgelist;
 }
 
 template <typename T=int>
@@ -132,7 +142,10 @@ GraphMat::edgelist_t<T> generate_dense_edgelist(int n) {
       }
     }
   }
-  return dense_edgelist;
+  GraphMat::edgelist_t<T> dist_dense_edgelist;
+  distribute_edges(0, dense_edgelist, dist_dense_edgelist);
+  dense_edgelist.clear();
+  return dist_dense_edgelist;
 }
 
 template <typename T=int>
@@ -147,7 +160,10 @@ GraphMat::edgelist_t<T> generate_circular_chain_edgelist(int n) {
       chain_edgelist.edges[i].val = 1;
     }
   }
-  return chain_edgelist;
+  GraphMat::edgelist_t<T> dist_chain_edgelist;
+  distribute_edges(0, chain_edgelist, dist_chain_edgelist);
+  chain_edgelist.clear();
+  return dist_chain_edgelist;
 }
 
 //////////////////////////////////////////

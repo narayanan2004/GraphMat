@@ -95,7 +95,7 @@ class SpMat {
   }
 
   template <typename T>
-  void ingestEdgelist(edgelist_t<T> blob) {
+  void ingestEdgelist(edgelist_t<T>& blob) {
     int global_nrank = get_global_nrank();
     int global_myrank = get_global_myrank();
     int nnz_l = blob.nnz;
