@@ -97,5 +97,9 @@ TEST_CASE("matrix_serialization", "matrix_serialization")
         matrix_serialization_test<GraphMat::COOSIMD32Tile<int>, int>(5);
         matrix_serialization_test<GraphMat::COOSIMD32Tile<int>, int>(500);
   }
+  SECTION(" HybridTile basic tests ", "HybridTile basic tests") {
+        matrix_serialization_test<GraphMat::HybridTile<int>, int>(5);
+        matrix_serialization_test<GraphMat::HybridTile<int>, int>(500);
+  }
 }
 

@@ -54,9 +54,26 @@ class HybridTile {
   DCSRTile<T> * t1;
   COOSIMD32Tile<T> * t2;
 
-  HybridTile() : name("TEMP"), m(0), n(0), nnz(0) {}
+  // Serialize
+  friend boost::serialization::access;
+  template<class Archive> 
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & name;
+    ar & m;
+    ar & n;
+    ar & nnz;
+    ar & nnz1;
+    ar & nnz2;
+    if(!isEmpty())
+    {
+      ar & t1;
+      ar & t2;
+    }
+  }
 
-  HybridTile(int _m, int _n) : name("TEMP"), m(_m), n(_n), nnz(0) {}
+  HybridTile() : name("TEMP"), m(0), n(0), nnz(0), nnz1(0), nnz2(0) {}
+
+  HybridTile(int _m, int _n) : name("TEMP"), m(_m), n(_n), nnz(0), nnz1(0), nnz2(0) {}
 
   HybridTile(edge_t<T>* edges, int _m, int _n, int _nnz, int row_start,
           int col_start)
@@ -70,30 +87,6 @@ class HybridTile {
     });
 
     CSRTile<T> * tmptile = new CSRTile<T>(edges, _m, _n, _nnz, row_start, col_start);
-    /*
-    unsigned int * ia = new unsigned int[m+1];
-    ia[0] = 0;
-    int num_partitions = omp_get_max_threads() * 4;
-    for(unsigned int i = 0 ; i < nnz-1 ; i++)
-    {
-      if(edges[i+1].src > edges[i].src)
-      {
-        unsigned int src_end = (edges[i+1].src - row_start);
-        ia[src_end-1] = i+1;
-        unsigned int src_start = (edges[i].src - row_start);
-        for(unsigned int src = src_start+1 ; src < src_end ; src++)
-        {
-          ia[src-1] = ia[src_start-1];
-        }
-      }
-    }
-    unsigned int last_src = edges[nnz-1].src - row_start;
-    for(unsigned int src = last_src ; src <= m ; src++)
-    {
-      ia[src] = nnz;
-    }
-    */
-
     int * ia = tmptile->ia;
 
     unsigned int * ia_gte16 = new unsigned int[m+1];
@@ -133,9 +126,9 @@ class HybridTile {
       }
     }
 
-    tmptile->clear();
     delete tmptile;
 
+    std::cout << "INSTANTIATING: " << nnz1 << "\t" << nnz2 << std::endl;
     t1 = new DCSRTile<T>(edges_gte16, _m, _n, nnz1, row_start, col_start);
     t2 = new COOSIMD32Tile<T>(edges_lt16, _m, _n, nnz2, row_start, col_start);
 
@@ -148,8 +141,11 @@ class HybridTile {
   bool isEmpty() const { return nnz <= 0; }
 
   void get_edges(edge_t<T>* edges, int row_start, int col_start) {
-    t1->get_edges(edges, row_start, col_start); 
-    t2->get_edges(edges + nnz1, row_start, col_start); 
+    if(nnz > 0)
+    {
+      t1->get_edges(edges, row_start, col_start); 
+      t2->get_edges(edges + nnz1, row_start, col_start); 
+    }
   }
 
   HybridTile& operator=(HybridTile other) {
@@ -161,14 +157,6 @@ class HybridTile {
     this->nnz2 = other.nnz2;
     this->t1 = other.t1;
     this->t2 = other.t2;
-  }
-
-  void clear() {
-    if (!isEmpty()) {
-      t1->clear();
-      t2->clear();
-    }
-    nnz = 0;
   }
 
   ~HybridTile(void) {}

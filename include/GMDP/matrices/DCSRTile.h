@@ -54,6 +54,73 @@ class DCSRTile {
   int* ia;
   int* row_ids;
 
+  // Serialize
+  friend boost::serialization::access;
+  template<class Archive> 
+  void save(Archive& ar, const unsigned int version) const {
+    ar & name;
+    ar & m;
+    ar & n;
+    ar & num_rows;
+    ar & nnz;
+    ar & num_partitions;
+    if(!isEmpty())
+    {
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & a[i];
+      }
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & ja[i];
+      }
+      for(int i = 0 ; i < m+1 ; i++)
+      {
+        ar & ia[i];
+      }
+      for(int i = 0 ; i < num_rows ; i++)
+      {
+        ar & row_ids[i];
+      }
+    }
+  }
+
+  template<class Archive> 
+  void load(Archive& ar, const unsigned int version) {
+    ar & name;
+    ar & m;
+    ar & n;
+    ar & num_rows;
+    ar & nnz;
+    ar & num_partitions;
+    if(!isEmpty())
+    {
+      a = reinterpret_cast<T*>(
+          _mm_malloc((uint64_t)nnz * (uint64_t)sizeof(T), 64));
+      ja = reinterpret_cast<int*>(
+          _mm_malloc((uint64_t)nnz * (uint64_t)sizeof(int), 64));
+      ia = reinterpret_cast<int*>(_mm_malloc((m + 1) * sizeof(int), 64));
+      row_ids  = reinterpret_cast<int*>(_mm_malloc(num_rows * sizeof(int), 64));
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & a[i];
+      }
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & ja[i];
+      }
+      for(int i = 0 ; i < m+1 ; i++)
+      {
+        ar & ia[i];
+      }
+      for(int i = 0 ; i < num_rows ; i++)
+      {
+        ar & row_ids[i];
+      }
+    }
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER()
+ 
   DCSRTile() : name("TEMP"), m(0), n(0), nnz(0) {}
 
   DCSRTile(int _m, int _n) : name("TEMP"), m(_m), n(_n), nnz(0) {}
@@ -190,6 +257,10 @@ class DCSRTile {
   }
 
   void clear() {
+    nnz = 0;
+  }
+
+  ~DCSRTile(void) {
     if (!isEmpty()) {
       _mm_free(a);
       _mm_free(ja);
@@ -197,10 +268,7 @@ class DCSRTile {
       _mm_free(row_ids);
       delete [] partition_ptrs;
     }
-    nnz = 0;
   }
-
-  ~DCSRTile(void) {}
 
 };
 
