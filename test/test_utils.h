@@ -28,11 +28,12 @@
 * ******************************************************************************/
 /* Narayanan Sundaram (Intel Corp.), Michael Anderson (Intel Corp.)
  * ******************************************************************************/
+#ifndef _TEST_UTILS_H_
+#define _TEST_UTILS_H_
 
 #include <iostream>
 #include "catch.hpp"
 #include <algorithm>
-
 
 template<typename T>
 bool edge_compare(const GraphMat::edge_t<T> &e1,
@@ -79,6 +80,89 @@ void collect_edges(const GraphMat::edgelist_t<EDGE_T>& in_edges, GraphMat::edgel
     delete [] OERecvOffset;
 }
 
+template <typename EDGE_T>
+void distribute_edges(const int root_rank, const GraphMat::edgelist_t<EDGE_T>& in_edges, GraphMat::edgelist_t<EDGE_T>& out_edges) {
+
+      int global_nrank = GraphMat::get_global_nrank();
+      int global_myrank = GraphMat::get_global_myrank();
+
+      unsigned long int * positions = new unsigned long[global_nrank+1];
+      unsigned long int * counts = new unsigned long[global_nrank];
+      unsigned long int * recv_positions = new unsigned long[global_nrank+1];
+      unsigned long int * recv_counts = new unsigned long[global_nrank];
+
+      memset(positions, 0, sizeof(unsigned long)*(global_nrank+1));
+      memset(counts, 0, sizeof(unsigned long)*(global_nrank));
+
+      if (global_myrank == root_rank) {
+        int points_per_rank = in_edges.nnz/global_nrank;
+        int remaining = in_edges.nnz - (global_nrank * points_per_rank);
+        assert(remaining < global_nrank);
+        for (int bin = 0; bin < global_nrank; bin++) {
+          counts[bin] = points_per_rank;
+          if (remaining > 0) {
+            counts[bin]++;
+            remaining--;
+          }
+        }
+
+        for (int bin = 1; bin < global_nrank; bin++) {
+	  positions[bin] = positions[bin-1] + counts[bin-1];
+        }
+        positions[global_nrank] = in_edges.nnz;
+      }
+      
+      MPI_Barrier(MPI_COMM_WORLD);
+  
+      MPI_Request* mpi_req = new MPI_Request[2 * global_nrank];
+      MPI_Status* mpi_status = new MPI_Status[2 * global_nrank];
+  
+      for (int i = 0; i < global_nrank; i++) {
+        MPI_Isend(&counts[i], 1, MPI_UNSIGNED_LONG, i, global_myrank, MPI_COMM_WORLD,
+                  &mpi_req[i]);
+      }
+      for (int i = 0; i < global_nrank; i++) {
+        MPI_Irecv(&recv_counts[i], 1, MPI_UNSIGNED_LONG, i, i, MPI_COMM_WORLD,
+                  &mpi_req[i + global_nrank]);
+      }
+      MPI_Waitall(2 * global_nrank, mpi_req, mpi_status);
+      MPI_Barrier(MPI_COMM_WORLD);
+  
+      auto new_nnz = 0; 
+      recv_positions[0] = 0;
+      for(int i = 0 ; i < global_nrank ; i++)
+      {
+        new_nnz += recv_counts[i];
+        recv_positions[i+1] = new_nnz;
+      }
+
+      MPI_Datatype MPI_EDGE_T;
+      MPI_Type_contiguous(sizeof(GraphMat::edge_t<EDGE_T>), MPI_CHAR, &MPI_EDGE_T);
+      MPI_Type_commit(&MPI_EDGE_T);
+      for (int i = 0; i < global_nrank; i++) {
+        MPI_Isend(in_edges.edges + positions[i], counts[i] ,
+                  MPI_EDGE_T, i, global_myrank, MPI_COMM_WORLD, &mpi_req[i]);
+      }
+      out_edges = GraphMat::edgelist_t<EDGE_T>(in_edges.m, in_edges.n, new_nnz);
+  
+      for (int i = 0; i < global_nrank; i++) {
+        MPI_Irecv(out_edges.edges + recv_positions[i], recv_counts[i] ,
+                  MPI_EDGE_T, i, i, MPI_COMM_WORLD, &mpi_req[i+global_nrank]);
+      }
+  
+      MPI_Waitall(2 * global_nrank, mpi_req, mpi_status);
+      std::cout << "Rank " << global_myrank << " has " << new_nnz << " edges after distribute" << std::endl;
+      MPI_Barrier(MPI_COMM_WORLD);
+
+      delete [] mpi_status;
+      delete [] mpi_req;
+      delete [] positions;
+      delete [] counts;
+      delete [] recv_positions;
+      delete [] recv_counts;
+
+}
+
 template <typename T>
 void mul(T a, T b, T * c, void* vsp) {*c = a*b;}
 
@@ -91,3 +175,4 @@ void max(T a, T b, T * c, void* vsp) {*c = std::max(a,b);}
 template <typename T>
 void min(T a, T b, T * c, void* vsp) {*c = std::min(a,b);}
 
+#endif
