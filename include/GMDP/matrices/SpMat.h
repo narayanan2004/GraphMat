@@ -118,7 +118,7 @@ class SpMat {
   }
 
   template <typename T>
-  void ingestEdgelist(edgelist_t<T> blob) {
+  void ingestEdgelist(edgelist_t<T>& blob) {
     int nnz_l = blob.nnz;
     edge_t<T>* edge_list = blob.edges;
 
