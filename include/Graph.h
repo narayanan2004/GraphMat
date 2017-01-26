@@ -326,10 +326,10 @@ Graph<V,E>::~Graph() {
   if (vertexpropertyowner) {
     //if(vertexproperty) delete [] vertexproperty;
   }
-  delete A;
-  delete AT;
-  delete vertexproperty;
-  delete active;
+  if (A != nullptr) delete A;
+  if (AT != nullptr) delete AT;
+  if (vertexproperty != nullptr) delete vertexproperty;
+  if (active != nullptr) delete active;
   //if (active) delete [] active;
   //if (id) delete [] id;
   //if (start_src_vertices) delete [] start_src_vertices;
