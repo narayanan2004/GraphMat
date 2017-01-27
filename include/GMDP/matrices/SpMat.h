@@ -50,49 +50,26 @@ bool compare_tile_id(const tedge_t<T>& a, const tedge_t<T>& b) {
 template <typename SpTile>
 class SpMat {
  public:
-  SpTile*** tiles;
-
-  int* start_idx;
-  int* start_idy;
-  int* nodeIds;
   int ntiles_x;
   int ntiles_y;
   int m;
   int n;
-  bool empty;
-  std::string name;
-  int num_tiles_x;
-  int num_tiles_y;
-  int (*pfn)(int, int, int, int, int);
-  int global_nrank, global_myrank;
+  std::vector<std::vector<SpTile*> > tiles;
+  std::vector<int> start_idx;
+  std::vector<int> start_idy;
+  std::vector<int> nodeIds;
 
-  void set(int _m, int _n, int _ntiles_x, int _ntiles_y, int* _nodeIds,
-           int* _start_idx, int* _start_idy) {
-    empty = false;
-    // Copy metadata
-    start_idx =
-        reinterpret_cast<int*>(_mm_malloc((_ntiles_x + 1) * sizeof(int), 64));
-    start_idy =
-        reinterpret_cast<int*>(_mm_malloc((_ntiles_y + 1) * sizeof(int), 64));
-    nodeIds = reinterpret_cast<int*>(
-        _mm_malloc((_ntiles_x * _ntiles_y) * sizeof(int), 64));
-    memcpy(start_idx, _start_idx, (_ntiles_x + 1) * sizeof(int));
-    memcpy(start_idy, _start_idy, (_ntiles_y + 1) * sizeof(int));
-    memcpy(nodeIds, _nodeIds, (_ntiles_x * _ntiles_y) * sizeof(int));
-    m = _m;
-    n = _n;
-    ntiles_x = _ntiles_x;
-    ntiles_y = _ntiles_y;
-    assert(ntiles_x > 0);
-    assert(ntiles_y > 0);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    // Allocate space for tiles
-    tiles = new SpTile** [ntiles_y];
-    for (int i = 0; i < ntiles_y; i++) {
-      tiles[i] = new SpTile*[ntiles_x];
-    }
+  friend boost::serialization::access;
+  template<class Archive> 
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & ntiles_x;
+    ar & ntiles_y;
+    ar & m;
+    ar & n;
+    ar & tiles;
+    ar & start_idx;
+    ar & start_idy;
+    ar & nodeIds;
   }
 
   inline int getPartition(const int src, const int dst, int* ival, int* jval) const {
@@ -119,6 +96,8 @@ class SpMat {
 
   template <typename T>
   void ingestEdgelist(edgelist_t<T>& blob) {
+    int global_nrank = get_global_nrank();
+    int global_myrank = get_global_myrank();
     int nnz_l = blob.nnz;
     edge_t<T>* edge_list = blob.edges;
 
@@ -298,93 +277,69 @@ class SpMat {
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
-  void print_tiles(std::string msg) {
-
-    MPI_Barrier(MPI_COMM_WORLD);
-    {
-      if (global_myrank == 0) {
-        std::cout << "Rank " << global_myrank << "\t" << msg << std::endl;
-        for (int i = 0; i < ntiles_y; i++) {
-          for (int j = 0; j < ntiles_x; j++) {
-            std::cout << nodeIds[i + j * ntiles_y];
-          }
-          std::cout << std::endl;
-        }
-      }
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-  }
-
-  void Allocate2DPartitioned(int m, int n, int _num_tiles_x, int _num_tiles_y,
-                             int (*_pfn)(int, int, int, int, int)) {
-    num_tiles_x = _num_tiles_x;
-    num_tiles_y = _num_tiles_y;
-    pfn = _pfn;
+  void Allocate2DPartitioned(int m, int n, int _ntiles_x, int _ntiles_y,
+                             int (*pfn)(int, int, int, int, int)) {
+    int global_nrank = get_global_nrank();
+    int global_myrank = get_global_myrank();
+    ntiles_x = _ntiles_x;
+    ntiles_y = _ntiles_y;
+    assert(ntiles_x > 0);
+    assert(ntiles_y > 0);
+    this->m = m;
+    this->n = n;
     int vx, vy;
     int roundup = 256;
-    int ntiles_x = num_tiles_x;
-    int ntiles_y = num_tiles_y;
     vx = ((((n + ntiles_x - 1) / ntiles_x) + roundup - 1) / roundup) * roundup;
     vy = ((((m + ntiles_y - 1) / ntiles_y) + roundup - 1) / roundup) * roundup;
 
-    int* nodeIds = reinterpret_cast<int*>(
-        _mm_malloc(num_tiles_x * num_tiles_y * sizeof(int), 64));
-    int* startx =
-        reinterpret_cast<int*>(_mm_malloc((num_tiles_x + 1) * sizeof(int), 64));
-    int* starty =
-        reinterpret_cast<int*>(_mm_malloc((num_tiles_y + 1) * sizeof(int), 64));
-
-    int global_nrank = get_global_nrank();
-    int global_myrank = get_global_myrank();
-
-    for (int i = 0; i < num_tiles_y; i++) {
-      for (int j = 0; j < num_tiles_x; j++) {
-        nodeIds[i + j * num_tiles_y] =
-            pfn(j, i, num_tiles_x, num_tiles_y, global_nrank);
+    for (int j = 0; j < ntiles_x; j++) {
+      for (int i = 0; i < ntiles_y; i++) {
+        nodeIds.push_back(pfn(j, i, ntiles_x, ntiles_y, global_nrank));
       }
     }
 
-    for (int j = 0; j < num_tiles_x; j++) {
-      startx[j] = std::min(vx * j, n);
+    for (int j = 0; j < ntiles_x; j++) {
+      start_idx.push_back(std::min(vx * j, n));
     }
 
-    for (int i = 0; i < num_tiles_y; i++) {
-      starty[i] = std::min(vy * i, m);
+    for (int i = 0; i < ntiles_y; i++) {
+      start_idy.push_back(std::min(vy * i, m));
     }
-    startx[num_tiles_x] = n;
-    starty[num_tiles_y] = m;
+    start_idx.push_back(n);
+    start_idy.push_back(m);
 
-    set(m, n, num_tiles_x, num_tiles_y, nodeIds, startx, starty);
-    _mm_free(nodeIds);
-    _mm_free(startx);
-    _mm_free(starty);
+    // Allocate space for tiles
+    for (int tile_i = 0; tile_i < ntiles_y; tile_i++) {
+      std::vector<SpTile*> tmp;
+      for (int tile_j = 0; tile_j < ntiles_x; tile_j++) {
+        tmp.push_back((SpTile*)NULL);
+      }
+      tiles.push_back(tmp);
+    }
+
+
   }
+
+  SpMat() {}
 
   template <typename T>
   SpMat(edgelist_t<T> edgelist, int ntx,
                    int nty, int (*pfn)(int, int, int, int, int)) {
-    global_nrank = get_global_nrank();
-    global_myrank = get_global_myrank();
     Allocate2DPartitioned(edgelist.m, edgelist.n, ntx, nty, pfn);
     ingestEdgelist(edgelist);
   }
 
   ~SpMat()
   {
-    for (int tile_i = 0; tile_i < ntiles_y; tile_i++) {
-      for (int tile_j = 0; tile_j < ntiles_x; tile_j++) {
-        if (nodeIds[tile_i + tile_j * ntiles_y] == global_myrank) {
-          delete tiles[tile_i][tile_j];
-        }
+    int global_nrank = get_global_nrank();
+    int global_myrank = get_global_myrank();
+    for(auto it1 = tiles.begin() ; it1 != tiles.end() ; it1++)
+    {
+      for(auto it2 = it1->begin() ; it2 != it1->end() ; it2++)
+      {
+        delete *it2;
       }
-      delete [] tiles[tile_i];
     }
-    delete [] tiles;
-
-    _mm_free(start_idx);
-    _mm_free(start_idy);
-    _mm_free(nodeIds);
-
   }
 
   template <typename T>

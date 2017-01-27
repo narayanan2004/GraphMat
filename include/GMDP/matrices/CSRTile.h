@@ -64,6 +64,61 @@ class CSRTile {
   int* ja;
   int* ia;
 
+  // Serialize
+  friend boost::serialization::access;
+  template<class Archive> 
+  void save(Archive& ar, const unsigned int version) const {
+    ar & name;
+    ar & m;
+    ar & n;
+    ar & nnz;
+    if(!isEmpty())
+    {
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & a[i];
+      }
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & ja[i];
+      }
+      for(int i = 0 ; i < m+1 ; i++)
+      {
+        ar & ia[i];
+      }
+    }
+  }
+
+  template<class Archive> 
+  void load(Archive& ar, const unsigned int version) {
+    ar & name;
+    ar & m;
+    ar & n;
+    ar & nnz;
+    if(!isEmpty())
+    {
+      a = reinterpret_cast<T*>(
+          _mm_malloc((uint64_t)nnz * (uint64_t)sizeof(T), 64));
+      ja = reinterpret_cast<int*>(
+          _mm_malloc((uint64_t)nnz * (uint64_t)sizeof(int), 64));
+      ia = reinterpret_cast<int*>(_mm_malloc((m + 1) * sizeof(int), 64));
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & a[i];
+      }
+      for(int i = 0 ; i < nnz ; i++)
+      {
+        ar & ja[i];
+      }
+      for(int i = 0 ; i < m+1 ; i++)
+      {
+        ar & ia[i];
+      }
+    }
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER()
+ 
+
   CSRTile() : name("TEMP"), m(0), n(0), nnz(0) {}
 
   CSRTile(int _m, int _n) : name("TEMP"), m(_m), n(_n), nnz(0) {}
@@ -139,36 +194,6 @@ class CSRTile {
         }
       }
       ia[m] = nnz+1;
-
-/*
-      std::stringstream ss;
-      ss << "tile" << row_start << "_" << col_start;
-      FILE * f = fopen(ss.str().c_str(), "w");
-      unsigned long int total_nz_gt16 = 0;
-      unsigned long int total_nz = 0;
-      for(int i = 0 ; i < m ; i++)
-      {
-        int nz_per_row = ia[i+1] - ia[i];
-        total_nz += nz_per_row;
-        if(nz_per_row > 16)
-        {
-          total_nz_gt16 += nz_per_row;
-        }
-      }
-      fprintf(f, "ratio: %f\n", ((double)total_nz_gt16) / ((double)total_nz));
-      fclose(f);
-      */
-/*
-      int cnt = 0;
-      for(int row = 0 ; row < m ; row++)
-      {
-        for(int nz = ia[row] ; nz < ia[row+1] ; nz++)
-        {
-          assert(ja[nz] == edges[nz].dst - col_start);
-          cnt++;
-        }
-      }
-      */
       _mm_free(jia);
     }
   }

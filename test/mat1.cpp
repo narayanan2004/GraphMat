@@ -52,10 +52,10 @@ void matrix_test(GraphMat::edgelist_t<EDGE_T> E)
     REQUIRE(A->getNNZ() == EAll.nnz);
     REQUIRE(A->m == E.m);
     REQUIRE(A->n == E.n);
-    REQUIRE(A->empty == false);
 
     // Get new edgelist from matrix
     GraphMat::edgelist_t<EDGE_T> OE;
+    std::cout << "Getting edges first" << std::endl;
     A->get_edges(&OE);
 
     //collect all edges
@@ -79,16 +79,15 @@ void matrix_test(GraphMat::edgelist_t<EDGE_T> E)
     REQUIRE(AT->getNNZ() == EAll.nnz);
     REQUIRE(AT->m == E.n);
     REQUIRE(AT->n == E.m);
-    REQUIRE(AT->empty == false);
 
     GraphMat::SpMat<TILE_T> *ATT;
     GraphMat::Transpose(AT, &ATT, GraphMat::get_global_nrank(), GraphMat::get_global_nrank(), GraphMat::partition_fn_1d);
     REQUIRE(ATT->getNNZ() == EAll.nnz);
     REQUIRE(ATT->m == E.m);
     REQUIRE(ATT->n == E.n);
-    REQUIRE(ATT->empty == false);
 
     GraphMat::edgelist_t<EDGE_T> OET;
+    std::cout << "Getting edges second" << std::endl;
     ATT->get_edges(&OET);
 
     //collect edges
@@ -144,6 +143,14 @@ TEST_CASE("matrix_nnz", "matrix_nnz")
   SECTION(" COOSIMD32Tile basic tests ", "CSRTile basic tests") {
         create_matrix_test<GraphMat::COOSIMD32Tile<int>, int>(5);
         create_matrix_test<GraphMat::COOSIMD32Tile<int>, int>(500);
+  }
+  SECTION(" DCSRTile basic tests ", "CSRTile basic tests") {
+        create_matrix_test<GraphMat::DCSRTile<int>, int>(5);
+        create_matrix_test<GraphMat::DCSRTile<int>, int>(500);
+  }
+  SECTION(" HybridTile basic tests ", "CSRTile basic tests") {
+        create_matrix_test<GraphMat::HybridTile<int>, int>(5);
+        create_matrix_test<GraphMat::HybridTile<int>, int>(500);
   }
 }
 
