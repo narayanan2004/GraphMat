@@ -371,7 +371,7 @@ void get_dimensions(edge_t<T> * edges, int nnz, int &max_m, int &max_n)
 }
 
 template <typename T>
-void ReadEdgesBin(edgelist_t<T>* edgelist, const char* fname_in, bool randomize) {
+void ReadEdgesBin(edgelist_t<T>* edgelist, const char* fname_in, bool randomize=false) {
   load_edgelist(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
 
   if (randomize) {
@@ -380,7 +380,7 @@ void ReadEdgesBin(edgelist_t<T>* edgelist, const char* fname_in, bool randomize)
 }
 
 template <typename T>
-void ReadEdgesTxt(edgelist_t<T>* edgelist, const char* fname_in, bool randomize) {
+void ReadEdgesTxt(edgelist_t<T>* edgelist, const char* fname_in, bool randomize=false) {
   load_edgelist_txt(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
 
   if (randomize) {
