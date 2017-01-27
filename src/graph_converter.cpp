@@ -340,8 +340,9 @@ template <typename T> void readFile(const char* ifilename, edge<T>*& edges, int&
 		n = 0; nnz = 0;
 		int tempsrc, tempdst;
 		T tempval;
-		while(!feof(ifile)) {
+		while(true) {
 		        readLine(ifile, opt.inputformat, &tempsrc, &tempdst, &tempval, opt);
+			if(feof(ifile)) break;
 			n = (n > tempsrc)?(n):(tempsrc);
 			n = (n > tempdst)?(n):(tempdst);
 			nnz++;
