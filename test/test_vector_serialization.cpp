@@ -48,9 +48,9 @@ TEST_CASE("vector_serialization", "vector_serialization")
       REQUIRE(myvec.getNNZ() == 0);
 
       myvec.set(1, 1);
-      myvec.set(10, 1);
-      myvec.set(200, 1);
-      myvec.set(300, 1);
+      myvec.set(10, 2);
+      myvec.set(200, 3);
+      myvec.set(300, 4);
 
       // Serialize A
       std::stringstream ss;
@@ -64,8 +64,29 @@ TEST_CASE("vector_serialization", "vector_serialization")
         boost::archive::binary_iarchive bi(ss);
         bi >> myvec2;
       }
-
       REQUIRE(myvec2.getNNZ() == 4);
+
+      int val;
+      myvec2.get(1, &val);
+      if(myvec2.node_owner(1))
+      {
+        REQUIRE(val == 1);
+      }
+      myvec2.get(10, &val);
+      if(myvec2.node_owner(10))
+      {
+        REQUIRE(val == 2);
+      }
+      myvec2.get(200, &val);
+      if(myvec2.node_owner(200))
+      {
+        REQUIRE(val == 3);
+      }
+      myvec2.get(300, &val);
+      if(myvec2.node_owner(300))
+      {
+        REQUIRE(val == 4);
+      }
 
       myvec2.setAll(2);
       REQUIRE(myvec2.getNNZ() == 1000);
