@@ -42,17 +42,31 @@
 template <typename SpSegment>
 class SpVec {
  public:
+  std::string name;
+  int nsegments;
+  int n;
+  int num_tiles_x;
+  int global_nrank, global_myrank;
+
   std::vector<int> nodeIds;
   std::vector<int> start_id;
   std::vector<SpSegment*> segments;
 
-  int nsegments;
-  int n;
-  std::string name;
-  int num_tiles_x;
-  int (*pfn)(int, int, int);
-  int global_nrank, global_myrank;
+  friend boost::serialization::access;
+  template<class Archive> 
+  void serialize(Archive& ar, const unsigned int version) {
+    ar & name;
+    ar & nsegments;
+    ar & n;
+    ar & num_tiles_x;
+    ar & global_nrank;
+    ar & global_myrank;
+    ar & nodeIds;
+    ar & start_id;
+    ar & segments;
+  }
 
+  SpVec() {};
   SpVec(int _n, int _num_tiles_x,
                            int (*_pfn)(int, int, int)) {
 
@@ -60,7 +74,6 @@ class SpVec {
     global_myrank = get_global_myrank(); 
     num_tiles_x = _num_tiles_x;
     n = _n;
-    pfn = _pfn;
     int vx, vy;
     int roundup = 256;
     nsegments = num_tiles_x;
@@ -69,7 +82,7 @@ class SpVec {
 
     // In case the roundup affected the num tiles
     for (int j = 0; j < num_tiles_x; j++) {
-      nodeIds.push_back(pfn(j, num_tiles_x, global_nrank));
+      nodeIds.push_back(_pfn(j, num_tiles_x, global_nrank));
     }
     for (int j = 0; j < num_tiles_x; j++) {
       start_id.push_back(std::min(vx * j, n));

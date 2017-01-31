@@ -39,7 +39,6 @@
 
 #include <string>
 #include <vector>
-#include <queue>
 #include <sstream>
 #include <cstdio>
 
@@ -57,27 +56,127 @@ struct send_metadata
   int nnz;
   size_t serialized_nbytes;
   size_t serialized_npartitions;
+
+  friend class boost::serialization::access;
+  template<class Archive>
+  void serialize(Archive & ar, const unsigned int version)
+  {
+      ar & nnz;
+      ar & serialized_nbytes;
+      ar & serialized_npartitions;
+  }
 };
 
 template <typename T>
 class buffer
 {
   public:
-    T * value;
-    int * bit_vector;
     bool uninitialized;
     int nnz;
     int capacity;
     int num_ints;
+    size_t serialized_nbytes;
+    size_t serialized_npartitions;
 
+    T * value;
+    int * bit_vector;
     T * compressed_data;
     int * compressed_indices;
-
     char * serialized_data;
-    size_t serialized_npartitions;
     size_t * serialized_partition_nbytes_scan;
     size_t * serialized_partition_nnz_scan;
-    size_t serialized_nbytes;
+
+    // Serialize
+    friend boost::serialization::access;
+    template<class Archive> 
+    void save(Archive& ar, const unsigned int version) const {
+      ar & uninitialized;
+      ar & nnz;
+      ar & capacity;
+      ar & num_ints;
+      ar & serialized_nbytes;
+      ar & serialized_npartitions;
+      for(int i = 0 ; i < capacity; i++)
+      {
+        ar & value[i];
+      }
+      for(int i = 0 ; i < num_ints; i++)
+      {
+        ar & bit_vector[i];
+      }
+      for(int i = 0 ; i < capacity ; i++)
+      {
+        ar & compressed_data[i];
+      }
+      for(int i = 0 ; i < capacity ; i++)
+      {
+        ar & compressed_indices[i];
+      }
+      for(int i = 0 ; i < serialized_nbytes; i++)
+      {
+        ar & serialized_data[i];
+      }
+      for(int i = 0 ; i < serialized_npartitions + 1; i++)
+      {
+        ar & serialized_partition_nbytes_scan[i];
+      }
+      for(int i = 0 ; i < serialized_npartitions + 1; i++)
+      {
+        ar & serialized_partition_nnz_scan[i];
+      }
+    }
+    template<class Archive> 
+    void load(Archive& ar, const unsigned int version) {
+      ar & uninitialized;
+      ar & nnz;
+      ar & capacity;
+      ar & num_ints;
+      ar & serialized_nbytes;
+      ar & serialized_npartitions;
+      delete [] value;
+      delete [] bit_vector;
+      delete [] compressed_data;
+      delete [] compressed_indices;
+      delete [] serialized_data;
+      delete [] serialized_partition_nbytes_scan;
+      delete [] serialized_partition_nnz_scan;
+      value = new T[capacity];
+      bit_vector = new int[num_ints];
+      compressed_data = new T[capacity];
+      compressed_indices = new int[capacity];
+      serialized_data = new char[serialized_nbytes];
+      serialized_partition_nbytes_scan = new size_t[serialized_npartitions+1];
+      serialized_partition_nnz_scan = new size_t[serialized_npartitions+1];
+      for(int i = 0 ; i < capacity; i++)
+      {
+        ar & value[i];
+      }
+      for(int i = 0 ; i < num_ints; i++)
+      {
+        ar & bit_vector[i];
+      }
+      for(int i = 0 ; i < capacity ; i++)
+      {
+        ar & compressed_data[i];
+      }
+      for(int i = 0 ; i < capacity ; i++)
+      {
+        ar & compressed_indices[i];
+      }
+      for(int i = 0 ; i < serialized_nbytes; i++)
+      {
+        ar & serialized_data[i];
+      }
+      for(int i = 0 ; i < serialized_npartitions + 1; i++)
+      {
+        ar & serialized_partition_nbytes_scan[i];
+      }
+      for(int i = 0 ; i < serialized_npartitions + 1; i++)
+      {
+        ar & serialized_partition_nnz_scan[i];
+      }
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 
     buffer(int _capacity, int _num_ints)
     {
@@ -90,20 +189,20 @@ class buffer
       compressed_indices = new int[capacity];
       uninitialized = true;
 
-      serialized_data = NULL;
+      serialized_data = new char[0];
+      serialized_nbytes = 0;
       serialized_npartitions = omp_get_max_threads() * 16;
       serialized_partition_nbytes_scan = new size_t[serialized_npartitions+1];
       serialized_partition_nnz_scan = new size_t[serialized_npartitions+1];
     }
-    void clear_serialized()
-    {
-      if(serialized_data != NULL) _mm_free(serialized_data);
-      serialized_data = NULL;
-    }
+
+    buffer() : buffer(0,0) {}
+
     void alloc_serialized(size_t sz)
     {
-      assert(serialized_data == NULL);
-      serialized_data = reinterpret_cast<char*>(_mm_malloc(sz, 64));
+      delete [] serialized_data;
+      serialized_data = new char[sz]; 
+      serialized_nbytes = sz;
     }
 
     int compute_nnz() const
@@ -242,10 +341,9 @@ class buffer
         serialized_partition_nnz_scan[p+1] = serialized_partition_nnz_scan[p] + serialized_partition_nnz[p];
         serialized_partition_nbytes_scan[p+1] = serialized_partition_nbytes_scan[p] + serialized_partition_nbytes[p];
       }
-      serialized_nbytes = serialized_partition_nbytes_scan[serialized_npartitions];
+      size_t sz = serialized_partition_nbytes_scan[serialized_npartitions];
 
-      clear_serialized();
-      alloc_serialized(serialized_nbytes);
+      alloc_serialized(sz);
 
       #pragma omp parallel for
       for(int p = 0 ; p < serialized_npartitions ; p++)
@@ -314,12 +412,11 @@ class buffer
     {
       delete [] value;
       delete [] bit_vector;
-      //_mm_free(compressed_data);
       delete [] compressed_data;
       delete [] compressed_indices;
       delete [] serialized_partition_nbytes_scan;
       delete [] serialized_partition_nnz_scan;
-      clear_serialized();
+      delete [] serialized_data;
     }
 };
 
@@ -331,15 +428,58 @@ class DenseSegment {
   int num_ints;
 
   buffer<T> *properties;
-  std::queue<send_metadata> to_be_received;
+  send_metadata received_md;
+  std::vector<send_metadata> queued_md;
   std::vector<buffer<T> * > received;
   std::vector<buffer<T> * > uninitialized;
+
+  friend boost::serialization::access;
+  template<class Archive> 
+  void save(Archive& ar, const unsigned int version) const {
+    bool properties_is_null = (properties == NULL);
+    ar & properties_is_null;
+    ar & name;
+    ar & capacity;
+    ar & num_ints;
+    if(properties != NULL)
+    {
+      ar & properties;
+    }
+    ar & received_md;
+    ar & queued_md;
+    ar & received;
+    ar & uninitialized;
+  }
+
+  template<class Archive> 
+  void load(Archive& ar, const unsigned int version) {
+    bool properties_null;
+    ar & properties_null;
+    ar & name;
+    ar & capacity;
+    ar & num_ints;
+    if(!properties_null)
+    {
+      ar & properties;
+    }
+    else
+    {
+      properties = NULL;
+    }
+    ar & received_md;
+    ar & queued_md;
+    ar & received;
+    ar & uninitialized;
+  }
+  BOOST_SERIALIZATION_SPLIT_MEMBER()
 
   DenseSegment(int n) {
     capacity = n;
     num_ints = (n + sizeof(int) * 8 - 1) / (sizeof(int) * 8);
     properties = NULL;
   }
+
+  DenseSegment() : DenseSegment(0) {} 
 
   void ingestEdges(edge_t<T>* edges, int _m, int _nnz, int row_start)
   {
@@ -506,17 +646,13 @@ class DenseSegment {
     send_metadata md;
     MPI_Recv(&md, sizeof(md), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
              MPI_STATUS_IGNORE);
-    to_be_received.push(md);
+    queued_md.insert(queued_md.begin(), md);
   }
   void recv_nnz(int myrank, int src_rank,
                 std::vector<MPI_Request>* requests) {
    alloc();
-   send_metadata md;
-   MPI_Recv(&md, sizeof(md), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
+   MPI_Recv(&received_md, sizeof(send_metadata), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD,
             MPI_STATUS_IGNORE);
-   properties->nnz = md.nnz;
-   properties->serialized_nbytes = md.serialized_nbytes;
-   properties->serialized_npartitions = md.serialized_npartitions;
   }
   void send_segment(int myrank, int dst_rank, std::vector<MPI_Request>* requests) {
     if(should_compress(properties->nnz) == COMPRESSED)
@@ -555,10 +691,14 @@ class DenseSegment {
     }
   }
 
-  void recv_buffer(buffer<T> * p,
+  void recv_buffer(send_metadata md,
+                   buffer<T> * p,
                    int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
 
+    p->nnz = md.nnz;
+    p->serialized_nbytes = md.serialized_nbytes;
+    p->serialized_npartitions = md.serialized_npartitions;
     if(should_compress(p->nnz) == COMPRESSED)
     {
       MPI_Request r1;
@@ -575,7 +715,6 @@ class DenseSegment {
       MPI_Request r1;
       MPI_Request r2;
       MPI_Request r3;
-      p->clear_serialized();
       p->alloc_serialized(p->serialized_nbytes);
       MPI_Irecv(p->serialized_data, p->serialized_nbytes, MPI_BYTE, src_rank, 0, MPI_COMM_WORLD, &r1);
       MPI_Irecv(p->serialized_partition_nnz_scan, (p->serialized_npartitions+1) * sizeof(size_t), MPI_BYTE, src_rank, 0, MPI_COMM_WORLD, &r2);
@@ -611,18 +750,17 @@ class DenseSegment {
     {
       new_properties = new buffer<T>(capacity, num_ints);
     }
-    send_metadata md = to_be_received.front();
-    to_be_received.pop();
-    new_properties->nnz = md.nnz;
-    new_properties->serialized_nbytes = md.serialized_nbytes;
+    send_metadata md = queued_md.back();
+    queued_md.pop_back();
 
-    recv_buffer(new_properties, myrank, src_rank, requests);
+    recv_buffer(md, new_properties, myrank, src_rank, requests);
     received.push_back(new_properties);
   }
 
   void recv_segment(int myrank, int src_rank, 
                  std::vector<MPI_Request>* requests) {
-    recv_buffer(properties, myrank, src_rank, requests);
+
+    recv_buffer(received_md, properties, myrank, src_rank, requests);
   }
 
   void save(std::string fname, int start_id, int _m, bool includeHeader)
