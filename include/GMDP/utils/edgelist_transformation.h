@@ -131,7 +131,8 @@ void remove_duplicate_edges(edgelist_t<T>* edgelist) {
         end = (end > nnz_l)?(nnz_l):(end);
         end = (tid == nthreads-1)?(nnz_l):(end);
         for(auto i = start ; i < end ; i++) {
-      	  int bin = (edgelist->edges[i].src-1)*global_nrank/n;
+      	  //int bin = (edgelist->edges[i].src-1)*global_nrank/n;
+      	  int bin = (edgelist->edges[i].src-1)%global_nrank;
 	  assert(bin >= 0 && bin <= global_nrank-1);
       	  histogram[tid*global_nrank + bin]+=1;
         }
@@ -158,7 +159,8 @@ void remove_duplicate_edges(edgelist_t<T>* edgelist) {
         end = (end > nnz_l)?(nnz_l):(end);
         end = (tid == nthreads-1)?(nnz_l):(end);
         for(auto i = start ; i < end ; i++) {
-      	  int bin = (edgelist->edges[i].src-1)*global_nrank/n;
+      	  //int bin = (edgelist->edges[i].src-1)*global_nrank/n;
+      	  int bin = (edgelist->edges[i].src-1)%global_nrank;
 	  assert(bin >= 0 && bin <= global_nrank-1);
 	  tedges[offset[omp_get_thread_num()*global_nrank + bin] + woffset[omp_get_thread_num()*global_nrank + bin]] = edgelist->edges[i];
           woffset[omp_get_thread_num()*global_nrank + bin]++;
