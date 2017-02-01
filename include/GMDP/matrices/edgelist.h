@@ -110,10 +110,10 @@ bool readLine (FILE * ifile, int * src, int * dst, T * val, bool binaryformat=tr
         fscanf(ifile, "%d %d %lf", src, dst, val);
       } else if (std::is_same<T, int>::value) {
         fscanf(ifile, "%d %d %d", src, dst, val);
-      } if (std::is_same<T, unsigned int>::value) {
+      } else if (std::is_same<T, unsigned int>::value) {
         fscanf(ifile, "%d %d %u", src, dst, val);
       }else {
-        std::cout << "Data type not supported " << std::endl;
+        std::cout << "Data type not supported (read)" << std::endl;
       }
     } else {
       fscanf(ifile, "%d %d", src, dst);
@@ -188,7 +188,7 @@ void writeLine (FILE* ofile, int src, int dst, T val, bool binaryformat=true, bo
       } else if (std::is_same<T, unsigned int>::value) {
         fprintf(ofile, "%d %d %u\n", src, dst, val);
       } else {
-        std::cout << "Data type not supported\n";
+        std::cout << "Data type not supported (write)\n";
       }
     } else {
       fprintf(ofile, "%d %d\n", src, dst);
@@ -204,7 +204,7 @@ void write_edgelist(const char* dir, const edgelist_t<T> & edgelist,
   int global_myrank = get_global_myrank();
   std::stringstream fname_ss;
   fname_ss << dir << global_myrank;
-  printf("Opening file: %s\n", fname_ss.str().c_str());
+  printf("Writing file: %s\n", fname_ss.str().c_str());
 
   FILE * fp;
   if (binaryformat) {
@@ -252,7 +252,7 @@ void load_edgelist(const char* dir, edgelist_t<T>* edgelist,
       printf("Could not open file: %s\n", fname_ss.str().c_str());
       break;
     } else {
-      printf("Opening file: %s\n", fname_ss.str().c_str());
+      printf("Reading file: %s\n", fname_ss.str().c_str());
     }
 
     int m_, n_;
