@@ -70,11 +70,23 @@ class Graph {
     GraphMat::SpMat<GraphMat::DCSCTile<E> > *AT;
     GraphMat::SpVec<GraphMat::DenseSegment<V> > * vertexproperty;
     GraphMat::SpVec<GraphMat::DenseSegment<bool> > * active;
+  
+  friend boost::serialization::access;
+  BOOST_SERIALIZATION_SPLIT_MEMBER()
 
   public:
+    Graph(): nvertices(0), nnz(0), vertexpropertyowner(1), tiles_per_dim(GraphMat::get_global_nrank()),
+             vertexID_randomization(true), A(nullptr), AT(nullptr),
+             vertexproperty(nullptr), active(nullptr) {}
     void MTXFromEdgelist(GraphMat::edgelist_t<E> A_edges);
     void getVertexEdgelist(GraphMat::edgelist_t<V> & myedges);
+    void getEdgelist(GraphMat::edgelist_t<E> & myedges);
     void ReadMTX(const char* filename, int grid_size=1); //grid_size is deprecated
+    template<class Archive> void load(Archive& ar, unsigned const int version);
+    template<class Archive> void save(Archive& ar, unsigned const int version) const;
+    void ReadGraphMatBin(const char* filename);
+    void WriteGraphMatBin(const char* filename);
+
     void setAllActive();
     void setAllInactive();
     int vertexToNative(int vertex, int nsegments, int len) const;
@@ -138,6 +150,68 @@ int Graph<V,E>::nativeToVertex(int vertex, int nsegments, int len) const
 }
 
 template<class V, class E>
+template<class Archive>
+void Graph<V,E>::save(Archive& ar, const unsigned int version) const {
+  ar & A;
+  ar & AT;
+  //ar & *vertexproperty;
+  //ar & *active;
+  ar & nvertices;
+  ar & nnz;
+  ar & tiles_per_dim;
+  ar & vertexID_randomization;
+}
+
+template<class V, class E>
+template<class Archive>
+void Graph<V,E>::load(Archive& ar, const unsigned int version) {
+  ar & A;
+  ar & AT;
+  int _tiles_per_dim = GraphMat::get_global_nrank();
+
+  vertexproperty = new GraphMat::SpVec<GraphMat::DenseSegment<V> >(A->m, _tiles_per_dim, GraphMat::vector_partition_fn);
+  V *__v = new V;
+  vertexproperty->setAll(*__v);
+  delete __v;
+
+  active = new GraphMat::SpVec<GraphMat::DenseSegment<bool> >(A->m, _tiles_per_dim, GraphMat::vector_partition_fn);
+  active->setAll(false);
+
+  vertexpropertyowner = 1;
+  //ar & (*vertexproperty);
+  //ar & (*active);
+  ar & nvertices;
+  ar & nnz;
+  ar & tiles_per_dim;
+  if(tiles_per_dim != GraphMat::get_global_nrank()) {
+    std::cout << "Error reading file - mismatch in number of MPI ranks used in load vs save graph" << std::endl;
+    exit(1);
+  }
+  ar & vertexID_randomization;
+}
+
+template<class V, class E>
+void Graph<V,E>::ReadGraphMatBin(const char* filename) {
+  std::stringstream fname_ss;
+  fname_ss << filename << GraphMat::get_global_myrank();
+  std::cout << "Reading file " << fname_ss.str() << std::endl;
+  std::ifstream ifilestream(fname_ss.str().c_str(), std::ios::in|std::ios::binary);
+  boost::archive::binary_iarchive bi(ifilestream);
+  bi >> *this;
+  ifilestream.close();
+}
+
+template<class V, class E>
+void Graph<V,E>::WriteGraphMatBin(const char* filename) {
+  std::stringstream fname_ss;
+  fname_ss << filename << GraphMat::get_global_myrank();
+  std::cout << "Writing file " << fname_ss.str() << std::endl;
+  std::ofstream ofilestream(fname_ss.str().c_str(), std::ios::out|std::ios::binary);
+  boost::archive::binary_oarchive bo(ofilestream);
+  bo << *this;
+  ofilestream.close();
+}
+template<class V, class E>
 void Graph<V,E>::MTXFromEdgelist(GraphMat::edgelist_t<E> A_edges) {
 
   //if (GraphMat::global_nrank == 1) {
@@ -164,12 +238,12 @@ void Graph<V,E>::MTXFromEdgelist(GraphMat::edgelist_t<E> A_edges) {
     int m_ = A->m;
     assert(A->m == A->n);
     nnz = A->getNNZ();
-      vertexproperty = new GraphMat::SpVec<GraphMat::DenseSegment<V> >(A->m, tiles_per_dim, GraphMat::vector_partition_fn);
-      V *__v = new V;
-      vertexproperty->setAll(*__v);
-      delete __v;
-      active = new GraphMat::SpVec<GraphMat::DenseSegment<bool> >(A->m, tiles_per_dim, GraphMat::vector_partition_fn);
-      active->setAll(false);
+    vertexproperty = new GraphMat::SpVec<GraphMat::DenseSegment<V> >(A->m, tiles_per_dim, GraphMat::vector_partition_fn);
+    V *__v = new V;
+    vertexproperty->setAll(*__v);
+    delete __v;
+    active = new GraphMat::SpVec<GraphMat::DenseSegment<bool> >(A->m, tiles_per_dim, GraphMat::vector_partition_fn);
+    active->setAll(false);
 
     nvertices = m_;
     vertexpropertyowner = 1;
@@ -185,6 +259,11 @@ void Graph<V,E>::ReadMTX(const char* filename, int grid_size) {
   GraphMat::edgelist_t<E> A_edges;
   //GraphMat::ReadEdgesBin(&A_edges, filename, false);
   GraphMat::ReadEdges(&A_edges, filename);
+  if (A_edges.m != A_edges.n) {
+    auto maxn = std::max(A_edges.m, A_edges.n);
+    A_edges.m = maxn;
+    A_edges.n = maxn;
+  }
   MTXFromEdgelist(A_edges);
   A_edges.clear();
 }
@@ -269,6 +348,15 @@ void Graph<V,E>::setVertexproperty(int v, const V& val) {
 template<class V, class E> 
 void Graph<V,E>::getVertexEdgelist(GraphMat::edgelist_t<V> & myedges) {
   vertexproperty->get_edges(&myedges);
+  for(unsigned int i = 0 ; i < myedges.nnz ; i++)
+  {
+    myedges.edges[i].src = nativeToVertex(myedges.edges[i].src, tiles_per_dim, nvertices);
+  }
+}
+
+template<class V, class E> 
+void Graph<V,E>::getEdgelist(GraphMat::edgelist_t<E> & myedges) {
+  A->get_edges(&myedges);
   for(unsigned int i = 0 ; i < myedges.nnz ; i++)
   {
     myedges.edges[i].src = nativeToVertex(myedges.edges[i].src, tiles_per_dim, nvertices);
