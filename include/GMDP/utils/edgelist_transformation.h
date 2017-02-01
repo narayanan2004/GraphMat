@@ -32,7 +32,7 @@
 #ifndef EDGELIST_TRANSFORMATIONS_H_
 #define EDGELIST_TRANSFORMATIONS_H_
 
-#include "GMDP/matrices/edgelist.h"
+#include "GMDP/utils/edgelist.h"
 
 template <typename T>
 void remove_selfedges(edgelist_t<T>* edgelist) {

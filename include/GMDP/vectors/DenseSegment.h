@@ -33,7 +33,7 @@
 #ifndef SRC_DENSESEGMENT_H_
 #define SRC_DENSESEGMENT_H_
 
-#include "GMDP/matrices/edgelist.h"
+#include "GMDP/utils/edgelist.h"
 #include "GMDP/utils/bitvector.h"
 #include "GMDP/singlenode/unionreduce.h"
 
