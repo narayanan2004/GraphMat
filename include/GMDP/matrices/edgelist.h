@@ -26,7 +26,7 @@
  * ** NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS        **
  * ** SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * * ******************************************************************************/
-/* Michael Anderson (Intel Corp.)
+/* Michael Anderson (Intel Corp.), Narayanan Sundaram (Intel Corp.)
  *  * ******************************************************************************/
 
 
@@ -83,170 +83,229 @@ struct tedge_t {
   T val;
 };
 
-template <typename T>
-void load_edgelist(const char* dir, int myrank, int nrank,
-                   edgelist_t<T>* edgelist) {
 
-  int global_nrank = get_global_nrank();
-  int global_myrank = get_global_myrank();
-
-  edgelist->nnz = 0;
-  for(int i = global_myrank ; ; i += global_nrank)
-  {
-    std::stringstream fname_ss;
-    fname_ss << dir << i;
-    //printf("Opening file: %s\n", fname_ss.str().c_str());
-    FILE* fp = fopen(fname_ss.str().c_str(), "r");
-    if(!fp) break;
-
-    int tmp_[3];
-    auto fread_bytes = fread(tmp_, sizeof(int), 3, fp);
-    assert(fread_bytes == 3);
-    edgelist->m = tmp_[0];
-    edgelist->n = tmp_[1];
-    edgelist->nnz += tmp_[2];
-    fclose(fp);
-  }
-
-  MPI_Bcast(&(edgelist->m), 1, MPI_INT, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&(edgelist->n), 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-  std::cout << "Got: " << edgelist->nnz << " edges\n" << std::endl;
-  
-  edgelist->edges = reinterpret_cast<edge_t<T>*>(
-      _mm_malloc((uint64_t)edgelist->nnz * (uint64_t)sizeof(edge_t<T>), 64));
-
-
-  int nnzcnt = 0;
-  for(int i = global_myrank ; ; i += global_nrank)
-  {
-    std::stringstream fname_ss;
-    fname_ss << dir << i;
-    //printf("Opening file: %s\n", fname_ss.str().c_str());
-    FILE* fp = fopen(fname_ss.str().c_str(), "r");
-    if(!fp) break;
-
-    int tmp_[3];
-    auto fread_bytes = fread(tmp_, sizeof(int), 3, fp);
-    assert(fread_bytes == 3);
-    assert(tmp_[0] == edgelist->m);
-    assert(tmp_[1] == edgelist->n);
-
-    fread_bytes = fread(edgelist->edges + nnzcnt, sizeof(edge_t<T>), tmp_[2], fp);
-    assert(fread_bytes == tmp_[2]);
-
-    #ifdef __DEBUG
-    for(int j = 0 ; j < tmp_[2] ; j++)
-    {
-      if(edgelist->edges[nnzcnt].src <= 0 ||
-         edgelist->edges[nnzcnt].dst <= 0 ||
-         edgelist->edges[nnzcnt].src > edgelist->m ||
-         edgelist->edges[nnzcnt].dst > edgelist->n)
-      {
-        std::cout << "Invalid edge, i, j, nnz: " << i << " , " << j << " , " << nnzcnt << std::endl;
-        exit(0);
-      }
-      nnzcnt++;
+template<typename T>
+bool readLine (FILE * ifile, int * src, int * dst, T * val, bool binaryformat=true, bool edgeweights=true)
+{
+  if(binaryformat) {	
+    auto fread_bytes = fread(src, sizeof(int), 1, ifile);
+    if (feof(ifile)) return false;
+    assert(fread_bytes == 1);
+    fread_bytes = fread(dst, sizeof(int), 1, ifile);
+    if (feof(ifile)) return false;
+    assert(fread_bytes == 1);
+    if (edgeweights) {
+      fread_bytes = fread(val, sizeof(T), 1, ifile);
+      if (feof(ifile)) return false;
+      assert(fread_bytes == 1);
+      *val = (T)(1);
     }
-    #else
-    nnzcnt += tmp_[2];
-    #endif
+  } else {
+    if (edgeweights) {
+      if (std::is_same<T, float>::value) {
+        fscanf(ifile, "%d %d %f", src, dst, val);
+      } else if (std::is_same<T, double>::value) {
+        fscanf(ifile, "%d %d %lf", src, dst, val);
+      } else if (std::is_same<T, int>::value) {
+        fscanf(ifile, "%d %d %d", src, dst, val);
+      } if (std::is_same<T, unsigned int>::value) {
+        fscanf(ifile, "%d %d %u", src, dst, val);
+      }else {
+        std::cout << "Data type not supported \n";
+      }
+    } else {
+      fscanf(ifile, "%d %d", src, dst);
+      *val = (T)(1);
+    }
+    if (feof(ifile)) return false;
+  }
+  return true;
+}
 
-    fclose(fp);
+template<typename T>
+void get_maxid_and_nnz(FILE* fp, int* m, int* n, unsigned long int* nnz, bool binaryformat=true, bool header=true, bool edgeweights=true) {
+  if (header) {
+    int tmp_[3];
+    if (binaryformat) {
+      auto fread_bytes = fread(tmp_, sizeof(int), 3, fp);
+      assert(fread_bytes == 3);
+      *m = tmp_[0];
+      *n = tmp_[1];
+      *nnz = tmp_[2];
+    } else {
+      fscanf(fp, "%d %d %u", &(tmp_[0]), &(tmp_[1]), &(tmp_[2]));
+      *m = tmp_[0];
+      *n = tmp_[1];
+      *nnz = tmp_[2];
+    }
+    return;
+  } else { //no header
+    unsigned long nnz_ = 0;
+    int tempsrc, tempdst;
+    int maxm = 0;
+    int maxn = 0;
+    T tempval;
+    while(true) {
+      if(feof(fp)) {
+        break;
+      }
+      if (!readLine(fp, &tempsrc, &tempdst, &tempval, binaryformat, edgeweights)) {
+        break;
+      }
+      maxm = (maxm > tempsrc)?(maxm):(tempsrc);
+      maxn = (maxn > tempdst)?(maxn):(tempdst);
+      nnz_++;
+    }
+    *m = maxm;
+    *n = maxn;
+    *nnz = nnz_;
+  }
+}
+
+
+template<typename T>
+void writeLine (FILE* ofile, int src, int dst, T val, bool binaryformat=true, bool edgeweights=true)
+{
+  if (binaryformat) {
+      auto fwrite_bytes = fwrite(&src, sizeof(int), 1, fp);
+      assert(fwrite_bytes == 1);
+      fwrite_bytes = fwrite(&dst, sizeof(int), 1, fp);
+      assert(fwrite_bytes == 1);
+      if (edgeweights) {
+        fwrite_bytes = fwrite(&val, sizeof(T), 1, fp);
+        assert(fwrite_bytes == 1);
+      }
+  } else {
+    if (edgeweights) { 
+      if (std::is_same<T, float>::value) {
+        fprintf(ofile, "%d %d %.8f\n", src, dst, val);
+      } else if (std::is_same<T, double>::value) {
+        fprintf(ofile, "%d %d %.15lf\n", src, dst, val);
+      } else if (std::is_same<T, int>::value) {
+        fprintf(ofile, "%d %d %d\n", src, dst, val);
+      } else if (std::is_same<T, unsigned int>::value) {
+        fprintf(ofile, "%d %d %u\n", src, dst, val);
+      } else {
+        std::cout << "Data type not supported\n";
+      }
+    } else {
+      fprintf(ofile, "%d %d\n", src, dst);
+    }
   }
 }
 
 template <typename T>
-void write_edgelist_txt(const char* dir, int myrank, int nrank, 
-                       const edgelist_t<T> & edgelist)
+void write_edgelist(const char* dir, const edgelist_t<T> & edgelist,
+                    bool binaryformat=true, bool header=true, bool edgeweights=true)
 {
   int global_nrank = get_global_nrank();
   int global_myrank = get_global_myrank();
   std::stringstream fname_ss;
   fname_ss << dir << global_myrank;
   printf("Opening file: %s\n", fname_ss.str().c_str());
-  FILE * fp = fopen(fname_ss.str().c_str(), "w");
-  fprintf(fp, "%d %d %u\n", edgelist.m, edgelist.n, edgelist.nnz);
-  for(int i = 0 ; i < edgelist.nnz ; i++)
+
+  FILE * fp;
+  if (binaryformat) {
+    fp = fopen(fname_ss.str().c_str(), "wb");
+    if (header) {
+      auto fwrite_bytes = fwrite(&(edgelist.m), sizeof(int), 1, fp);
+      assert(fwrite_bytes == 1);
+      fwrite_bytes = fwrite(&(edgelist.n), sizeof(int), 1, fp);
+      assert(fwrite_bytes == 1);
+      fwrite_bytes = fwrite(&(edgelist.nnz), sizeof(int), 1, fp);
+      assert(fwrite_bytes == 1);
+    }
+  } else {
+    fp = fopen(fname_ss.str().c_str(), "w");
+    if (header) {
+      fprintf(fp, "%d %d %u\n", edgelist.m, edgelist.n, edgelist.nnz);
+    }
+  }
+  for(auto i = 0 ; i < edgelist.nnz ; i++)
   {
-    fprintf(fp, "%d %d %.15e\n", edgelist.edges[i].src, edgelist.edges[i].dst, edgelist.edges[i].val);
+    writeLine(fp, edgelist.edges[i].src, edgelist.edges[i].dst, edgelist.edges[i].val, binaryformat, edgeweights);
   }
   fclose(fp);
 }
 
-
 template <typename T>
-void write_edgelist_bin(const char* dir, int myrank, int nrank, 
-                       const edgelist_t<T> & edgelist)
-{
+void load_edgelist(const char* dir, edgelist_t<T>* edgelist,
+                             bool binaryformat=true, bool header=true, bool edgeweights=true) {
   int global_nrank = get_global_nrank();
   int global_myrank = get_global_myrank();
-  std::stringstream fname_ss;
-  fname_ss << dir << global_myrank;
-  printf("Opening file: %s\n", fname_ss.str().c_str());
-  FILE * fp = fopen(fname_ss.str().c_str(), "wb");
-  auto fwrite_bytes = fwrite(&(edgelist.m), sizeof(int), 1, fp);
-  assert(fwrite_bytes == 1);
-  fwrite_bytes = fwrite(&(edgelist.n), sizeof(int), 1, fp);
-  assert(fwrite_bytes == 1);
-  fwrite_bytes = fwrite(&(edgelist.nnz), sizeof(int), 1, fp);
-  assert(fwrite_bytes == 1);
-  fwrite_bytes = fwrite(edgelist.edges, sizeof(edge_t<T>), edgelist.nnz, fp);
-  assert(fwrite_bytes == edgelist.nnz);
-  fclose(fp);
-}
-
-
-template <typename T>
-void load_edgelist_txt(const char* dir, int myrank, int nrank,
-                       edgelist_t<T>* edgelist) {
-  int global_nrank = get_global_nrank();
-  int global_myrank = get_global_myrank();
+  edgelist->m = 0;
+  edgelist->n = 0;
   edgelist->nnz = 0;
   for(int i = global_myrank ; ; i += global_nrank)
   {
     std::stringstream fname_ss;
     fname_ss << dir << i;
-    //printf("Opening file: %s\n", fname_ss.str().c_str());
-    FILE* fp = fopen(fname_ss.str().c_str(), "r");
-    if(!fp) break;
+    FILE* fp;
+    if (binaryformat) {
+     fp = fopen(fname_ss.str().c_str(), "rb");
+    } else {
+     fp = fopen(fname_ss.str().c_str(), "r");
+    }  
+    if(!fp) {
+      printf("Could not open file: %s\n", fname_ss.str().c_str());
+      break;
+    } else {
+      printf("Opening file: %s\n", fname_ss.str().c_str());
+    }
 
-    int tmp_[3];
-    fscanf(fp, "%d %d %u", &(tmp_[0]), &(tmp_[1]), &(tmp_[2]));
-    edgelist->m = tmp_[0];
-    edgelist->n = tmp_[1];
-    edgelist->nnz += tmp_[2];
+    int m_, n_;
+    unsigned long nnz_;
+    get_maxid_and_nnz<T>(fp, &m_, &n_, &nnz_, binaryformat, header, edgeweights);
+    edgelist->m = std::max(m_, edgelist->m);
+    edgelist->n = std::max(n_, edgelist->n);
+    edgelist->nnz += nnz_;
     fclose(fp);
   }
+  int local_max_m = edgelist->m;
+  int max_m = edgelist->m;
+  int local_max_n = edgelist->n;
+  int max_n = edgelist->n;
+  MPI_Allreduce(&local_max_m, &max_m, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_max_n, &max_n, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  edgelist->m = max_m;
+  edgelist->n = max_n;
 
-  std::cout << "Got: " << edgelist->nnz << " edges\n" << std::endl;
+  std::cout << "Got: " << edgelist->m << " by " << edgelist->n << "  vertices" << std::endl;
+  std::cout << "Got: " << edgelist->nnz << " edges" << std::endl;
   
   edgelist->edges = reinterpret_cast<edge_t<T>*>(
       _mm_malloc((uint64_t)edgelist->nnz * (uint64_t)sizeof(edge_t<T>), 64));
 
 
-  int nnzcnt = 0;
+  unsigned long int nnzcnt = 0;
   for(int i = global_myrank ; ; i += global_nrank)
   {
     std::stringstream fname_ss;
     fname_ss << dir << i;
     //printf("Opening file: %s\n", fname_ss.str().c_str());
-    FILE* fp = fopen(fname_ss.str().c_str(), "r");
+    FILE* fp;
+    if (binaryformat) {
+     fp = fopen(fname_ss.str().c_str(), "rb");
+    } else {
+     fp = fopen(fname_ss.str().c_str(), "r");
+    }
     if(!fp) break;
 
-    int tmp_[3];
-    fscanf(fp, "%d %d %u", &(tmp_[0]), &(tmp_[1]), &(tmp_[2]));
-    assert(tmp_[0] == edgelist->m);
-    assert(tmp_[1] == edgelist->n);
-    for(int j = 0 ; j < tmp_[2] ; j++)
-    {
-      if(!fscanf(fp, "%d %d %lf", &(edgelist->edges[nnzcnt].src),
-             &(edgelist->edges[nnzcnt].dst), &(edgelist->edges[nnzcnt].val)))
-      {
-        std::cout << "Bad edge read, i, j, nnzcnt " << i << " , " << j << " , " << nnzcnt << std::endl;
-        exit(0);
+    if (header) { //remove header
+      int m_, n_;
+      unsigned long nnz_;
+      get_maxid_and_nnz<T>(fp, &m_, &n_, &nnz_, binaryformat, header, edgeweights);
+    }
+    int j = 0;
+    while(true) {
+      if (feof(fp)) {
+        break;
       }
-
+      if (!readLine(fp, &(edgelist->edges[nnzcnt].src), &(edgelist->edges[nnzcnt].dst), &(edgelist->edges[nnzcnt].val), binaryformat, edgeweights)) {
+        break;
+      }
+      #ifdef __DEBUG
+      //std::cout <<(edgelist->edges[nnzcnt].src) << " " << (edgelist->edges[nnzcnt].dst) << std::endl;
       if(edgelist->edges[nnzcnt].src <= 0 ||
          edgelist->edges[nnzcnt].dst <= 0 ||
          edgelist->edges[nnzcnt].src > edgelist->m ||
@@ -255,6 +314,8 @@ void load_edgelist_txt(const char* dir, int myrank, int nrank,
         std::cout << "Invalid edge, i, j, nnz: " << i << " , " << j << " , " << nnzcnt << std::endl;
         exit(0);
       }
+      j++;
+      #endif
       nnzcnt++;
     }
     fclose(fp);
@@ -371,8 +432,8 @@ void get_dimensions(edge_t<T> * edges, int nnz, int &max_m, int &max_n)
 }
 
 template <typename T>
-void ReadEdgesBin(edgelist_t<T>* edgelist, const char* fname_in, bool randomize=false) {
-  load_edgelist(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
+void ReadEdges(edgelist_t<T>* edgelist, const char* fname_in, bool binaryformat=true, bool header=true, bool edgeweights=true, bool randomize=false) {
+  load_edgelist(fname_in, edgelist, binaryformat, header, edgeweights);
 
   if (randomize) {
     randomize_edgelist_square<T>(edgelist, get_global_nrank());
@@ -380,24 +441,8 @@ void ReadEdgesBin(edgelist_t<T>* edgelist, const char* fname_in, bool randomize=
 }
 
 template <typename T>
-void ReadEdgesTxt(edgelist_t<T>* edgelist, const char* fname_in, bool randomize=false) {
-  load_edgelist_txt(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
-
-  if (randomize) {
-    randomize_edgelist_square<T>(edgelist, get_global_nrank());
-  }
+void WriteEdges(const edgelist_t<T>& edgelist, const char* fname_in, bool binaryformat=true, bool header=true, bool edgeweights=true) {
+  write_edgelist(fname_in, edgelist, binaryformat, header, edgeweights);
 }
-
-template <typename T>
-void WriteEdgesTxt(const edgelist_t<T>& edgelist, const char* fname_in) {
-  write_edgelist_txt(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
-}
-
-template <typename T>
-void WriteEdgesBin(const edgelist_t<T>& edgelist, const char* fname_in) {
-  write_edgelist_bin(fname_in, get_global_myrank(), get_global_nrank(), edgelist);
-}
-
-
 
 #endif  // SRC_EDGELIST_H_

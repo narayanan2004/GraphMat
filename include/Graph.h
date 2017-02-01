@@ -183,7 +183,8 @@ void Graph<V,E>::MTXFromEdgelist(GraphMat::edgelist_t<E> A_edges) {
 template<class V, class E>
 void Graph<V,E>::ReadMTX(const char* filename, int grid_size) {
   GraphMat::edgelist_t<E> A_edges;
-  GraphMat::ReadEdgesBin(&A_edges, filename, false);
+  //GraphMat::ReadEdgesBin(&A_edges, filename, false);
+  GraphMat::ReadEdges(&A_edges, filename);
   MTXFromEdgelist(A_edges);
   A_edges.clear();
 }
