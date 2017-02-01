@@ -33,6 +33,8 @@
 #ifndef SRC_EDGELIST_H_
 #define SRC_EDGELIST_H_
 
+#include <string>
+
 template <typename T>
 struct edge_t {
   edge_t() {}
@@ -111,7 +113,7 @@ bool readLine (FILE * ifile, int * src, int * dst, T * val, bool binaryformat=tr
       } if (std::is_same<T, unsigned int>::value) {
         fscanf(ifile, "%d %d %u", src, dst, val);
       }else {
-        std::cout << "Data type not supported \n";
+        std::cout << "Data type not supported " << std::endl;
       }
     } else {
       fscanf(ifile, "%d %d", src, dst);
@@ -149,7 +151,7 @@ void get_maxid_and_nnz(FILE* fp, int* m, int* n, unsigned long int* nnz, bool bi
       if(feof(fp)) {
         break;
       }
-      if (!readLine(fp, &tempsrc, &tempdst, &tempval, binaryformat, edgeweights)) {
+      if (!readLine<T>(fp, &tempsrc, &tempdst, &tempval, binaryformat, edgeweights)) {
         break;
       }
       maxm = (maxm > tempsrc)?(maxm):(tempsrc);
@@ -167,12 +169,12 @@ template<typename T>
 void writeLine (FILE* ofile, int src, int dst, T val, bool binaryformat=true, bool edgeweights=true)
 {
   if (binaryformat) {
-      auto fwrite_bytes = fwrite(&src, sizeof(int), 1, fp);
+      auto fwrite_bytes = fwrite(&src, sizeof(int), 1, ofile);
       assert(fwrite_bytes == 1);
-      fwrite_bytes = fwrite(&dst, sizeof(int), 1, fp);
+      fwrite_bytes = fwrite(&dst, sizeof(int), 1, ofile);
       assert(fwrite_bytes == 1);
       if (edgeweights) {
-        fwrite_bytes = fwrite(&val, sizeof(T), 1, fp);
+        fwrite_bytes = fwrite(&val, sizeof(T), 1, ofile);
         assert(fwrite_bytes == 1);
       }
   } else {
@@ -301,7 +303,7 @@ void load_edgelist(const char* dir, edgelist_t<T>* edgelist,
       if (feof(fp)) {
         break;
       }
-      if (!readLine(fp, &(edgelist->edges[nnzcnt].src), &(edgelist->edges[nnzcnt].dst), &(edgelist->edges[nnzcnt].val), binaryformat, edgeweights)) {
+      if (!readLine<T>(fp, &(edgelist->edges[nnzcnt].src), &(edgelist->edges[nnzcnt].dst), &(edgelist->edges[nnzcnt].val), binaryformat, edgeweights)) {
         break;
       }
       #ifdef __DEBUG
@@ -323,7 +325,7 @@ void load_edgelist(const char* dir, edgelist_t<T>* edgelist,
 }
 
 template <typename T>
-void randomize_edgelist_square(edgelist_t<T>* edgelist, int nrank) {
+void randomize_edgelist_square(edgelist_t<T>* edgelist) {
   unsigned int* mapping = new unsigned int[edgelist->m];
   unsigned int* rval = new unsigned int[edgelist->m];
 
@@ -436,7 +438,7 @@ void ReadEdges(edgelist_t<T>* edgelist, const char* fname_in, bool binaryformat=
   load_edgelist(fname_in, edgelist, binaryformat, header, edgeweights);
 
   if (randomize) {
-    randomize_edgelist_square<T>(edgelist, get_global_nrank());
+    randomize_edgelist_square<T>(edgelist);
   }
 }
 
