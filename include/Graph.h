@@ -197,7 +197,13 @@ void Graph<V,E>::ReadGraphMatBin(const char* filename) {
   std::cout << "Reading file " << fname_ss.str() << std::endl;
   std::ifstream ifilestream(fname_ss.str().c_str(), std::ios::in|std::ios::binary);
   boost::archive::binary_iarchive bi(ifilestream);
+
+  struct timeval start, end;
+  gettimeofday(&start, 0);
   bi >> *this;
+  gettimeofday(&end, 0);
+  std::cout << "Finished GraphMat read + construction, time: " << sec(start,end)  << std::endl;
+
   ifilestream.close();
 }
 
@@ -217,7 +223,7 @@ void Graph<V,E>::MTXFromEdgelist(GraphMat::edgelist_t<E> A_edges) {
   //if (GraphMat::global_nrank == 1) {
   //  vertexID_randomization = false;
   //} else {
-  vertexID_randomization = true;
+  //vertexID_randomization = true;
   //}
 
   struct timeval start, end;

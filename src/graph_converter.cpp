@@ -211,7 +211,7 @@ void process_graph(const char * ifilename, const char * ofilename, struct myopti
 	if (Opt.outputformat == 0 || Opt.outputformat==1) {
           bool binaryformat = (Opt.outputformat == 0);
           bool header = (Opt.outputheader == 1);
-          bool edgeweights = (Opt.outputedgeweights == 1);
+          bool edgeweights = (Opt.outputedgeweights != 0);
 	  GraphMat::write_edgelist<T>(ofilename, edgelist, binaryformat, header, edgeweights);
 	}
 	if (Opt.outputformat == 2) {
