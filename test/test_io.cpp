@@ -35,6 +35,7 @@
 #include "catch.hpp"
 #include "generator.h"
 #include "test_utils.h"
+#include "Graph.h"
 
 template<typename T>
 void test_read_mtx(int n) {
@@ -43,7 +44,6 @@ void test_read_mtx(int n) {
   std::string tempfilenamestr = "GM_tempfileXXXXXX" + std::to_string(GraphMat::get_global_myrank());
   int suffixlen = std::to_string(GraphMat::get_global_myrank()).size();
   char* tempfilename = new char[tempfilenamestr.size()+1];
-  std::cout << tempfilenamestr << " " << suffixlen << std::endl;
 
   int fd;
   do {
@@ -138,13 +138,73 @@ void test_read_mtx(int n) {
   E2_out.clear();
 }
 
+template<typename T>
+void test_read_gm_bin(int n) {
+  auto E = generate_dense_edgelist<T>(n);
+  GraphMat::edgelist_t<T> E2;
+
+  std::string tempfilenamestr = "GM_tempfileXXXXXX" + std::to_string(GraphMat::get_global_myrank());
+  int suffixlen = std::to_string(GraphMat::get_global_myrank()).size();
+  char* tempfilename = new char[tempfilenamestr.size()+1];
+
+  int fd;
+  do {
+    memcpy(tempfilename, tempfilenamestr.c_str(), tempfilenamestr.size()*sizeof(char));
+    tempfilename[tempfilenamestr.size()] = '\0';
+    fd = mkstemps(tempfilename, suffixlen);
+  } while(fd == -1);
+  REQUIRE(fd != -1);
+ 
+  char* tempfilenamewithoutsuffix = new char[tempfilenamestr.size() - suffixlen + 1];
+  memcpy(tempfilenamewithoutsuffix, tempfilename, (tempfilenamestr.size() - suffixlen)*sizeof(char));
+  tempfilenamewithoutsuffix[ tempfilenamestr.size() - suffixlen] = '\0';
+
+  {
+    GraphMat::Graph<int, T> G;
+    G.MTXFromEdgelist(E);
+    G.WriteGraphMatBin(tempfilenamewithoutsuffix);
+  }
+
+
+  {
+    GraphMat::Graph<double, T> G2;
+    G2.ReadGraphMatBin(tempfilenamewithoutsuffix);
+    G2.getEdgelist(E2); 
+  }
+
+  unlink(tempfilename);
+
+  GraphMat::edgelist_t<T> E_out;
+  collect_edges(E, E_out);
+  std::sort(E_out.edges, E_out.edges + E_out.nnz, edge_compare<T>);
+
+  GraphMat::edgelist_t<T> E2_out;
+  collect_edges(E2, E2_out);
+  std::sort(E2_out.edges, E2_out.edges + E2_out.nnz, edge_compare<T>);
+
+  REQUIRE(E_out.nnz == E2_out.nnz);
+  for (int i = 0; i < E_out.nnz; i++) {
+    REQUIRE(E_out.edges[i].src == E2_out.edges[i].src);
+    REQUIRE(E_out.edges[i].dst == E2_out.edges[i].dst);
+    REQUIRE(E_out.edges[i].val == E2_out.edges[i].val);
+  }
+  E.clear();
+  E_out.clear();
+  E2.clear();
+  E2_out.clear();
+}
+
 TEST_CASE("IO") 
 {
-  SECTION("Test file IO (int)") {
+  SECTION("Test file IO (int mtx)") {
     test_read_mtx<int>(10);
   }
-  SECTION("Test file IO (float)") {
+  SECTION("Test file IO (float mtx)") {
     test_read_mtx<float>(10);
+  }
+  SECTION("Test file IO (GM bin)") {
+    test_read_gm_bin<int>(10);
+    test_read_gm_bin<float>(10);
   }
 }
 
