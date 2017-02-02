@@ -3,6 +3,9 @@ GraphMat graph analytics framework
 
 [![Build Status](https://travis-ci.org/narayanan2004/GraphMat.svg?branch=distributed_primitives_integration)](https://travis-ci.org/narayanan2004/GraphMat)
 
+Note: This is a major update from GraphMat v1.0 (single node and distributed).
+Please see changelog for details.
+
 Requirements:
 ------------
 - Intel compiler (icpc) + Intel MPI (mpiicpc + mpi libraries)
@@ -10,6 +13,8 @@ Requirements:
 (or)
 
 - GCC + MPICH (Other MPI libraries not tested)
+
+- Boost serialization library (links to libboost\_serialization)
 
 To compile with Intel compiler + Intel MPI :
 --------------------------------------------
@@ -41,9 +46,13 @@ GraphMat uses Catch, a C++ based testing framework.
     git submodule update
     make test
 
-To run all the tests,
+To run all the tests with a single MPI rank,
 
     ./testbin/test 
+
+Tests are also runnable in distributed mode with multiple ranks,
+
+    mpirun -np <NRANKS> ./testbin/test
 
 You can also do 
     ./testbin/test -? 
@@ -59,7 +68,11 @@ format.
 To convert from a text file with 3 white space separated columns
 (`src, dst, edge_value`) to GraphMat format, do
 
-    bin/graph_converter --selfloops 1 --duplicatededges 1 --inputformat 1 --outputformat 0 --inputheader 0 --outputheader 1 --nvertices < nvertices > < input text file > < output graphmat file >
+    mpirun -np <NRANKS> bin/graph_converter --selfloops 1 --duplicatededges 1 --inputformat 1 --outputformat 0 --inputheader 0 --outputheader 1 --nvertices < nvertices > < input text file prefix> < output graphmat file prefix>
+
+This command reads input files (inputfile0, inputfile1, inputfile2 .. inputfilen)
+in text format and converts it into files
+(outfile0, outfile1, outfile2 ... outfile<nranks>) in GraphMat friendly format.
 
 You can remove selfloops and duplicatededges (when multiple edges with
 same src and dst are found, only one is retained) by changing their
