@@ -79,7 +79,7 @@ inline double get_compression_threshold() {
 
 class Serializable {};
 
-#include "GMDP/matrices/edgelist.h"
+#include "GMDP/utils/edgelist.h"
 #include "GMDP/matrices/SpMat.h"
 #include "GMDP/matrices/layouts.h"
 #include "GMDP/matrices/COOSIMD32Tile.h"
