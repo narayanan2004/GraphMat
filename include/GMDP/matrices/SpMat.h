@@ -331,8 +331,6 @@ class SpMat {
 
   ~SpMat()
   {
-    int global_nrank = get_global_nrank();
-    int global_myrank = get_global_myrank();
     for(auto it1 = tiles.begin() ; it1 != tiles.end() ; it1++)
     {
       for(auto it2 = it1->begin() ; it2 != it1->end() ; it2++)
