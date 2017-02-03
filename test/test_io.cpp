@@ -38,7 +38,7 @@
 #include "Graph.h"
 
 template<typename T>
-void test_read_mtx(int n) {
+void test_read_mtx(int n, bool binaryformat, bool header, bool edgeweights) {
   auto E = generate_dense_edgelist<T>(n);
 
   std::string tempfilenamestr = "GM_tempfileXXXXXX" + std::to_string(GraphMat::get_global_myrank());
@@ -58,63 +58,9 @@ void test_read_mtx(int n) {
   tempfilenamewithoutsuffix[ tempfilenamestr.size() - suffixlen] = '\0';
 
   GraphMat::edgelist_t<T> E2;
-  bool edgeweights;
 
-  SECTION("Test text format with header and edgeweights") 
-  {
-  edgeweights = true;
-  GraphMat::write_edgelist(tempfilenamewithoutsuffix, E, false, true, edgeweights); //text format with header and edgeweights
-  GraphMat::load_edgelist<T>(tempfilenamewithoutsuffix, &E2, false, true, edgeweights);
-  }
-
-  SECTION("Test text format with no header and edgeweights") 
-  {
-  edgeweights = true;
-  GraphMat::write_edgelist(tempfilenamewithoutsuffix, E, false, false, edgeweights); //text format with header and edgeweights
-  GraphMat::load_edgelist<T>(tempfilenamewithoutsuffix, &E2, false, false, edgeweights);
-  } 
-
-  SECTION("Test text format with no header and no edgeweights") 
-  {
-  edgeweights = false;
-  GraphMat::write_edgelist(tempfilenamewithoutsuffix, E, false, false, edgeweights); //text format with header and edgeweights
-  GraphMat::load_edgelist<T>(tempfilenamewithoutsuffix, &E2, false, false, edgeweights);
-  }
-
-  SECTION("Test text format with header and no edgeweights") 
-  {
-  edgeweights = false;
-  GraphMat::write_edgelist<T>(tempfilenamewithoutsuffix, E, false, true, edgeweights); //text format with header and edgeweights
-  GraphMat::load_edgelist<T>(tempfilenamewithoutsuffix, &E2, false, true, edgeweights);
-  }
-
-  SECTION("Test binary format with header and edgeweights") 
-  {
-  edgeweights = true;
-  GraphMat::write_edgelist(tempfilenamewithoutsuffix, E, true, true, edgeweights); //text format with header and edgeweights
-  GraphMat::load_edgelist<T>(tempfilenamewithoutsuffix, &E2, true, true, edgeweights);
-  }
-
-  SECTION("Test binary format with no header and edgeweights") 
-  {
-  edgeweights = true;
-  GraphMat::write_edgelist(tempfilenamewithoutsuffix, E, true, false, edgeweights); //text format with header and edgeweights
-  GraphMat::load_edgelist<T>(tempfilenamewithoutsuffix, &E2, true, false, edgeweights);
-  } 
-
-  SECTION("Test binary format with no header and no edgeweights") 
-  {
-  edgeweights = false;
-  GraphMat::write_edgelist(tempfilenamewithoutsuffix, E, true, false, edgeweights); //text format with header and edgeweights
-  GraphMat::load_edgelist<T>(tempfilenamewithoutsuffix, &E2, true, false, edgeweights);
-  }
-
-  SECTION("Test binary format with header and no edgeweights") 
-  {
-  edgeweights = false;
-  GraphMat::write_edgelist<T>(tempfilenamewithoutsuffix, E, true, true, edgeweights); //text format with header and edgeweights
-  GraphMat::load_edgelist<T>(tempfilenamewithoutsuffix, &E2, true, true, edgeweights);
-  } 
+  GraphMat::write_edgelist(tempfilenamewithoutsuffix, E, binaryformat, header, edgeweights); //text format with header and edgeweights
+  GraphMat::load_edgelist<T>(tempfilenamewithoutsuffix, &E2, binaryformat, header, edgeweights);
 
   unlink(tempfilename);
 
@@ -197,10 +143,24 @@ void test_read_gm_bin(int n) {
 TEST_CASE("IO") 
 {
   SECTION("Test file IO (int mtx)") {
-    test_read_mtx<int>(10);
+    test_read_mtx<int>(10, true, true, true);
+    test_read_mtx<int>(10, true, true, false);
+    test_read_mtx<int>(10, true, false, true);
+    test_read_mtx<int>(10, true, false, false);
+    test_read_mtx<int>(10, false, true, true);
+    test_read_mtx<int>(10, false, true, false);
+    test_read_mtx<int>(10, false, false, true);
+    test_read_mtx<int>(10, false, false, false);
   }
   SECTION("Test file IO (float mtx)") {
-    test_read_mtx<float>(10);
+    test_read_mtx<float>(10, true, true, true);
+    test_read_mtx<float>(10, true, true, false);
+    test_read_mtx<float>(10, true, false, true);
+    test_read_mtx<float>(10, true, false, false);
+    test_read_mtx<float>(10, false, true, true);
+    test_read_mtx<float>(10, false, true, false);
+    test_read_mtx<float>(10, false, false, true);
+    test_read_mtx<float>(10, false, false, false);
   }
   SECTION("Test file IO (GM bin)") {
     test_read_gm_bin<int>(10);
