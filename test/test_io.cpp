@@ -46,11 +46,9 @@ void test_read_mtx(int n, bool binaryformat, bool header, bool edgeweights) {
   char* tempfilename = new char[tempfilenamestr.size()+1];
 
   int fd;
-  do {
-    memcpy(tempfilename, tempfilenamestr.c_str(), tempfilenamestr.size()*sizeof(char));
-    tempfilename[tempfilenamestr.size()] = '\0';
-    fd = mkstemps(tempfilename, suffixlen);
-  } while(fd == -1);
+  memcpy(tempfilename, tempfilenamestr.c_str(), tempfilenamestr.size()*sizeof(char));
+  tempfilename[tempfilenamestr.size()] = '\0';
+  fd = mkstemps(tempfilename, suffixlen);
   REQUIRE(fd != -1);
  
   char* tempfilenamewithoutsuffix = new char[tempfilenamestr.size() - suffixlen + 1];
@@ -59,10 +57,11 @@ void test_read_mtx(int n, bool binaryformat, bool header, bool edgeweights) {
 
   GraphMat::edgelist_t<T> E2;
 
-  GraphMat::write_edgelist(tempfilenamewithoutsuffix, E, binaryformat, header, edgeweights); //text format with header and edgeweights
+  GraphMat::write_edgelist<T>(tempfilenamewithoutsuffix, E, binaryformat, header, edgeweights); //text format with header and edgeweights
   GraphMat::load_edgelist<T>(tempfilenamewithoutsuffix, &E2, binaryformat, header, edgeweights);
 
   unlink(tempfilename);
+  MPI_Barrier(MPI_COMM_WORLD);
 
   GraphMat::edgelist_t<T> E_out;
   collect_edges(E, E_out);
@@ -94,11 +93,9 @@ void test_read_gm_bin(int n) {
   char* tempfilename = new char[tempfilenamestr.size()+1];
 
   int fd;
-  do {
-    memcpy(tempfilename, tempfilenamestr.c_str(), tempfilenamestr.size()*sizeof(char));
-    tempfilename[tempfilenamestr.size()] = '\0';
-    fd = mkstemps(tempfilename, suffixlen);
-  } while(fd == -1);
+  memcpy(tempfilename, tempfilenamestr.c_str(), tempfilenamestr.size()*sizeof(char));
+  tempfilename[tempfilenamestr.size()] = '\0';
+  fd = mkstemps(tempfilename, suffixlen);
   REQUIRE(fd != -1);
  
   char* tempfilenamewithoutsuffix = new char[tempfilenamestr.size() - suffixlen + 1];
