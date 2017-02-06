@@ -142,7 +142,8 @@ void get_maxid_and_nnz(FILE* fp, int* m, int* n, unsigned long int* nnz, bool bi
       *n = tmp_[1];
       *nnz = tmp_[2];
     } else {
-      fscanf(fp, "%d %d %u", &(tmp_[0]), &(tmp_[1]), &(tmp_[2]));
+      int ret = fscanf(fp, "%d %d %u", &(tmp_[0]), &(tmp_[1]), &(tmp_[2]));
+      assert(ret == 3);
       *m = tmp_[0];
       *n = tmp_[1];
       *nnz = tmp_[2];
