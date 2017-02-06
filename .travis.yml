@@ -20,8 +20,8 @@ before_install:
 # Build steps
 script:
 # - source ~/.bashrc
- - make MPICXX=mpic++ CXX=g++
- - make MPICXX=mpic++ CXX=g++ test
+ - make MPICXX=mpic++ CXX=g++ -j
+ - make MPICXX=mpic++ CXX=g++ test -j
  - ./testbin/test
  - mpirun -np 4 ./testbin/test
 #Uninstall intel tools
