@@ -55,14 +55,14 @@ struct edgelist_t {
   int m;
   int n;
   int nnz;
-  edgelist_t() : m(0), n(0), nnz(0) {}
+  edgelist_t() : m(0), n(0), nnz(0), edges(nullptr) {}
   edgelist_t(int _m, int _n, int _nnz)
   {
     m = _m;
     n = _n;
     nnz = _nnz;
     if(nnz > 0) {
-      edges = (edge_t<T>*)_mm_malloc(nnz * sizeof(edge_t<T>), 64);
+      edges = reinterpret_cast<edge_t<T>*>(_mm_malloc((size_t)nnz * sizeof(edge_t<T>), 64));
     }
   }
   edgelist_t(edge_t<T>* edges, int m, int n, int nnz) : edges(edges), m(m), n(n), nnz(nnz) {}
@@ -70,7 +70,7 @@ struct edgelist_t {
     if (nnz > 0) {
       _mm_free(edges);
     }
-    edges = NULL;
+    edges = nullptr;
     nnz = 0;
     m = 0;
     n = 0;
@@ -104,20 +104,27 @@ bool readLine (FILE * ifile, int * src, int * dst, T * val, bool binaryformat=tr
     }
   } else {
     if (edgeweights) {
+      int ret;
       if (std::is_same<T, float>::value) {
-        fscanf(ifile, "%d %d %f", src, dst, val);
+        ret = fscanf(ifile, "%d %d %f", src, dst, val);
+        if (ret != 3) return false;
       } else if (std::is_same<T, double>::value) {
-        fscanf(ifile, "%d %d %lf", src, dst, val);
+        ret = fscanf(ifile, "%d %d %lf", src, dst, val);
+        if (ret != 3) return false;
       } else if (std::is_same<T, int>::value) {
-        fscanf(ifile, "%d %d %d", src, dst, val);
+        ret = fscanf(ifile, "%d %d %d", src, dst, val);
+        if (ret != 3) return false;
       } else if (std::is_same<T, unsigned int>::value) {
-        fscanf(ifile, "%d %d %u", src, dst, val);
+        ret = fscanf(ifile, "%d %d %u", src, dst, val);
+        if (ret != 3) return false;
       }else {
         std::cout << "Data type not supported (read)" << std::endl;
       }
     } else {
-      fscanf(ifile, "%d %d", src, dst);
-      *val = (T)(1);
+      int ret = fscanf(ifile, "%d %d", src, dst);
+      if (ret == 2) {
+        *val = (T)(1);
+      } else return false;
     }
     if (feof(ifile)) return false;
   }
@@ -225,7 +232,7 @@ void write_edgelist(const char* dir, const edgelist_t<T> & edgelist,
   }
   for(auto i = 0 ; i < edgelist.nnz ; i++)
   {
-    writeLine(fp, edgelist.edges[i].src, edgelist.edges[i].dst, edgelist.edges[i].val, binaryformat, edgeweights);
+    writeLine<T>(fp, edgelist.edges[i].src, edgelist.edges[i].dst, edgelist.edges[i].val, binaryformat, edgeweights);
   }
   fclose(fp);
 }
