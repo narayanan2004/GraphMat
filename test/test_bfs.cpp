@@ -240,19 +240,19 @@ TEST_CASE("BFS tests", "[bfs][uppertriangular][dense]")
   SECTION("BFS upper triangular size 500") {
     test_ut_bfs(500);
   }
-  SECTION("BFS upper triangular size 1000") {
-    test_ut_bfs(1000);
+  SECTION("BFS upper triangular size 100") {
+    test_ut_bfs(100);
   }
   SECTION("BFS dense size 500") {
     test_dense_bfs(500);
   }
-  SECTION("BFS dense size 1000") {
-    test_dense_bfs(1000);
+  SECTION("BFS dense size 100") {
+    test_dense_bfs(100);
   }
   SECTION("BFS chain size 500") {
     test_chain_bfs(500);
   }
-  SECTION("BFS chain size 1000") {
-    test_chain_bfs(1000);
+  SECTION("BFS chain size 100") {
+    test_chain_bfs(100);
   }
 }
