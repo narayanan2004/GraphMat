@@ -130,8 +130,8 @@ void test_get_neighbors(int n) {
 
 TEST_CASE("Get neighbors tests")
 {
-  SECTION("getneighbors 1000") {
-    test_get_neighbors(1000);
+  SECTION("getneighbors 100") {
+    test_get_neighbors(100);
   }
 }
 
