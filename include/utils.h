@@ -36,7 +36,7 @@
 #include "immintrin.h"
 
 //SSE 
-#define CPU_FREQ (2.7e9)
+//#define CPU_FREQ (2.7e9)
 
 #define SIMD_WIDTH (4)
 #define SIMDINTTYPE         __m128i

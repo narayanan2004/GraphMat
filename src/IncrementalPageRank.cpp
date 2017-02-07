@@ -28,9 +28,7 @@
 * ******************************************************************************/
 /* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
-#include "GraphMatRuntime.cpp"
-
-#include "Degree.cpp"
+#include "GraphMatRuntime.h"
 
 class dPR {
   public:
@@ -51,8 +49,35 @@ class dPR {
     }
 };
 
+template<class V, class E=int>
+class Degree : public GraphMat::GraphProgram<int, int, V, E> {
+  public:
 
-class DeltaPageRank : public GraphProgram<double, double, dPR> {
+  Degree() {
+    this->order = GraphMat::IN_EDGES;
+    this->process_message_requires_vertexprop = false;
+  }
+
+  bool send_message(const V& vertexprop, int& message) const {
+    message = 1;
+    return true;
+  }
+
+  void process_message(const int& message, const E edge_value, const V& vertexprop, int& result) const {
+    result = message;
+  }
+
+  void reduce_function(int& a, const int& b) const {
+    a += b;
+  }
+
+  void apply(const int& message_out, V& vertexprop) {
+    vertexprop.degree = message_out; 
+  }
+
+};
+
+class DeltaPageRank : public GraphMat::GraphProgram<double, double, dPR> {
   public:
     double alpha;
     int iter;
@@ -62,8 +87,9 @@ class DeltaPageRank : public GraphProgram<double, double, dPR> {
   DeltaPageRank(double a=0.3) {
     alpha = a;
     iter = 0;
-    this->order = OUT_EDGES;
-    this->activity=ACTIVE_ONLY;
+    this->order = GraphMat::OUT_EDGES;
+    this->activity=GraphMat::ACTIVE_ONLY;
+    this->process_message_requires_vertexprop = false;
   }
 
   void reduce_function(double& a, const double& b) const {
@@ -99,47 +125,51 @@ class DeltaPageRank : public GraphProgram<double, double, dPR> {
 //-------------------------------------------------------------------------
 
 
-void run_pagerank(const char* filename, int nthreads) {
+void run_pagerank(const char* filename) {
 
-  Graph<dPR> G;
+  GraphMat::Graph<dPR> G;
   DeltaPageRank dpr;
   Degree<dPR, int> dg;
   
-  G.ReadMTX(filename, nthreads*4); //nthread*4 pieces of matrix
+  G.ReadMTX(filename); 
 
-  auto dg_tmp = graph_program_init(dg, G);
+  auto dg_tmp = GraphMat::graph_program_init(dg, G);
 
   struct timeval start, end;
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  run_graph_program(&dg, G, 1, &dg_tmp);
+  GraphMat::run_graph_program(&dg, G, 1, &dg_tmp);
 
   gettimeofday(&end, 0);
   double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
   printf("Degree Time = %.3f ms \n", time);
 
-  graph_program_clear(dg_tmp);
+  GraphMat::graph_program_clear(dg_tmp);
   
-  auto dpr_tmp = graph_program_init(dpr, G);
+  auto dpr_tmp = GraphMat::graph_program_init(dpr, G);
 
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  run_graph_program(&dpr, G, -1, &dpr_tmp);
+  GraphMat::run_graph_program(&dpr, G, GraphMat::UNTIL_CONVERGENCE, &dpr_tmp);
   
   gettimeofday(&end, 0);
   time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
   printf("PR Time = %.3f ms \n", time);
 
-  graph_program_clear(dpr_tmp);
+  GraphMat::graph_program_clear(dpr_tmp);
 
   for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.getNumberOfVertices()); i++) { 
-    printf("%d : %d %f\n", i, G.getVertexproperty(i).degree, G.getVertexproperty(i).pagerank);
+    if (G.vertexNodeOwner(i)) {
+      printf("%d : %d %f\n", i, G.getVertexproperty(i).degree, G.getVertexproperty(i).pagerank);
+    }
   }
+  
 }
 
 int main(int argc, char* argv[]) {
+  MPI_Init(&argc, &argv);
 
   const char* input_filename = argv[1];
 
@@ -147,18 +177,9 @@ int main(int argc, char* argv[]) {
     printf("Correct format: %s A.mtx\n", argv[0]);
     return 0;
   }
+  run_pagerank(input_filename);
 
-#pragma omp parallel
-  {
-#pragma omp single
-    {
-      nthreads = omp_get_num_threads();
-      printf("num threads got: %d\n", nthreads);
-    }
-  }
-  
-
-  run_pagerank(input_filename, nthreads);
+  MPI_Finalize();
   
 }
 

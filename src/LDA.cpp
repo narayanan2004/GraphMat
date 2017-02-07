@@ -29,20 +29,21 @@
 /* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
 #include <omp.h>
-#include "GraphMatRuntime.cpp"
+#include <mpi.h>
+#include "GraphMatRuntime.h"
 #include <algorithm>
 #include <iomanip>
-
-const int MAX_THREADS = 128;
 
 template <unsigned int K>
 class LatentVector {
   public:
     double N[K];
     char type;
+    double token_loglik;
 
   public:
     LatentVector() {
+      token_loglik = 0.0;
     }
     ~LatentVector() {
     }
@@ -66,12 +67,13 @@ class LatentVector {
 
 };
 template<unsigned int K>
-class LDAInitProgram : public GraphProgram<LatentVector<K>, LatentVector<K>, LatentVector<K> > {
+class LDAInitProgram : public GraphMat::GraphProgram<LatentVector<K>, LatentVector<K>, LatentVector<K> > {
 
   public:
     LDAInitProgram() {
-      this->order = ALL_EDGES;// check
-      this->activity = ALL_VERTICES;
+      this->order = GraphMat::ALL_EDGES;// check
+      this->activity = GraphMat::ALL_VERTICES;
+      this->process_message_requires_vertexprop = false;
     }
 
 
@@ -124,27 +126,24 @@ void Add(LatentVector<K> v1, LatentVector<K> v2, LatentVector<K>* out, void* par
 }
 
 template<unsigned int K>
-class LDAProgram : public GraphProgram<LatentVector<K>, LatentVector<K>, LatentVector<K> > {
+class LDAProgram : public GraphMat::GraphProgram<LatentVector<K>, LatentVector<K>, LatentVector<K> > {
   public:
     double alpha;
     double eta;
     double vocab_size;
     LatentVector<K> global_N;
-    Graph<LatentVector<K> >& graph_ref;
+    GraphMat::Graph<LatentVector<K> >& graph_ref;
 
   public:
-    LDAProgram(Graph<LatentVector<K> >& G, double a, double e, double V) : 
+    LDAProgram(GraphMat::Graph<LatentVector<K> >& G, double a, double e, double V) : 
                 graph_ref(G), alpha(a), eta(e), vocab_size(V) {
-      this->order = ALL_EDGES;// check
-      this->activity = ALL_VERTICES;
+      this->order = GraphMat::ALL_EDGES;// check
+      this->activity = GraphMat::ALL_VERTICES;
     }
 
     void calcGlobalN() {
       for (int i = 0; i < K; i++) global_N.N[i] = 0;
       graph_ref.applyReduceAllVertices(&global_N, IfTerm, Add);
-      //std::cout << "global_N " <<std::endl;
-      //for (int i = 0; i < K; i++) std::cout << global_N.N[i] << " ";
-      //std::cout << std::endl;
     }
 
   void reduce_function(LatentVector<K>& v, const LatentVector<K>& w) const {
@@ -193,6 +192,64 @@ class LDAProgram : public GraphProgram<LatentVector<K>, LatentVector<K>, LatentV
   }
 };
 
+template<unsigned int K>
+class LDALLProgram : public GraphMat::GraphProgram<LatentVector<K>, double, LatentVector<K> > {
+
+  public:
+    LatentVector<K> N_k;
+    double eta;
+    int nterms;
+
+    LDALLProgram(LatentVector<K> _N_k, double _eta, int _nterms) : 
+    N_k(_N_k), eta(_eta), nterms(_nterms) {
+      this->activity = GraphMat::ALL_VERTICES;
+      this->order = GraphMat::OUT_EDGES;
+      assert(eta > 1.0);
+      //smoothed N_k
+      for (int i = 0; i < K; i++) {
+        N_k.N[i] = N_k.N[i] + nterms*(eta-1.0);
+      }
+    }
+
+
+  void reduce_function(double& v, const double& w) const {
+    v += w;
+  }
+
+  void process_message(const LatentVector<K>& message, const int edge_value, 
+                        const LatentVector<K>& vertexprop, double& res) const {
+    double phi_wk[K];
+    double theta_kj[K];
+
+    double sum = 0;
+
+    for (int i = 0; i < K; i++) {
+      phi_wk[i] = (vertexprop.N[i] + (eta - 1.0))/(N_k.N[i]);
+      theta_kj[i] = (message.N[i] + (eta - 1.0));
+      sum += theta_kj[i];
+    }
+    for (int i = 0; i < K; i++) {
+      theta_kj[i] /= sum;
+    }
+
+    double dot = 0.0;
+    for (int i = 0; i < K; i++) {
+      dot += phi_wk[i] * theta_kj[i];
+    }
+    res = edge_value * log(dot);
+  }
+
+  bool send_message(const LatentVector<K>& vertexprop, LatentVector<K>& message) const {
+    message = vertexprop;
+    return true;
+  }
+
+  void apply(const double& message_out, LatentVector<K>& vertexprop) {
+    vertexprop.token_loglik = message_out;
+  }
+};
+
+
 int getnthelement(const double *arr_in, int n, int p) {
   double* arr = new double[n];
   memcpy(arr, arr_in, sizeof(double)*n);
@@ -201,10 +258,17 @@ int getnthelement(const double *arr_in, int n, int p) {
   return std::distance(arr_in, pos);
 }
 
-void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations=10) {
+template<unsigned int K>
+void return_ll(LatentVector<K>* v, double* out, void* param) {
+  *out = v->token_loglik;
+}
+
+
+void run_lda(char* filename, int ndoc, int nterms, int niterations=10) {
   const int k = 20;
-  Graph< LatentVector<k> > G;
-  G.ReadMTX(filename, nthreads*8); //nthread pieces of matrix
+  GraphMat::Graph< LatentVector<k> > G;
+  G.ReadMTX(filename); 
+
   if (ndoc + nterms != G.getNumberOfVertices()) {
     std::cout << "Number of vertices in graph != NDOC + NTERMS" << std::endl;
     exit(1);
@@ -220,20 +284,16 @@ void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations
     G.setVertexproperty(i, v);
   }
 
-//  initializeWeights(G);
+  //  initializeWeights(G);
   LDAInitProgram<k> ldainit_program;
   G.setAllActive();
-  run_graph_program(&ldainit_program, G, 1);
-  /*for (int i = 1; i <= std::min(10, G.getNumberOfVertices()); i++) { 
-    printf("%d : ", i) ;
-    G.getVertexproperty(i).print();
-    printf("\n");
-  }*/
-
-
-  LDAProgram<k> ldap(G, 1, 1, nterms);
+  GraphMat::run_graph_program(&ldainit_program, G, 1);
+ 
+  double alpha = 1.0;
+  double eta = 5.0;
+  LDAProgram<k> ldap(G, alpha, eta, nterms);
   ldap.calcGlobalN();
-  auto ldap_tmp = graph_program_init(ldap, G);
+  auto ldap_tmp = GraphMat::graph_program_init(ldap, G);
 
   printf("LDA Init over\n");
   
@@ -242,28 +302,46 @@ void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  run_graph_program(&ldap, G, niterations, &ldap_tmp);
+  GraphMat::run_graph_program(&ldap, G, niterations, &ldap_tmp);
 
   gettimeofday(&end, 0);
   
   double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
   printf("Time = %.3f ms \n", time);
 
-  graph_program_clear(ldap_tmp);
+  GraphMat::graph_program_clear(ldap_tmp);
 
   for (int i = 1; i <= std::min(5, ndoc); i++) { 
-    printf("%d : ", i) ;
-    G.getVertexproperty(i).print();
-    printf("\n");
+    if (G.vertexNodeOwner(i)) {
+      printf("%d : ", i) ;
+      G.getVertexproperty(i).print();
+      printf("\n");
+    }
   }
   for (int i = 1; i <= std::min(5, nterms); i++) { 
-    printf("%d : ", i+ndoc) ;
-    G.getVertexproperty(i+ndoc).print();
-    printf("\n");
+    if(G.vertexNodeOwner(i+ndoc)) {
+      printf("%d : ", i+ndoc) ;
+      G.getVertexproperty(i+ndoc).print();
+      printf("\n");
+    }
+  }
+
+  /** 
+  Calculate log likelihood
+  P(doc | words, topic distributions, alpha, eta)
+  */
+  auto Nk = ldap.global_N;
+  LDALLProgram<k> ldall(Nk, eta, nterms);
+  G.setAllActive();
+  GraphMat::run_graph_program(&ldall, G, 1);
+  double total_ll = 0.0;
+  G.applyReduceAllVertices(&total_ll, return_ll<k>);
+  if (GraphMat::get_global_myrank() == 0) {
+    printf("Total Loglikelihood = %lf \n", total_ll);
   }
 
   //Calculate topic-word distributions
-  double *phi = new double[k*nterms];
+  /*double *phi = new double[k*nterms];
   for (int i = 0; i < nterms; i++){
     assert(G.getVertexproperty(i+ndoc+1).type == 'w');
     for (int j = 0; j < k; j++) { 
@@ -293,7 +371,7 @@ void run_lda(char* filename, int nthreads, int ndoc, int nterms, int niterations
     }
   }
 
-  delete [] phi;
+  delete [] phi;*/
 }
 
 int main(int argc, char* argv[]) {
@@ -301,23 +379,14 @@ int main(int argc, char* argv[]) {
     printf("Correct format: %s A.mtx #DOC #TERMS {#iterations (default 10)}\n", argv[0]);
     return 0;
   }
+  MPI_Init(&argc, &argv);
+
   int ndoc = atoi(argv[2]);
   int nterms = atoi(argv[3]);
 
   int niterations = (argc >= 5)?(atoi(argv[4])):(10);
 
-
-#pragma omp parallel
-  {
-#pragma omp single
-    {
-      nthreads = omp_get_num_threads();
-      printf("num threads got: %d\n", nthreads);
-    }
-  }
-  
-
-  run_lda(argv[1], nthreads, ndoc, nterms, niterations); 
-  
+  run_lda(argv[1], ndoc, nterms, niterations); 
+  MPI_Finalize();  
 }
 

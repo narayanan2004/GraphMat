@@ -1,0 +1,23 @@
+Changes in v2.0 from both v1.0-single-node and v1.0-distributed
+- All the GraphMat classes and routines are in the "GraphMat::" namespace.
+- All the GraphMat include files have been moved to include/ directory. src/ directory contains only the apps.
+- graph_utils/graph_convert.cpp moved to src/
+    - graph_converter is fully distributed
+    - Input and output files are expected to be in the form <file0>, <file1> .. <filen>
+    - split functionality is deprecated - call graph_converter with as many MPI ranks as needed splits
+    - New binary GraphMat format is introduced (this is specific to number of MPI ranks and is not as general as default binary format, but is fast)
+- Use "#include GraphMatRuntime.h" instead of "#include GraphMatRuntime.cpp"
+- C++ classes used for vertex property, message and message reduction types which include stl containers and/or do memory management (e.g. std::vector, std::map, pointers) inside:
+    - Must be subclassed from GraphMat::Serializable. 
+    - Must have a friend boost::serialization::access in the class definition
+    - Must define template<class Archive>serialize(Archive& ar, const unsigned int version) method to serialize/deserialize the class
+     (Refer boost::serialization tutorial to see how this works)
+- Needs libboost_serialization to be linked.
+- src/Degree.cpp has been removed and code integrated into src/PageRank.cpp and src/IncrementalPageRank.cpp
+- Major code refactoring for the backend
+- Code cleanup in src/
+- Cleanup Makefile
+
+Changes in v2.0 from v1.0-single-node only
+- Use of global variable nthreads deprecated
+- User does not have the specify number of partitions (as a multiple of nthreads). Paritioning is fully automated now.

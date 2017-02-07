@@ -29,36 +29,22 @@
 /* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
 
+#include "GraphMatRuntime.h"
 #include <vector>
-#include <set>
 #include <algorithm>
 #include <assert.h>
-#include <memory>
-#include "GraphMatRuntime.cpp"
+#include <boost/serialization/vector.hpp>
 
-void set_bit(unsigned int idx, int* bitvec) {
-    unsigned int neighbor_id = idx;
-    int dword = (neighbor_id >> 5);
-    int bit = neighbor_id  & 0x1F;
-    unsigned int current_value = bitvec[dword];
-    if ( (current_value & (1<<bit)) == 0)
-    {
-      bitvec[dword] = current_value | (1<<bit);
-    }
-}
 
-class TC {
+class TC : public GraphMat::Serializable {
   public:
     int id;
     int triangles;
     std::vector<int> neighbors;
-    int* bitvector;
 
   public:
     TC() {
       triangles = 0;
-      neighbors.clear();
-      bitvector = NULL;
     }
     int operator!=(const TC& t) const {
       return (t.triangles != this->triangles); //dummy
@@ -67,174 +53,152 @@ class TC {
       printf("%d : %d : ", id, triangles);
       printf("\n");
     }
-    ~TC() {
-      neighbors.clear();
-      triangles = 0;
+    friend std::ostream& operator<<(std::ostream& out, const TC& t) {
+      out << t.triangles;
+      return out;
+    }
+
+    friend boost::serialization::access;
+    template<class Archive> 
+    void serialize(Archive& ar, const unsigned int version) {
+      ar & id;
+      ar & triangles;
+      ar & neighbors;
     }
 };
 
-class TCP { //pointer to TC
+template<typename T>
+class serializable_vector : public GraphMat::Serializable {
   public:
-  const TC* ptr;
+    std::vector<T> v;
+  public:
+    friend boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive &ar, const unsigned int version) {
+      ar & v;
+    }
 };
 
-
-int compare(const void* a, const void* b) {
-  if ( *(int*)a < *(int*)b ) return -1;
-  if ( *(int*)a == *(int*)b ) return 0;
-  else return 1;
-}
-
-class GetNeighbors : public GraphProgram<int, std::vector<int>, TC> {
+class GetNeighbors : public GraphMat::GraphProgram<int, serializable_vector<int>, TC> {
 
   public:
-      int BVLENGTH;
 
-
-  GetNeighbors(int maxvertices) {
-    this->order = IN_EDGES;
-    BVLENGTH = (maxvertices+31)/32 + 32; //32 for safety
+  GetNeighbors() {
+    this->activity = GraphMat::ALL_VERTICES;
+    this->order = GraphMat::IN_EDGES;
+    this->process_message_requires_vertexprop = false;
   }
 
-  void reduce_function(std::vector<int>& a, const std::vector<int>& b) const {
-    assert(b.size() == 1);
-    a.push_back(b[0]);
+  void reduce_function(serializable_vector<int>& a, const serializable_vector<int>& b) const {
+    a.v.insert(a.v.end(), b.v.begin(), b.v.end()); 
   }
 
-  void process_message(const int& message, const int edge_val, const TC& vertexprop, std::vector<int>&res) const {
-    res.clear(); 
-	res.push_back(message);
+  void process_message(const int& message, const int edge_val, const TC& vertexprop, serializable_vector<int>& res) const {
+    res.v.clear(); 
+    res.v.push_back(message);
   }
+
   bool send_message(const TC& vertexprop, int& message) const {
     message = vertexprop.id;
     return true;
   }
-  void apply(const std::vector<int>& message_out, TC& vertexprop) {
-    vertexprop.neighbors = message_out;
 
-    if (vertexprop.neighbors.size() > 1024) {
-      vertexprop.bitvector = new int[BVLENGTH];
-      for (auto it = vertexprop.neighbors.begin(); it != vertexprop.neighbors.end(); ++it) {
-        set_bit(*it, vertexprop.bitvector);
-      }
-    } else {
-      std::sort(vertexprop.neighbors.begin(), vertexprop.neighbors.end());
-    }
+  void apply(const serializable_vector<int>& message_out, TC& vertexprop) {
+    vertexprop.neighbors = message_out.v;
+    std::sort(vertexprop.neighbors.begin(), vertexprop.neighbors.end());
   }
 
 };
 
 
-class CountTriangles: public GraphProgram<TCP, int, TC> {
+class CountTriangles: public GraphMat::GraphProgram<TC, int, TC> {
 
   public:
-    int BVLENGTH;
 
-  CountTriangles(int maxvertices) {
-    this->order = OUT_EDGES;
-    BVLENGTH = (maxvertices+31)/32 + 32; //32 for safety
-
+  CountTriangles() {
+    this->activity = GraphMat::ALL_VERTICES;
+    this->order = GraphMat::OUT_EDGES;
   }
 
   void reduce_function(int& v, const int& w) const {
     v += w;
   }
 
-  void process_message(const TCP& message_ptr, const int edge_val, const TC& vertexprop, int& res) const {
+  void process_message(const TC& message, const int edge_val, const TC& vertexprop, int& res) const {
     res = 0;
-    const TC& message = *(message_ptr.ptr);
-    //assume sorted
-    
-    if (message.bitvector == NULL && vertexprop.bitvector == NULL) {
-      int it1 = 0, it2 = 0;
-      int it1_end = message.neighbors.size();
-      int it2_end = vertexprop.neighbors.size();
+    int it1 = 0, it2 = 0;
+    int it1_end = message.neighbors.size();
+    int it2_end = vertexprop.neighbors.size();
 
-      while (it1 != it1_end && it2 != it2_end){
-        if (message.neighbors[it1] == vertexprop.neighbors[it2]) {
-          res++;
-          ++it1; ++it2;
-        } else if (message.neighbors[it1] < vertexprop.neighbors[it2]) {
-          ++it1;
-        } else {
-          ++it2;
-        }
-      } 
-      return;
-
+    while (it1 != it1_end && it2 != it2_end){
+      if (message.neighbors[it1] == vertexprop.neighbors[it2]) {
+        res++;
+        ++it1; ++it2;
+      } else if (message.neighbors[it1] < vertexprop.neighbors[it2]) {
+        ++it1;
+      } else {
+        ++it2;
+      }
     } 
-
-    else {
-      int const* bv;
-      std::vector<int>::const_iterator itb, ite;
-
-      if (message.bitvector != NULL) { 
-        bv = message.bitvector; 
-        itb = vertexprop.neighbors.begin(); 
-        ite = vertexprop.neighbors.end(); 
-      } else { 
-        bv = vertexprop.bitvector; 
-        itb = message.neighbors.begin(); 
-        ite = message.neighbors.end(); 
-      }
-      for (auto it = itb; it != ite; ++it) {
-        res += get_bitvector(*it, bv);
-      }
-    }
-
-
+    return;
   }
 
-  bool send_message(const TC& vertexprop, TCP& message) const {
-    message.ptr = &vertexprop;
+  bool send_message(const TC& vertexprop, TC& message) const {
+    message = vertexprop;
     return true;
   }
 
   void apply(const int& message_out, TC& vertexprop) {
-    vertexprop.triangles = message_out;
+    vertexprop.triangles += message_out;
   }
+
 
 };
 
-void run_triangle_counting(char* filename, int nthreads) {
-  Graph<TC> G;
-  G.ReadMTX(filename, nthreads*16); //nthread pieces of matrix
+void return_triangles(TC* v, unsigned long int* out, void* params) {
+  *out = v->triangles;
+}
+
+void run_triangle_counting(char* filename) {
+  GraphMat::Graph<TC> G;
+  G.ReadMTX(filename); 
   
   int numberOfVertices = G.getNumberOfVertices();
-  GetNeighbors gn(numberOfVertices);
-  CountTriangles ct(numberOfVertices);
+  GetNeighbors gn;
+  CountTriangles ct;
 
-  auto gn_tmp = graph_program_init(gn, G);
-  auto ct_tmp = graph_program_init(ct, G);
+  auto gn_tmp = GraphMat::graph_program_init(gn, G);
+  auto ct_tmp = GraphMat::graph_program_init(ct, G);
   
   struct timeval start, end;
 
   for (int i = 1; i <= numberOfVertices; i++) {
-	TC vp = G.getVertexproperty(i);
-	vp.id = i;
-    G.setVertexproperty(i, vp);
+    if (G.vertexNodeOwner(i)) {
+      TC vp = G.getVertexproperty(i);
+      vp.id = i;
+      G.setVertexproperty(i, vp);
+    }
   }
   gettimeofday(&start, 0);
 
+  GraphMat::run_graph_program(&gn, G, 1, &gn_tmp);
 
-  G.setAllActive();
-  run_graph_program(&gn, G, 1, &gn_tmp);
-
-  G.setAllActive();
-  run_graph_program(&ct, G, 1, &ct_tmp);
+  GraphMat::run_graph_program(&ct, G, 1, &ct_tmp);
   
   gettimeofday(&end, 0);
   printf("Time = %.3f ms \n", (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3);
 
-  graph_program_clear(gn_tmp);
-  graph_program_clear(ct_tmp);  
+  GraphMat::graph_program_clear(gn_tmp);
+  GraphMat::graph_program_clear(ct_tmp);  
 
   unsigned long int ntriangles = 0;
-  for (int i = 1; i <= numberOfVertices; i++) ntriangles += G.getVertexproperty(i).triangles;
-  printf("Total triangles = %lu \n", ntriangles);
+  G.applyReduceAllVertices(&ntriangles, return_triangles, GraphMat::AddFn);
+  if(GraphMat::get_global_myrank() == 0) printf("Total triangles = %lu \n", ntriangles);
   
   for (int i = 1; i <= std::min(10, numberOfVertices); i++) {
-    G.getVertexproperty(i).print();
+    if (G.vertexNodeOwner(i)) {
+      G.getVertexproperty(i).print();
+    }
   }
 
 }
@@ -244,17 +208,9 @@ int main(int argc, char* argv[]) {
     printf("Correct format: %s A.mtx\n", argv[0]);
     return 0;
   }
-
-#pragma omp parallel
-  {
-#pragma omp single
-    {
-      nthreads = omp_get_num_threads();
-      printf("num threads got: %d\n", nthreads);
-    }
-  }
-  
-  run_triangle_counting(argv[1], nthreads); 
-
-  }
+  MPI_Init(&argc, &argv);
+ 
+  run_triangle_counting(argv[1]); 
+  MPI_Finalize();
+}
 

@@ -1,59 +1,73 @@
+MPICXX=mpiicpc
 CXX=icpc
-CXX_OPTIONS=-qopenmp -std=c++11 -I./src/ 
 
+SRCDIR=./src
+INCLUDEDIR=./include
+DIST_PRIMITIVES_PATH=$(INCLUDEDIR)/GMDP
+BINDIR=./bin
 
-ifeq (${debug}, 1)
-  CXX_OPTIONS += -g
+CATCHDIR=./test/Catch
+TESTDIR=./test
+TESTBINDIR=./testbin
+
+ifeq (${CXX}, icpc)
+  CXX_OPTIONS=-qopenmp -std=c++11
 else
-  CXX_OPTIONS += -O3 -ipo 
+  CXX_OPTIONS=-fopenmp --std=c++11 -I/usr/include/mpi/
 endif
 
-CXX_OPTIONS += -xHost
+CXX_OPTIONS+=-I$(INCLUDEDIR) -I$(DIST_PRIMITIVES_PATH)
+
+ifeq (${debug}, 1)
+  CXX_OPTIONS += -O0 -g -D__DEBUG 
+else
+  ifeq (${CXX}, icpc)
+    CXX_OPTIONS += -O3 -ipo 
+  else
+    CXX_OPTIONS += -O3 -flto -fwhole-program
+  endif
+endif
+
+ifeq (${CXX}, icpc)
+  CXX_OPTIONS += -xHost
+else
+  CXX_OPTIONS += -march=native
+endif
 
 ifeq (${timing}, 1)
   CXX_OPTIONS += -D__TIMING
 else
 endif
 
-SRCDIR=src
-BINDIR=bin
+LD_OPTIONS += -lboost_serialization
 
-SOURCES=$(SRCDIR)/PageRank.cpp $(SRCDIR)/Degree.cpp $(SRCDIR)/BFS.cpp $(SRCDIR)/SGD.cpp $(SRCDIR)/TriangleCounting.cpp $(SRCDIR)/SSSP.cpp $(SRCDIR)/Delta.cpp
+# --- Apps --- #
+SOURCES = $(wildcard $(SRCDIR)/*.cpp)
 
-DEPS=$(SRCDIR)/SPMV.cpp $(SRCDIR)/Graph.cpp $(SRCDIR)/GraphProgram.cpp $(SRCDIR)/SparseVector.cpp $(SRCDIR)/GraphMatRuntime.cpp
+include_headers = $(wildcard $(INCLUDEDIR)/*.h)
+dist_primitives_headers = $(wildcard $(DIST_PRIMITIVES_PATH)/*.h $(DIST_PRIMITIVES_PATH)/*/*.h)
+DEPS = $(include_headers) $(dist_primitives_headers)
 
-EXE=$(BINDIR)/PageRank $(BINDIR)/IncrementalPageRank $(BINDIR)/BFS $(BINDIR)/TriangleCounting $(BINDIR)/SGD $(BINDIR)/SSSP $(BINDIR)/DS $(BINDIR)/LDA
+APPS=$(BINDIR)/graph_converter $(BINDIR)/PageRank $(BINDIR)/IncrementalPageRank $(BINDIR)/BFS $(BINDIR)/SSSP $(BINDIR)/LDA $(BINDIR)/SGD $(BINDIR)/TriangleCounting #$(BINDIR)/DS
 
-
-all: $(EXE) graph_converter
+all: $(APPS)
 	
+$(BINDIR)/% : $(SRCDIR)/%.cpp $(DEPS)  
+	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -o $@ $< $(LD_OPTIONS)
 
-graph_converter: graph_utils/graph_convert.cpp
-	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/graph_converter graph_utils/graph_convert.cpp
+# --- Test --- #
+test: $(TESTBINDIR)/test 
+test_headers = $(wildcard $(TESTDIR)/*.h)
+test_src = $(wildcard $(TESTDIR)/*.cpp)
+test_objects = $(patsubst $(TESTDIR)/%.cpp, $(TESTBINDIR)/%.o, $(test_src))
 
-$(BINDIR)/PageRank: $(DEPS) $(MULTINODEDEPS) $(SRCDIR)/PageRank.cpp $(SRCDIR)/Degree.cpp 
-	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/PageRank $(SRCDIR)/PageRank.cpp 
+$(TESTBINDIR)/%.o : $(TESTDIR)/%.cpp $(DEPS) $(test_headers) 
+	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include -c $< -o $@ $(LD_OPTIONS)
 
-$(BINDIR)/IncrementalPageRank: $(DEPS) $(MULTINODEDEPS) $(SRCDIR)/IncrementalPageRank.cpp $(SRCDIR)/Degree.cpp 
-	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/IncrementalPageRank $(SRCDIR)/IncrementalPageRank.cpp 
+$(TESTBINDIR)/test: $(test_objects) 
+	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include -o $(TESTBINDIR)/test $(test_objects) $(LD_OPTIONS)
 
-$(BINDIR)/BFS: $(DEPS) $(SRCDIR)/BFS.cpp
-	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/BFS $(SRCDIR)/BFS.cpp
-
-$(BINDIR)/SGD: $(DEPS) $(SRCDIR)/SGD.cpp 
-	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/SGD $(SRCDIR)/SGD.cpp
-
-$(BINDIR)/LDA: $(DEPS) $(SRCDIR)/LDA.cpp 
-	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/LDA $(SRCDIR)/LDA.cpp
-
-$(BINDIR)/TriangleCounting: $(DEPS) $(SRCDIR)/TriangleCounting.cpp
-	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/TriangleCounting $(SRCDIR)/TriangleCounting.cpp
-
-$(BINDIR)/SSSP: $(DEPS) $(MULTINODEDEPS) $(SRCDIR)/SSSP.cpp
-	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/SSSP $(SRCDIR)/SSSP.cpp 
-
-$(BINDIR)/DS: $(DEPS) $(SRCDIR)/Delta.cpp
-	$(CXX) $(CXX_OPTIONS) -o $(BINDIR)/DS $(SRCDIR)/Delta.cpp
+# --- clean --- #
 
 clean:
-	rm $(EXE) bin/graph_converter
+	rm -f $(APPS) $(TESTBINDIR)/test $(test_objects)

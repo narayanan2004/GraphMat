@@ -28,13 +28,12 @@
 * ******************************************************************************/
 /* Narayanan Sundaram (Intel Corp.)
  * ******************************************************************************/
-#include "GraphMatRuntime.cpp"
+#include "GraphMatRuntime.h"
 
-#include "Degree.cpp"
 
 class PR {
   public:
-    double pagerank;
+    float pagerank;
     int degree;
   public:
     PR() {
@@ -42,37 +41,71 @@ class PR {
       degree = 0;
     }
     int operator!=(const PR& p) {
-      return (fabs(p.pagerank-pagerank)>1e-8);
+      return (fabs(p.pagerank-pagerank)>1e-5);
+    }
+    friend std::ostream &operator<<(std::ostream &outstream, const PR & val)
+    {
+      outstream << val.pagerank; 
+      return outstream;
     }
 };
 
-template <class E>
-class PageRank : public GraphProgram<double, double, PR, E> {
-  public:
-    double alpha;
-
+template<class V, class E=int>
+class Degree : public GraphMat::GraphProgram<int, int, V, E> {
   public:
 
-  PageRank(double a=0.3) {
-    alpha = a;
-    this->activity = ALL_VERTICES;
+  Degree() {
+    this->order = GraphMat::IN_EDGES;
+    this->process_message_requires_vertexprop = false;
   }
 
-  void reduce_function(double& a, const double& b) const {
+  bool send_message(const V& vertexprop, int& message) const {
+    message = 1;
+    return true;
+  }
+
+  void process_message(const int& message, const E edge_value, const V& vertexprop, int& result) const {
+    result = message;
+  }
+
+  void reduce_function(int& a, const int& b) const {
     a += b;
   }
-  void process_message(const double& message, const E edge_val, const PR& vertexprop, double& res) const {
+
+  void apply(const int& message_out, V& vertexprop) {
+    vertexprop.degree = message_out; 
+  }
+
+};
+
+template <class E>
+class PageRank : public GraphMat::GraphProgram<float, float, PR, E> {
+  public:
+    float alpha;
+
+  public:
+
+  PageRank(float a=0.3) {
+    alpha = a;
+    this->activity = GraphMat::ALL_VERTICES;
+    this->process_message_requires_vertexprop = false;
+  }
+
+  void reduce_function(float& a, const float& b) const {
+    a += b;
+  }
+  void process_message(const float& message, const E edge_val, const PR& vertexprop, float& res) const {
     res = message;
   }
-  bool send_message(const PR& vertexprop, double& message) const {
+  bool send_message(const PR& vertexprop, float& message) const {
     if (vertexprop.degree == 0) {
       message = 0.0;
     } else {
-      message = vertexprop.pagerank/(double)vertexprop.degree;
+      message = vertexprop.pagerank/(float)vertexprop.degree;
     }
     return true;
   }
-  void apply(const double& message_out, PR& vertexprop) {
+  void apply(const float& message_out, PR& vertexprop) {
     vertexprop.pagerank = alpha + (1.0-alpha)*message_out; //non-delta update
   }
 
@@ -80,48 +113,55 @@ class PageRank : public GraphProgram<double, double, PR, E> {
 
 
 template <class edge>
-void run_pagerank(const char* filename, int nthreads) {
+void run_pagerank(const char* filename) {
 
-  Graph<PR, edge> G;
+  GraphMat::Graph<PR, edge> G;
   PageRank<edge> pr;
   Degree<PR, edge> dg;
 
  
-  G.ReadMTX(filename, nthreads*4); //nthread pieces of matrix
+  G.ReadMTX(filename); 
 
-  auto dg_tmp = graph_program_init(dg, G);
+  auto dg_tmp = GraphMat::graph_program_init(dg, G);
 
   struct timeval start, end;
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  run_graph_program(&dg, G, 1, &dg_tmp);
+  GraphMat::run_graph_program(&dg, G, 1, &dg_tmp);
 
   gettimeofday(&end, 0);
   double time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
   printf("Degree Time = %.3f ms \n", time);
 
-  graph_program_clear(dg_tmp);
+  GraphMat::graph_program_clear(dg_tmp);
   
-  auto pr_tmp = graph_program_init(pr, G);
+  auto pr_tmp = GraphMat::graph_program_init(pr, G);
 
   gettimeofday(&start, 0);
 
   G.setAllActive();
-  run_graph_program(&pr, G, -1, &pr_tmp);
+  GraphMat::run_graph_program(&pr, G, GraphMat::UNTIL_CONVERGENCE, &pr_tmp);
   
   gettimeofday(&end, 0);
   time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
   printf("PR Time = %.3f ms \n", time);
 
-  graph_program_clear(pr_tmp);
+  GraphMat::graph_program_clear(pr_tmp);
 
+  MPI_Barrier(MPI_COMM_WORLD);
   for (int i = 1; i <= std::min((unsigned long long int)25, (unsigned long long int)G.getNumberOfVertices()); i++) { 
-    printf("%d : %d %f\n", i, G.getVertexproperty(i).degree, G.getVertexproperty(i).pagerank);
+    if (G.vertexNodeOwner(i)) {
+      printf("%d : %d %f\n", i, G.getVertexproperty(i).degree, G.getVertexproperty(i).pagerank);
+    }
+    fflush(stdout);
+    MPI_Barrier(MPI_COMM_WORLD);
   }
+
 }
 
 int main(int argc, char* argv[]) {
+  MPI_Init(&argc, &argv);
 
   const char* input_filename = argv[1];
 
@@ -130,17 +170,8 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-#pragma omp parallel
-  {
-#pragma omp single
-    {
-      nthreads = omp_get_num_threads();
-      printf("num threads got: %d\n", nthreads);
-    }
-  }
-  
-  run_pagerank<int>(input_filename, nthreads);
+  run_pagerank<int>(input_filename);
 
-  
+  MPI_Finalize();
 }
 
