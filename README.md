@@ -1,7 +1,7 @@
 GraphMat graph analytics framework
 =====================================
 
-[![Build Status](https://travis-ci.org/narayanan2004/GraphMat.svg?branch=distributed_primitives_integration)](https://travis-ci.org/narayanan2004/GraphMat)
+[![Build Status](https://travis-ci.org/narayanan2004/GraphMat.svg?branch=master)](https://travis-ci.org/narayanan2004/GraphMat)
 
 Note: This is a major update from GraphMat v1.0 (single node and distributed).
 Please see changelog for details.
