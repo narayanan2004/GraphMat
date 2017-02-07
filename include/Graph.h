@@ -75,17 +75,15 @@ class Graph {
              tiles_per_dim(GraphMat::get_global_nrank()),
              A(nullptr), AT(nullptr), num_threads(omp_get_max_threads()),
              vertexproperty(nullptr), active(nullptr) {}
-    void MTXFromEdgelist(GraphMat::edgelist_t<E> A_edges);
+    void ReadEdgelist(GraphMat::edgelist_t<E> A_edges);
     void getVertexEdgelist(GraphMat::edgelist_t<V> & myedges);
     void getEdgelist(GraphMat::edgelist_t<E> & myedges);
-    void ReadMTX(const char* filename, int grid_size=1); //grid_size is deprecated
+    void ReadMTX(const char* filename); 
     void ReadGraphMatBin(const char* filename);
     void WriteGraphMatBin(const char* filename);
 
     void setAllActive();
     void setAllInactive();
-    int vertexToNative(int vertex, int nsegments, int len) const;
-    int nativeToVertex(int vertex, int nsegments, int len) const;
     void setActive(int v);
     void setInactive(int v);
     void setAllVertexproperty(const V& val);
@@ -99,6 +97,11 @@ class Graph {
     void applyToAllVertices(void (*ApplyFn)(V, V*, void*), void* param=nullptr);
     template<class T> void applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*)=AddFn<T>, void* param=nullptr);
     ~Graph();
+
+  private:
+    int vertexToNative(int vertex, int nsegments, int len) const;
+    int nativeToVertex(int vertex, int nsegments, int len) const;
+
 };
 
 
@@ -203,7 +206,7 @@ void Graph<V,E>::WriteGraphMatBin(const char* filename) {
 }
 
 template<class V, class E>
-void Graph<V,E>::MTXFromEdgelist(GraphMat::edgelist_t<E> A_edges) {
+void Graph<V,E>::ReadEdgelist(GraphMat::edgelist_t<E> A_edges) {
 
   struct timeval start, end;
   gettimeofday(&start, 0);
@@ -241,37 +244,29 @@ void Graph<V,E>::MTXFromEdgelist(GraphMat::edgelist_t<E> A_edges) {
 }
 
 template<class V, class E>
-void Graph<V,E>::ReadMTX(const char* filename, int grid_size) {
+void Graph<V,E>::ReadMTX(const char* filename) {
   GraphMat::edgelist_t<E> A_edges;
-  //GraphMat::ReadEdgesBin(&A_edges, filename, false);
-  GraphMat::ReadEdges(&A_edges, filename);
+  GraphMat::load_edgelist(filename, &A_edges, true, true, true);// binary format with header and edge weights
+
   if (A_edges.m != A_edges.n) {
     auto maxn = std::max(A_edges.m, A_edges.n);
     A_edges.m = maxn;
     A_edges.n = maxn;
   }
-  MTXFromEdgelist(A_edges);
+  ReadEdgelist(A_edges);
   A_edges.clear();
 }
 
 
 template<class V, class E> 
 void Graph<V,E>::setAllActive() {
-  //for (int i = 0; i <= nvertices; i++) {
-  //  active[i] = true;
-  //}
-  //memset(active, 0xff, sizeof(bool)*(nvertices));
-  //GraphMat::Apply(active, &active, set_all_true);
   active->setAll(true);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setAllInactive() {
-  //memset(active, 0x0, sizeof(bool)*(nvertices));
-  //GraphMat::Apply(active, &active, set_all_false);
   active->setAll(false);
   int global_myrank = GraphMat::get_global_myrank();
-  //GraphMat::Clear(&active);
   for(int segmentId = 0 ; segmentId < active->nsegments ; segmentId++)
   {
     if(active->nodeIds[segmentId] == global_myrank)
@@ -284,14 +279,12 @@ void Graph<V,E>::setAllInactive() {
 
 template<class V, class E> 
 void Graph<V,E>::setActive(int v) {
-  //active[v] = true;
   int v_new = vertexToNative(v, tiles_per_dim, nvertices);
   active->set(v_new, true);
 }
 
 template<class V, class E> 
 void Graph<V,E>::setInactive(int v) {
-  //active[v] = false;
   int v_new = vertexToNative(v, tiles_per_dim, nvertices);
   active->set(v_new, false);
 }

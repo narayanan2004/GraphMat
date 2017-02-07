@@ -97,7 +97,7 @@ class BFS : public GraphMat::GraphProgram<unsigned long long int, unsigned long 
 void test_ut_bfs(int n) {
   auto E = generate_upper_triangular_edgelist<int>(n);
   GraphMat::Graph<BFSD> G;
-  G.MTXFromEdgelist(E);
+  G.ReadEdgelist(E);
   E.clear();
 
   BFS bfs_program;
@@ -144,7 +144,7 @@ void test_ut_bfs(int n) {
 void test_dense_bfs(int n) {
   auto E = generate_dense_edgelist<int>(n);
   GraphMat::Graph<BFSD> G;
-  G.MTXFromEdgelist(E);
+  G.ReadEdgelist(E);
   E.clear();
 
   BFS bfs_program;
@@ -191,7 +191,7 @@ void test_dense_bfs(int n) {
 void test_chain_bfs(int n) {
   auto E = generate_circular_chain_edgelist<int>(n);
   GraphMat::Graph<BFSD> G;
-  G.MTXFromEdgelist(E);
+  G.ReadEdgelist(E);
   E.clear();
 
   BFS bfs_program;

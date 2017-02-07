@@ -104,7 +104,7 @@ void test_read_gm_bin(int n) {
 
   {
     GraphMat::Graph<int, T> G;
-    G.MTXFromEdgelist(E);
+    G.ReadEdgelist(E);
     G.WriteGraphMatBin(tempfilenamewithoutsuffix);
   }
 

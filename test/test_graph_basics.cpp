@@ -56,7 +56,7 @@ class custom_vertex_type {
 void test_graph_getset(int n) {
   auto E = generate_random_edgelist<int>(n, 16);
   GraphMat::Graph<custom_vertex_type> G;
-  G.MTXFromEdgelist(E);
+  G.ReadEdgelist(E);
   E.clear();
 
   REQUIRE(G.getNumberOfVertices() == n);
@@ -87,7 +87,7 @@ void test_graph_size(int n) {
   {
     auto E = generate_random_edgelist<int>(n, 16);
     GraphMat::Graph<custom_vertex_type> G;
-    G.MTXFromEdgelist(E);
+    G.ReadEdgelist(E);
     E.clear();
 
     REQUIRE(G.getNumberOfVertices() == n);
@@ -97,7 +97,7 @@ void test_graph_size(int n) {
   {
     auto E = generate_dense_edgelist<int>(n);
     GraphMat::Graph<custom_vertex_type> G;
-    G.MTXFromEdgelist(E);
+    G.ReadEdgelist(E);
     E.clear();
 
     REQUIRE(G.getNumberOfVertices() == n);
@@ -107,7 +107,7 @@ void test_graph_size(int n) {
   {
     auto E = generate_upper_triangular_edgelist<int>(n);
     GraphMat::Graph<custom_vertex_type> G;
-    G.MTXFromEdgelist(E);
+    G.ReadEdgelist(E);
     E.clear();
 
     REQUIRE(G.getNumberOfVertices() == n);

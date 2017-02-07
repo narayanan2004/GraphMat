@@ -99,7 +99,7 @@ void test_get_neighbors(int n) {
   //auto E = generate_circular_chain_edgelist<int>(n);
   auto E = generate_dense_edgelist<int>(n);
   GraphMat::Graph<neighbors_vp> G;
-  G.MTXFromEdgelist(E);
+  G.ReadEdgelist(E);
   E.clear();
 
   for (int i = 1; i <= n; i++ ) {

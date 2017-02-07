@@ -98,7 +98,6 @@ void printOptions(struct myoptions opt) {
 	printf("Edge weight type = %d \n", opt.edgeweighttype);
 	printf("Range of random edge weights = %d \n", opt.random_range);
 	printf("Number of vertices = %d \n", opt.nvertices);
-	//printf("Number of splits = %d \n", opt.nsplits);
 	printf("Randomize vertex IDs = %d \n", opt.randomizeID);
   return;
 }
@@ -116,8 +115,8 @@ void printHelp(const char* argv0) {
 	printf("\t\t0: Remove all duplicated edges (default)\n");
 	printf("\t\t1: Retain duplicated edges\n");
 	
-	printf("\t--uppertriangular\tAll edges (u,v) have u <= v \n");
-	printf("\t--bidirectional\tFor all edges (u,v) add (v,u)\n");
+	printf("\t--uppertriangular\tAll edges (u,v), leave edge unchanged if u <= v, and swap u & v if u > v\n");
+	printf("\t--bidirectional\tFor all edges (u,v), add (v,u)\n");
 
 	printf("\t--inputformat\n");
 	printf("\t\t0: Binary mtx input\n");
@@ -156,7 +155,6 @@ void printHelp(const char* argv0) {
 
 	printf("\t--nvertices [number] (use only with \"--inputheader 0\")\n");
 	
-	//printf("\t--split [number] (default 1 i.e. no splitting, if specified then output file is split into n pieces each named as <outputfile>i_n for i from 0 to n-1)\n");
 	printf("\t--randomizeID\tUsing this flag would randomize the vertex IDs from the input file\n");// and also produce a <output>.permutation file with the random permutation used\n");
 }
 
@@ -216,7 +214,7 @@ void process_graph(const char * ifilename, const char * ofilename, struct myopti
 	}
 	if (Opt.outputformat == 2) {
 		GraphMat::Graph<int, T> G;
-		G.MTXFromEdgelist(edgelist);
+		G.ReadEdgelist(edgelist);
 		G.WriteGraphMatBin(ofilename);
 	}
 
