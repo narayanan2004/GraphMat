@@ -123,9 +123,10 @@ void run_bfs(char* filename, int v) {
 
   G.setAllInactive();
 
-  auto vp = G.getVertexproperty(v);
-  vp.depth = 0;
-  G.setVertexproperty(v, vp);
+  //G.vertexproperty[v].depth = 0;
+  auto source = G.getVertexproperty(v);
+  source.depth = 0;
+  G.setVertexproperty(v, source);
   G.setActive(v);
 
   struct timeval start, end;

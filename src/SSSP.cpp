@@ -154,6 +154,5 @@ int main (int argc, char* argv[]) {
   int source_vertex = atoi(argv[2]);
   run_sssp<int>(input_filename, source_vertex);
   MPI_Finalize();
- 
 }
 

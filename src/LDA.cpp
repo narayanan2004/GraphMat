@@ -34,7 +34,6 @@
 #include <algorithm>
 #include <iomanip>
 
-
 template <unsigned int K>
 class LatentVector {
   public:
@@ -93,7 +92,6 @@ class LDAInitProgram : public GraphMat::GraphProgram<LatentVector<K>, LatentVect
     unsigned int rstart = edge_value; 
     for (int i = 0; i < K; i++) {
       gamma_wjk[i] = (double)rand_r(&rstart)/RAND_MAX; //double(i+1)/K;
-      //gamma_wjk[i] = (double)(i+edge_value+0.3); //double(i+1)/K;
       sum += gamma_wjk[i];
     }
 
@@ -270,6 +268,7 @@ void run_lda(char* filename, int ndoc, int nterms, int niterations=10) {
   const int k = 20;
   GraphMat::Graph< LatentVector<k> > G;
   G.ReadMTX(filename); 
+
   if (ndoc + nterms != G.getNumberOfVertices()) {
     std::cout << "Number of vertices in graph != NDOC + NTERMS" << std::endl;
     exit(1);
@@ -390,3 +389,4 @@ int main(int argc, char* argv[]) {
   run_lda(argv[1], ndoc, nterms, niterations); 
   MPI_Finalize();  
 }
+

@@ -18,7 +18,6 @@ endif
 
 CXX_OPTIONS+=-I$(INCLUDEDIR) -I$(DIST_PRIMITIVES_PATH)
 
-
 ifeq (${debug}, 1)
   CXX_OPTIONS += -O0 -g -D__DEBUG 
 else
