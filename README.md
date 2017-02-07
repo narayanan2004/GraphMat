@@ -58,25 +58,11 @@ You can also do
     ./testbin/test -? 
 to list all the options available
 
-Converting data to GraphMat compatible format:
+Reading graph files to use with GraphMat:
 ----------------------------------------------
 
-You can convert an edge list file to GraphMat compatible format using
-the `graph_converter` utility. GraphMat works on a binary graph
-format.
-
-To convert from a text file with 3 white space separated columns
-(`src, dst, edge_value`) to GraphMat format, do
-
-    mpirun -np <NRANKS> bin/graph_converter --selfloops 1 --duplicatededges 1 --inputformat 1 --outputformat 0 --inputheader 0 --outputheader 1 --nvertices < nvertices > < input text file prefix> < output graphmat file prefix>
-
-This command reads input files (inputfile0, inputfile1, inputfile2 .. inputfilen)
-in text format and converts it into files
-(outfile0, outfile1, outfile2 ... outfile<nranks>) in GraphMat friendly format.
-
-You can remove selfloops and duplicatededges (when multiple edges with
-same src and dst are found, only one is retained) by changing their
-values in the command line from 1 to 0.
+See wiki page - 
+https://github.com/narayanan2004/GraphMat/wiki/Reading-graph-files
 
 References:
 -----------
