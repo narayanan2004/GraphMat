@@ -1,3 +1,5 @@
+Note : This code branch has been deprecated since v2.0 (Feb 2017). Please use the master branch. This branch exists to prevent broken web links. 
+
 GraphMat graph analytics framework
 =====================================
 
