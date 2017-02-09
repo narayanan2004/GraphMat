@@ -40,6 +40,7 @@
 template<typename T>
 void test_read_mtx(int n, bool binaryformat, bool header, bool edgeweights) {
   auto E = generate_dense_edgelist<T>(n);
+  GraphMat::random_edge_weights(&E, 128);
 
   std::string tempfilenamestr = "GM_tempfileXXXXXX" + std::to_string(GraphMat::get_global_myrank());
   int suffixlen = std::to_string(GraphMat::get_global_myrank()).size();
