@@ -100,6 +100,7 @@ bool readLine (FILE * ifile, int * src, int * dst, T * val, bool binaryformat=tr
       fread_bytes = fread(val, sizeof(T), 1, ifile);
       if (feof(ifile)) return false;
       assert(fread_bytes == 1);
+    } else {
       *val = (T)(1);
     }
   } else {
