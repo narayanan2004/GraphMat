@@ -17,6 +17,7 @@ before_install:
  - sudo apt-get install -y libboost-serialization-dev
  - test -n $CC  && unset CC
  - test -n $CXX && unset CXX
+ - ls /usr/include/mpi
 # Build steps
 script:
 # - source ~/.bashrc
