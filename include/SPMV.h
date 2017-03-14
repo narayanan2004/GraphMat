@@ -65,7 +65,7 @@ void SpMSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GraphMat::SpVec<Grap
   gettimeofday(&start, 0);
 
   if (gp->getProcessMessageRequiresVertexprop()) {
-    GraphMat::SpMSpV3(G.A, x, G.vertexproperty, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+//    GraphMat::SpMSpV3(G.A, x, G.vertexproperty, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
   } else {
     GraphMat::SpMSpV(G.A, x, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
   }
@@ -82,7 +82,7 @@ void SpMTSpV(Graph<V,E>& G, const GraphProgram<T,U,V,E>* gp, GraphMat::SpVec<Gra
   gettimeofday(&start, 0);
 
   if (gp->getProcessMessageRequiresVertexprop()) {
-    GraphMat::SpMSpV3(G.AT, x, G.vertexproperty, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
+//    GraphMat::SpMSpV3(G.AT, x, G.vertexproperty, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
   } else {
     GraphMat::SpMSpV(G.AT, x, y, Mulfn<T,U,V,E>, Addfn<T,U,V,E>, (void*)gp);
   }

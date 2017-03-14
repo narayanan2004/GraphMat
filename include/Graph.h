@@ -65,8 +65,8 @@ class Graph {
     int tiles_per_dim;
     int num_threads;
 
-    GraphMat::SpMat<GraphMat::DCSCTile<E> > *A;
-    GraphMat::SpMat<GraphMat::DCSCTile<E> > *AT;
+    GraphMat::SpMat<GraphMat::CSRTile<E> > *A;
+    GraphMat::SpMat<GraphMat::CSRTile<E> > *AT;
     GraphMat::SpVec<GraphMat::DenseSegment<V> > * vertexproperty;
     GraphMat::SpVec<GraphMat::DenseSegment<bool> > * active;
   
@@ -221,7 +221,7 @@ void Graph<V,E>::ReadEdgelist(GraphMat::edgelist_t<E> A_edges) {
     A_edges.edges[i].dst = vertexToNative(A_edges.edges[i].dst, tiles_per_dim, A_edges.m);
   }
 
-  A = new GraphMat::SpMat<GraphMat::DCSCTile<E> >(A_edges, tiles_per_dim, tiles_per_dim, GraphMat::partition_fn_2d);
+  A = new GraphMat::SpMat<GraphMat::CSRTile<E> >(A_edges, tiles_per_dim, tiles_per_dim, GraphMat::partition_fn_2d);
   GraphMat::Transpose(A, &AT, tiles_per_dim, tiles_per_dim, GraphMat::partition_fn_2d);
 
   int m_ = A->m;

@@ -35,7 +35,8 @@
 #include "GraphMatRuntime.h"
 
 //typedef unsigned char distance_type;
-typedef unsigned int distance_type;
+//typedef unsigned int distance_type;
+typedef int distance_type;
 //typedef double distance_type;
 //typedef float distance_type;
 
