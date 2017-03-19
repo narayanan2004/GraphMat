@@ -35,7 +35,7 @@
 
 //typedef unsigned char distance_type;
 typedef unsigned int distance_type;
-//typedef double distance_type;
+//typedef float distance_type;
 
 distance_type MAX_DIST = std::numeric_limits<distance_type>::max();
 
@@ -47,16 +47,16 @@ class DeltaSteppingDS {
   public:
     DeltaSteppingDS() {
       distance = MAX_DIST;
-      bucket = INT_MAX;
+      bucket = std::numeric_limits<int>::max();
     }
     bool operator != (const DeltaSteppingDS& p) {
       return (this->distance != p.distance);
     }
     void print() {
       if (distance < MAX_DIST) 
-        printf("distance %u\n", distance);
+        std::cout << "distance = " << distance << std::endl;
       else
-        printf("distance INF\n");
+        std::cout << "distance = INF" << std::endl;
     }
 };
 
@@ -79,19 +79,19 @@ class DeltaStepping : public GraphMat::GraphProgram<distance_type, distance_type
     a = (a <= b)?(a):(b);
   }
 
-  void process_message(const distance_type& message, const int edge_val, const DeltaSteppingDS& vertexprop, distance_type& res) const {
-    res = message + edge_val; //always <= delta
+  void process_message(const distance_type& message, const int edge_val, const DeltaSteppingDS& vertex, distance_type& res) const {
+    res = (message < MAX_DIST) ? (message + edge_val) : (MAX_DIST); //always <= delta
   }
 
-  bool send_message(const DeltaSteppingDS& vertexprop, distance_type& message) const {
-    message = vertexprop.distance;
-    return (vertexprop.bucket == bid);
+  bool send_message(const DeltaSteppingDS& vertex, distance_type& message) const {
+    message = (vertex.bucket == bid)?(vertex.distance):(MAX_DIST);
+    return true;//(vertex.bucket == bid);
   }
 
-  void apply(const distance_type& message_out, DeltaSteppingDS& vertexprop)  {
-    if (vertexprop.distance > message_out) {
-      vertexprop.distance = message_out;
-      vertexprop.bucket = (int)(message_out/delta);
+  void apply(const distance_type& message_out, DeltaSteppingDS& vertex)  {
+    if (vertex.distance > message_out) {
+      vertex.distance = message_out;
+      vertex.bucket = (int)(message_out/delta);
     }
   }
 
@@ -103,6 +103,15 @@ void reachable_or_not(DeltaSteppingDS* v, int *result, void* params=nullptr) {
     reachable = 1;
   } 
   *result = reachable;
+}
+
+void CheckBucketNotEmpty(DeltaSteppingDS* v, int* result, void* param) { 
+  *result = (v->bucket >= *(int*)param && v->bucket < std::numeric_limits<int>::max())? (1) : (0); 
+}
+
+template<typename T>
+void Add(T a, T b, T *c, void *param) {
+  *c = a + b;
 }
 
 bool less_than_delta(GraphMat::edge_t<int> e, void* param) {
@@ -153,55 +162,25 @@ void run_deltastepping(char* filename, int delta, int source) {
 
   do {
 
-  printf("***Running Bucket %d ***\n", deltastep.bid);
+  //printf("***Running Bucket %d ***\n", deltastep.bid);
 
-  GraphMat::run_graph_program(&deltastep, G, GraphMat::UNTIL_CONVERGENCE, &ds_ts);
+    G.setAllActive(); 
+    GraphMat::run_graph_program(&deltastep, G, GraphMat::UNTIL_CONVERGENCE, &ds_ts);
 
-  gettimeofday(&start2, 0);
- 
-  #pragma omp parallel for 
-  for (int i = 1; i <= G.getNumberOfVertices(); i++) {
-    if (G.vertexNodeOwner(i)) {
-      if(G.getVertexproperty(i).bucket == deltastep.bid) {
-        G2.setActive(i);
-      } else {
-        G2.setInactive(i);
-      }
-    }
-  }
-  gettimeofday(&end2, 0);
-  active_time += (end2.tv_sec-start2.tv_sec)*1e3+(end2.tv_usec-start2.tv_usec)*1e-3;
+    G2.setAllActive();
+    GraphMat::run_graph_program(&deltastep, G2, 1, &ds_ts);
 
-  GraphMat::run_graph_program(&deltastep, G2, 1, &ds_ts);
-  deltastep.bid++;
-  bucket_not_empty = 0;
-
-  gettimeofday(&start2, 0);
+    deltastep.bid++;
   
-  #pragma omp parallel for reduction(+:bucket_not_empty)
-  for (int i = 1; i <= G.getNumberOfVertices(); i++) {
-    if (G.vertexNodeOwner(i)) {
-      if(G.getVertexproperty(i).bucket == deltastep.bid) {
-        G.setActive(i);
-      } else {
-        G.setInactive(i);
-      }
-      if(G.getVertexproperty(i).bucket >= deltastep.bid && G.getVertexproperty(i).bucket < INT_MAX) {
-        bucket_not_empty = 1;
-      }
-    }
-  }
-  MPI_Allreduce(MPI_IN_PLACE, &bucket_not_empty, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    bucket_not_empty = 0;
+    G.applyReduceAllVertices(&bucket_not_empty, CheckBucketNotEmpty, Add<int>, (void*)&deltastep.bid ); 
 
-  gettimeofday(&end2, 0);
-  active_time += (end2.tv_sec-start2.tv_sec)*1e3+(end2.tv_usec-start2.tv_usec)*1e-3;
-
-  } while(bucket_not_empty);
+  } while(bucket_not_empty != 0);
 
   gettimeofday(&end, 0);
   printf("Time = %.3f ms \n", (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3);
-  printf("Active setting time = %.3f ms \n", active_time);
 
+  if (GraphMat::get_global_myrank() == 0) printf("Number of buckets processed = %d \n", deltastep.bid);
   GraphMat::graph_program_clear(ds_ts);
  
   int reachable_vertices = 0;

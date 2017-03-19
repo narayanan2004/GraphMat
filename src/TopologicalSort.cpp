@@ -104,13 +104,13 @@ class TopSort : public GraphMat::GraphProgram<bool, int, Vertex_type> {
   }
 
   void process_message(const bool& message, const int edge_val, const Vertex_type& vertex, int &res) const {
-    res = 1; 
-    assert(message == true);
+    res = (message == true)?(1):(0); 
+    //assert(message == true);
   }
 
   bool send_message(const Vertex_type& vertex, bool& message) const {
-    message = true;
-    return (vertex.in_degree == 0);
+    message = (vertex.in_degree == 0)?true:false;
+    return true; //(vertex.in_degree == 0);
   }
 
   void apply(const int& message_out, Vertex_type& vertex)  {
