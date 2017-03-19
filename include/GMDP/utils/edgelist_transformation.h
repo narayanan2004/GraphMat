@@ -428,4 +428,19 @@ void random_edge_weights(edgelist_t<T>* edgelist, int random_range) {
   }
 }
 
+template <typename T>
+edgelist_t<T> filter_edges(edgelist_t<T>* edgelist, bool(*filter_function)(edge_t<T>, void*), void* param=NULL) {
+  edgelist_t<T> new_edgelist(edgelist->m, edgelist->n, edgelist->nnz);
+  int k = 0;
+  for(int i = 0; i < edgelist->nnz; i++) {
+    if (filter_function(edgelist->edges[i], param)) {
+      new_edgelist.edges[k] = edgelist->edges[i];
+      k++;
+    }
+  }
+  new_edgelist.nnz = k;
+  return new_edgelist;
+}
+
+
 #endif

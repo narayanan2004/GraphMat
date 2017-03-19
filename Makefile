@@ -42,17 +42,15 @@ endif
 LD_OPTIONS += -lboost_serialization
 
 # --- Apps --- #
-SOURCES = $(wildcard $(SRCDIR)/*.cpp)
-
+sources = $(wildcard $(SRCDIR)/*.cpp)
 include_headers = $(wildcard $(INCLUDEDIR)/*.h)
 dist_primitives_headers = $(wildcard $(DIST_PRIMITIVES_PATH)/*.h $(DIST_PRIMITIVES_PATH)/*/*.h)
-DEPS = $(include_headers) $(dist_primitives_headers)
+deps = $(include_headers) $(dist_primitives_headers)
+apps = $(patsubst $(SRCDIR)/%.cpp, $(BINDIR)/%, $(sources))
 
-APPS=$(BINDIR)/graph_converter $(BINDIR)/PageRank $(BINDIR)/IncrementalPageRank $(BINDIR)/BFS $(BINDIR)/SSSP $(BINDIR)/LDA $(BINDIR)/SGD $(BINDIR)/TriangleCounting $(BINDIR)/TopologicalSort #$(BINDIR)/DS
-
-all: $(APPS)
+all: $(apps)
 	
-$(BINDIR)/% : $(SRCDIR)/%.cpp $(DEPS)  
+$(BINDIR)/% : $(SRCDIR)/%.cpp $(deps)  
 	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -o $@ $< $(LD_OPTIONS)
 
 # --- Test --- #
@@ -61,7 +59,7 @@ test_headers = $(wildcard $(TESTDIR)/*.h)
 test_src = $(wildcard $(TESTDIR)/*.cpp)
 test_objects = $(patsubst $(TESTDIR)/%.cpp, $(TESTBINDIR)/%.o, $(test_src))
 
-$(TESTBINDIR)/%.o : $(TESTDIR)/%.cpp $(DEPS) $(test_headers) 
+$(TESTBINDIR)/%.o : $(TESTDIR)/%.cpp $(deps) $(test_headers) 
 	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -I$(CATCHDIR)/include -c $< -o $@ $(LD_OPTIONS)
 
 $(TESTBINDIR)/test: $(test_objects) 
@@ -70,4 +68,4 @@ $(TESTBINDIR)/test: $(test_objects)
 # --- clean --- #
 
 clean:
-	rm -f $(APPS) $(TESTBINDIR)/test $(test_objects)
+	rm -f $(apps) $(TESTBINDIR)/test $(test_objects)

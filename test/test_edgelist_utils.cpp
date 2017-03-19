@@ -116,6 +116,33 @@ void test_convert_to_dag(int n) {
   E_out.clear();
 }
 
+template<typename T>
+bool src_div_by_3(GraphMat::edge_t<T> e, void* param) {
+  return (e.src % 3 == 0);
+}
+
+template<typename T>
+void test_filter_edges(int n) {
+  auto E = generate_dense_edgelist<T>(n);
+  auto E_out = GraphMat::filter_edges(&E, src_div_by_3<T>, nullptr);
+
+  REQUIRE(E_out.nnz <= n*n);
+  std::sort(E_out.edges, E_out.edges + E_out.nnz, edge_compare<T>);
+  std::sort(E.edges, E.edges + E.nnz, edge_compare<T>);
+
+  int k = 0;
+  for (int i = 0; i < E.nnz; i++) {
+    if (E.edges[i].src % 3 == 0) {
+      REQUIRE(E_out.edges[k].src % 3 == 0);
+      k++;
+    }
+  }
+  REQUIRE(E_out.nnz == k);
+
+  E.clear();
+  E_out.clear();
+}
+
 TEST_CASE("edgelist transformations") 
 {
   SECTION("Test remove self edges") {
@@ -137,5 +164,9 @@ TEST_CASE("edgelist transformations")
   SECTION("Test convert to dag") {
     test_convert_to_dag<int>(5);
     test_convert_to_dag<float>(100);
+  }
+  SECTION("Test filter edges") {
+    test_filter_edges<int>(5);
+    test_filter_edges<float>(100);
   }
 }
