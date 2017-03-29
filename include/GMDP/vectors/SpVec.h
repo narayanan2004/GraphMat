@@ -317,6 +317,15 @@ class SpVec {
     }
   }
 
+  void unset(int idx) {
+    int partitionId = getPartition(idx);
+    assert(partitionId >= 0);
+    if (nodeIds[partitionId] == global_myrank) {
+      assert(segments[partitionId]->capacity > 0);
+      segments[partitionId]->unset(idx - start_id[partitionId]);
+    }
+  }
+
   template<typename T>
   void setAll(T val) {
     for(int segmentId = 0 ; segmentId < nsegments ; segmentId++)

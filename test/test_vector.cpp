@@ -71,6 +71,9 @@ TEST_CASE("vector", "vector")
 
       REQUIRE(myvec.getNNZ() == 4);
 
+      myvec.unset(300);
+      REQUIRE(myvec.getNNZ() == 3);
+
       myvec.setAll(2);
       REQUIRE(myvec.getNNZ() == 1000);
 
@@ -85,6 +88,9 @@ TEST_CASE("vector", "vector")
       v1.set(200, 1);
       v1.set(300, 1);
       REQUIRE(v1.compute_nnz() == 4);
+
+      v1.unset(300);
+      REQUIRE(v1.compute_nnz() == 3);
    }
 
   SECTION("DenseSegment send/recv tests", "DenseSegment send/recv tests") {

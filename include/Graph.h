@@ -286,7 +286,7 @@ void Graph<V,E>::setActive(int v) {
 template<class V, class E> 
 void Graph<V,E>::setInactive(int v) {
   int v_new = vertexToNative(v, tiles_per_dim, nvertices);
-  active->set(v_new, false);
+  active->unset(v_new);
 }
 template<class V, class E> 
 void Graph<V,E>::reset() {
