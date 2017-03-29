@@ -606,6 +606,14 @@ class DenseSegment {
     properties->uninitialized = false;
   }
 
+  void unset(int idx) {
+    alloc();
+    initialize();
+    if(get_bitvector(idx-1, properties->bit_vector)) properties->nnz--;
+    clear_bitvector(idx-1, properties->bit_vector);
+    properties->uninitialized = false;
+  }
+
   void setAll(T val) {
     alloc();
     //initialize();
