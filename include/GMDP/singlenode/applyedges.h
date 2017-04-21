@@ -30,76 +30,65 @@
  *  * ******************************************************************************/
 
 
-#ifndef SRC_GMDP_H_
-#define SRC_GMDP_H_
+#pragma once
 
-#include <mpi.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <math.h>
-#include <parallel/algorithm>
-#include <map>
-#include <set>
-#include <string>
-#include <list>
-#include <vector>
-#include <algorithm>
-#include <cassert>
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
-#include <cstring>
-#include <climits>
-#include <sstream>
-#include <fstream>
-#include <iostream>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/serialization/vector.hpp>
+#include <xmmintrin.h>
+#include "GMDP/utils/bitvector.h"
 
+template <typename Ta, typename Tvp>
+void my_applyedges(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
+               int num_partitions, int* row_pointers, int* col_starts,
+               int* edge_pointers, Tvp * vpvalue1, int * vpbit_vector1,
+	       Tvp * vpvalue2, int * vpbit_vector2,
+	       int m, int n, int* nnz, 
+               void (*op)(Ta*, Tvp, Tvp, void*), void* vsp) {
 
-namespace GraphMat {
+#pragma omp parallel for schedule(dynamic, 1)
+  for (int p = 0; p < num_partitions; p++) {
+    // For each column
+    const int* column_offset = col_indices + col_starts[p];
+    const int* partitioned_row_offset = row_inds + edge_pointers[p];
+    Ta* partitioned_val_offset = vals + edge_pointers[p];
+    const int* col_ptrs_cur = col_ptrs + col_starts[p];
+    for (int j = 0; j < (col_starts[p + 1] - col_starts[p]) - 1; j++) {
+      int col_index = col_indices[col_starts[p] + j];
+      {
+	      //assert(get_bitvector(col_index, vpbit_vector1));
+        Tvp Xval = vpvalue1[col_index];
+        _mm_prefetch((char*)(vpvalue1 + column_offset[j + 4]), _MM_HINT_T0);
 
-inline int get_global_nrank() {
-  int global_nrank;
-  MPI_Comm_size(MPI_COMM_WORLD, &global_nrank);
-  return global_nrank;
+        int nz_idx = col_ptrs_cur[j];
+        for (; nz_idx < col_ptrs_cur[j + 1]; nz_idx++) {
+          int row_ind = partitioned_row_offset[nz_idx];
+	        assert(get_bitvector(row_ind, vpbit_vector2));
+          Tvp Yval = vpvalue2[row_ind];
+          Ta Aval = partitioned_val_offset[nz_idx];
+          op(&Aval, Xval, Yval, vsp);
+          partitioned_val_offset[nz_idx] = Aval;
+        }
+      }
+    }
+  }
+  for (int p = 0; p < num_partitions; p++) {
+    // nnz += new_nnz[p];
+  }
+  *nnz = m * n;
 }
 
-inline int get_global_myrank() {
-  int global_myrank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &global_myrank);
-  return global_myrank;
+
+template <typename Ta, typename Tvp>
+void apply_edges(DCSCTile<Ta>* tile, const DenseSegment<Tvp> * segmentvp1,
+                  const DenseSegment<Tvp> * segmentvp2,
+                  void (*fp)(Ta*, Tvp, Tvp, void*), void* vsp) {
+  if(!(tile->isEmpty()))
+  {
+  int nnz;
+  my_applyedges(tile->row_inds, tile->col_ptrs, tile->col_indices, tile->vals,
+            tile->num_partitions, tile->row_pointers, tile->col_starts,
+            tile->edge_pointers, segmentvp1->properties->value, segmentvp1->properties->bit_vector,
+     	    segmentvp2->properties->value, segmentvp2->properties->bit_vector,
+            tile->m, tile->n, (&nnz),
+            fp, vsp);
+  }
 }
 
-inline double get_compression_threshold() {
-  return 0.5;
-}
-
-class Serializable {};
-
-#include "GMDP/utils/edgelist.h"
-#include "GMDP/matrices/SpMat.h"
-#include "GMDP/matrices/layouts.h"
-#include "GMDP/matrices/COOSIMD32Tile.h"
-#include "GMDP/matrices/COOTile.h"
-#include "GMDP/matrices/CSRTile.h"
-#include "GMDP/matrices/DCSCTile.h"
-#include "GMDP/matrices/HybridTile.h"
-#include "GMDP/matrices/SpMat.h"
-#include "GMDP/vectors/SpVec.h"
-#include "GMDP/vectors/DenseSegment.h"
-#include "GMDP/multinode/intersectreduce.h"
-#include "GMDP/multinode/reduce.h"
-#include "GMDP/multinode/spmspv.h"
-#include "GMDP/multinode/spmspv3.h"
-#include "GMDP/multinode/applyedges.h"
-#include "GMDP/multinode/apply.h"
-#include "GMDP/multinode/clear.h"
-#include "GMDP/utils/edgelist_transformation.h"
-
-
-}  // namespace GMDP
-
-#endif  // SRC_GMDP_H_
