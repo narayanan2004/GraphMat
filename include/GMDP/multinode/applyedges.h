@@ -38,6 +38,10 @@
 #include "GMDP/vectors/SpVec.h"
 #include "GMDP/singlenode/applyedges.h"
 
+/* function pointer:
+ * apply_fn(edge_val, dst_vertex, src_vertex)
+ */
+
 template <template <typename> class SpTile, template<typename> class SpSegment, typename Ta,
           typename Tvp>
 void ApplyEdges(SpMat<SpTile<Ta> > * grida, 

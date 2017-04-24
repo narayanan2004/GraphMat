@@ -35,9 +35,9 @@
 #include <algorithm>
 #include "test_utils.h"
 
-void apply_edges_fn(int * edge_val, int vp1, int vp2, void * vsp)
+void apply_edges_fn(int * edge_val, int dst_vp, int src_vp, void * vsp)
 {
-  *edge_val = vp1 + vp2;
+  *edge_val = dst_vp + 2*src_vp;
 }
 
 template <typename TILE_T, typename EDGE_T>
@@ -61,7 +61,7 @@ void apply_edges(GraphMat::edgelist_t<EDGE_T> E)
 
     for(int i = 0 ; i < OE.nnz ; i++)
     {
-            REQUIRE(OE.edges[i].val == OE.edges[i].src + OE.edges[i].dst);
+            REQUIRE(OE.edges[i].val == 2*OE.edges[i].src + OE.edges[i].dst);
     }
 
     delete A;
