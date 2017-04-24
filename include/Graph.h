@@ -379,10 +379,25 @@ void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), 
   GraphMat::MapReduce(vertexproperty, val, ApplyFn, ReduceFn, param);
 }
 
+template <class V, class E>
+struct func_with_param {
+  void (*Func)(E*, V, V, void*);
+  void* param;
+};
+
 template<class V, class E> 
-void Graph<V,E>::applyToAllEdges(void (*ApplyFn)(E*, V, V, void*), void* param) {
-  GraphMat::ApplyEdges(A, vertexproperty, ApplyFn, param);
+void Graph<V,E>::applyToAllEdges(void (*ApplyFn)(E* edge, V src, V dst, void*), void* param) {
   GraphMat::ApplyEdges(AT, vertexproperty, ApplyFn, param);
+
+  struct func_with_param<V,E> s;
+  s.Func = ApplyFn;
+  s.param = param;
+  void (*ApplyFn2)(E*, V, V, void*);
+  ApplyFn2 = [](E* e, V src, V dst, void* p){
+      struct func_with_param<V,E>* f =(struct func_with_param<V,E>*)(p);
+      f->Func(e, dst, src, f->param);
+  };
+  GraphMat::ApplyEdges(A, vertexproperty, ApplyFn2, (void*)(&s) );
 }
 
 template<class V, class E> 

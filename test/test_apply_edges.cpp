@@ -34,6 +34,7 @@
 #include "generator.h"
 #include <algorithm>
 #include "test_utils.h"
+#include "Graph.h"
 
 void apply_edges_fn(int * edge_val, int vp1, int vp2, void * vsp)
 {
@@ -43,6 +44,25 @@ void apply_edges_fn(int * edge_val, int vp1, int vp2, void * vsp)
 template <typename TILE_T, typename EDGE_T>
 void apply_edges(GraphMat::edgelist_t<EDGE_T> E)
 {
+
+    GraphMat::Graph<int, EDGE_T> G;
+    G.ReadEdgelist(E);
+    for(int i = 1 ; i <= G.getNumberOfVertices() ; i++)
+    {
+      G.setVertexproperty(i, i);
+    }
+
+    // Apply edges
+    G.applyToAllEdges(apply_edges_fn, NULL);
+    GraphMat::edgelist_t<EDGE_T> E2;
+    G.getEdgelist(E2);
+    for(int i = 0 ; i < E2.nnz ; i++)
+    {
+            REQUIRE(E2.edges[i].val == E2.edges[i].src + E2.edges[i].dst);
+    }
+    E2.clear();
+
+
     std::sort(E.edges, E.edges + E.nnz, edge_compare<EDGE_T>);
     GraphMat::SpMat<TILE_T>* A = new GraphMat::SpMat<TILE_T>(E, GraphMat::get_global_nrank(), GraphMat::get_global_nrank(), GraphMat::partition_fn_1d);
     GraphMat::SpVec<GraphMat::DenseSegment<EDGE_T> > vp(A->n, GraphMat::get_global_nrank(), GraphMat::vector_partition_fn);
