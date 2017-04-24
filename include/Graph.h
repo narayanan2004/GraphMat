@@ -86,6 +86,7 @@ class Graph {
     void setAllInactive();
     void setActive(int v);
     void setInactive(int v);
+
     void setAllVertexproperty(const V& val);
     void setVertexproperty(int v, const V& val);
     V getVertexproperty(int v) const;
@@ -96,6 +97,7 @@ class Graph {
     int getNumberOfVertices() const;
     void applyToAllVertices(void (*ApplyFn)(V, V*, void*), void* param=nullptr);
     template<class T> void applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*)=AddFn<T>, void* param=nullptr);
+    void applyToAllEdges(void (*ApplyFn)(E*, V, V, void*), void* param=nullptr);
     ~Graph();
 
   private:
@@ -375,6 +377,27 @@ template<class V, class E>
 template<class T> 
 void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*), void* param) {
   GraphMat::MapReduce(vertexproperty, val, ApplyFn, ReduceFn, param);
+}
+
+template <class V, class E>
+struct func_with_param {
+  void (*Func)(E*, V, V, void*);
+  void* param;
+};
+
+template<class V, class E> 
+void Graph<V,E>::applyToAllEdges(void (*ApplyFn)(E* edge, V src, V dst, void*), void* param) {
+  GraphMat::ApplyEdges(AT, vertexproperty, ApplyFn, param);
+
+  struct func_with_param<V,E> s;
+  s.Func = ApplyFn;
+  s.param = param;
+  void (*ApplyFn2)(E*, V, V, void*);
+  ApplyFn2 = [](E* e, V src, V dst, void* p){
+      struct func_with_param<V,E>* f =(struct func_with_param<V,E>*)(p);
+      f->Func(e, dst, src, f->param);
+  };
+  GraphMat::ApplyEdges(A, vertexproperty, ApplyFn2, (void*)(&s) );
 }
 
 template<class V, class E> 
