@@ -36,9 +36,10 @@
 #include "test_utils.h"
 #include "Graph.h"
 
-void apply_edges_fn(int * edge_val, int dst_vp, int src_vp, void * vsp)
+void apply_edges_fn(int * edge_val, int src_vp, int dst_vp, void * vsp)
 {
-  *edge_val = dst_vp + 2*src_vp;
+  int s = *(int*)vsp;
+  *edge_val = src_vp + s * dst_vp;
 }
 
 template <typename TILE_T, typename EDGE_T>
@@ -52,13 +53,15 @@ void apply_edges(GraphMat::edgelist_t<EDGE_T> E)
       G.setVertexproperty(i, i);
     }
 
+    int s = 2;
+
     // Apply edges
-    G.applyToAllEdges(apply_edges_fn, NULL);
+    G.applyToAllEdges(apply_edges_fn, (void*)&s);
     GraphMat::edgelist_t<EDGE_T> E2;
     G.getEdgelist(E2);
     for(int i = 0 ; i < E2.nnz ; i++)
     {
-            REQUIRE(E2.edges[i].val == E2.edges[i].src + E2.edges[i].dst);
+            REQUIRE(E2.edges[i].val == E2.edges[i].src + s * E2.edges[i].dst);
     }
     E2.clear();
 
@@ -72,7 +75,7 @@ void apply_edges(GraphMat::edgelist_t<EDGE_T> E)
     }
 
     // Apply edges
-    GraphMat::ApplyEdges(A, &vp, apply_edges_fn, NULL);
+    GraphMat::ApplyEdges(A, &vp, apply_edges_fn, (void*)&s);
 
     // Get new edgelist from matrix
     GraphMat::edgelist_t<EDGE_T> OE;
@@ -81,7 +84,7 @@ void apply_edges(GraphMat::edgelist_t<EDGE_T> E)
 
     for(int i = 0 ; i < OE.nnz ; i++)
     {
-            REQUIRE(OE.edges[i].val == 2*OE.edges[i].src + OE.edges[i].dst);
+            REQUIRE(OE.edges[i].val == s * OE.edges[i].src + OE.edges[i].dst); // For A, src = row and dst = column.
     }
 
     delete A;

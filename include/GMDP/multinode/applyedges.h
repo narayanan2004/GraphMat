@@ -39,7 +39,7 @@
 #include "GMDP/singlenode/applyedges.h"
 
 /* function pointer:
- * apply_fn(edge_val, dst_vertex, src_vertex)
+ * apply_fn(edge_val, column_vertex, row_vertex)
  */
 
 template <template <typename> class SpTile, template<typename> class SpSegment, typename Ta,
