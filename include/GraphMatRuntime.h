@@ -231,8 +231,16 @@ void run_graph_program(GraphProgram<T,U,V,E>* gp, Graph<V,E>& g, int iterations=
     printf("Apply time = %.3f ms \n", time);
     #endif
     
+    gettimeofday(&start, 0);
+
     gp->do_every_iteration(it);
 
+    #ifdef __TIMING
+    gettimeofday(&end, 0);
+    time = (end.tv_sec-start.tv_sec)*1e3+(end.tv_usec-start.tv_usec)*1e-3;
+    printf("Do every iteration time = %.3f ms \n", time);
+    #endif
+ 
     gettimeofday(&iteration_end, 0);
     #ifdef __TIMING
     time = (iteration_end.tv_sec-iteration_start.tv_sec)*1e3+(iteration_end.tv_usec-iteration_start.tv_usec)*1e-3;
