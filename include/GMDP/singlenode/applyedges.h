@@ -61,10 +61,11 @@ void my_applyedges(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
         for (; nz_idx < col_ptrs_cur[j + 1]; nz_idx++) {
           int row_ind = partitioned_row_offset[nz_idx];
 	        assert(get_bitvector(row_ind, vpbit_vector2));
-          Tvp Yval = vpvalue2[row_ind];
-          Ta Aval = partitioned_val_offset[nz_idx];
-          op(&Aval, Xval, Yval, vsp);
-          partitioned_val_offset[nz_idx] = Aval;
+          //Tvp Yval = vpvalue2[row_ind];
+          //Ta Aval = partitioned_val_offset[nz_idx];
+          //op(&Aval, Xval, Yval, vsp);
+          op(&partitioned_val_offset[nz_idx], Xval, vpvalue2[row_ind], vsp);
+          //partitioned_val_offset[nz_idx] = Aval;
         }
       }
     }
