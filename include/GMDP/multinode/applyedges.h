@@ -46,7 +46,7 @@ template <template <typename> class SpTile, template<typename> class SpSegment, 
           typename Tvp>
 void ApplyEdges(SpMat<SpTile<Ta> > * grida, 
                  SpVec<SpSegment<Tvp> >* vecvp,
-                 void (*fp)(Ta*, Tvp, Tvp, void*), void* vsp=NULL) {
+                 void (*fp)(Ta*, const Tvp&, const Tvp&, void*), void* vsp=NULL) {
   int start_m = 0;
   int start_n = 0;
   int end_m = grida->ntiles_y;

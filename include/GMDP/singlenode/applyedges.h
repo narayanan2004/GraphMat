@@ -41,7 +41,7 @@ void my_applyedges(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
                int* edge_pointers, Tvp * vpvalue1, int * vpbit_vector1,
 	       Tvp * vpvalue2, int * vpbit_vector2,
 	       int m, int n, int* nnz, 
-               void (*op)(Ta*, Tvp, Tvp, void*), void* vsp) {
+               void (*op)(Ta*, const Tvp&, const Tvp&, void*), void* vsp) {
 
 #pragma omp parallel for schedule(dynamic, 1)
   for (int p = 0; p < num_partitions; p++) {
@@ -54,7 +54,7 @@ void my_applyedges(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
       int col_index = col_indices[col_starts[p] + j];
       {
 	      //assert(get_bitvector(col_index, vpbit_vector1));
-        Tvp Xval = vpvalue1[col_index];
+        //Tvp Xval = vpvalue1[col_index];
         _mm_prefetch((char*)(vpvalue1 + column_offset[j + 4]), _MM_HINT_T0);
 
         int nz_idx = col_ptrs_cur[j];
@@ -64,7 +64,8 @@ void my_applyedges(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
           //Tvp Yval = vpvalue2[row_ind];
           //Ta Aval = partitioned_val_offset[nz_idx];
           //op(&Aval, Xval, Yval, vsp);
-          op(&partitioned_val_offset[nz_idx], Xval, vpvalue2[row_ind], vsp);
+          //op(&partitioned_val_offset[nz_idx], Xval, vpvalue2[row_ind], vsp);
+          op(&partitioned_val_offset[nz_idx], vpvalue1[col_index], vpvalue2[row_ind], vsp);
           //partitioned_val_offset[nz_idx] = Aval;
         }
       }
@@ -80,7 +81,7 @@ void my_applyedges(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
 template <typename Ta, typename Tvp>
 void apply_edges(DCSCTile<Ta>* tile, const DenseSegment<Tvp> * segmentvp1,
                   const DenseSegment<Tvp> * segmentvp2,
-                  void (*fp)(Ta*, Tvp, Tvp, void*), void* vsp) {
+                  void (*fp)(Ta*, const Tvp&, const Tvp&, void*), void* vsp) {
   if(!(tile->isEmpty()))
   {
   int nnz;

@@ -36,7 +36,7 @@
 #include "test_utils.h"
 #include "Graph.h"
 
-void apply_edges_fn(int * edge_val, int src_vp, int dst_vp, void * vsp)
+void apply_edges_fn(int * edge_val, const int& src_vp, const int& dst_vp, void * vsp)
 {
   int s = *(int*)vsp;
   *edge_val = src_vp + s * dst_vp;
