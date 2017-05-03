@@ -41,7 +41,7 @@ void my_spmspv3(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
                int* edge_pointers, Tx* xvalue, int * xbit_vector, 
 	       Tvp * vpvalue, int * vpbit_vector, Ty * yvalue,
                int * ybit_vector, 
-	       int m, int n, int* nnz, void (*op_mul)(Ta, Tx, Tvp, Ty*, void*),
+	       int m, int n, int* nnz, void (*op_mul)(const Ta&, const Tx&, const Tvp&, Ty*, void*),
                void (*op_add)(Ty, Ty, Ty*, void*), void* vsp) {
 
 #pragma omp parallel for schedule(dynamic, 1)
@@ -54,7 +54,7 @@ void my_spmspv3(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
     for (int j = 0; j < (col_starts[p + 1] - col_starts[p]) - 1; j++) {
       int col_index = col_indices[col_starts[p] + j];
       if(get_bitvector(col_index, xbit_vector)) {
-        Tx Xval = xvalue[col_index];
+        //Tx Xval = xvalue[col_index];
         _mm_prefetch((char*)(xvalue + column_offset[j + 4]), _MM_HINT_T0);
 
         int nz_idx = col_ptrs_cur[j];
@@ -67,7 +67,7 @@ void my_spmspv3(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
 	  {
             Ty tmp_mul;
             //Ty tmp_add;
-            op_mul(Aval, Xval, vpvalue[row_ind], &tmp_mul, vsp);
+            op_mul(Aval, xvalue[col_index], vpvalue[row_ind], &tmp_mul, vsp);
             op_add(yvalue[row_ind], tmp_mul, &yvalue[row_ind], vsp);
             //yvalue[row_ind] = tmp_add;
 	  }
@@ -75,7 +75,7 @@ void my_spmspv3(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
 	  {
             //Ty tmp_mul;
             //op_mul(Aval, Xval, VPVal, &tmp_mul, vsp);
-            op_mul(Aval, Xval, vpvalue[row_ind], &yvalue[row_ind], vsp);
+            op_mul(Aval, xvalue[col_index], vpvalue[row_ind], &yvalue[row_ind], vsp);
             //yvalue[row_ind] = tmp_mul;
             set_bitvector(row_ind, ybit_vector);
 	  }
@@ -95,7 +95,7 @@ void my_coospmspv3(Ta* a, int* ia, int* ja, int num_partitions, int * partition_
                   Tx* xvalue, int * xbit_vector,
 	          Tvp * vpvalue, int * vpbit_vector, Ty * yvalue,
                   int * ybit_vector, 
- 	          int m, int n, int* nnz, void (*op_mul)(Ta, Tx, Tvp, Ty*, void*),
+ 	          int m, int n, int* nnz, void (*op_mul)(const Ta&, const Tx&, const Tvp&, Ty*, void*),
                   void (*op_add)(Ty, Ty, Ty*, void*), void* vsp) {
 
 
@@ -119,7 +119,7 @@ void my_coospmspv3(Ta* a, int* ia, int* ja, int num_partitions, int * partition_
 	assert(get_bitvector(row, vpbit_vector));
 
         Ty tmp_mul;
-        op_mul(a[nz], xvalue[col], VPVal, &tmp_mul, vsp);
+        op_mul(a[nz], xvalue[col], vpvalue[row], &tmp_mul, vsp);
 
         bool row_exists = get_bitvector(row, ybit_vector);
         if(!row_exists)
@@ -144,7 +144,7 @@ template <typename Ta, typename Tx, typename Tvp, typename Ty>
 void mult_segment3(const DCSCTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
                   const DenseSegment<Tvp> * segmentvp,
                   DenseSegment<Ty> * segmenty,
-                  void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*mul_fp)(const Ta&, const Tx&, const Tvp&, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
   int nnz = 0;
@@ -161,7 +161,7 @@ template <typename Ta, typename Tx, typename Tvp, typename Ty>
 void mult_segment3(const COOTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
                   const DenseSegment<Tvp> * segmentvp,
                   DenseSegment<Ty>* segmenty,
-                  void (*mul_fp)(Ta, Tx, Tvp, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*mul_fp)(const Ta&, const Tx&, const Tvp&, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
   int nnz = 0;

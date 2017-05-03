@@ -39,14 +39,14 @@
 namespace GraphMat {
 
 template <class T, class U, class V, class E>
-void Mulfn(E a, T b, U * c, void* gpv) { 
+void Mulfn(const E& a, const T& b, U * c, void* gpv) { 
   GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
   V dummy;
   gp->process_message(b, a, dummy, *c); 
 }
 
 template <class T, class U, class V, class E>
-void Mulfn(E a, T b, V v, U * c, void* gpv) { 
+void Mulfn(const E& a, const T& b, const V& v, U * c, void* gpv) { 
   GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
   gp->process_message(b, a, v, *c); 
 }

@@ -164,7 +164,7 @@ void distribute_edges(const int root_rank, const GraphMat::edgelist_t<EDGE_T>& i
 }
 
 template <typename T>
-void mul(T a, T b, T * c, void* vsp) {*c = a*b;}
+void mul(const T& a, const T& b, T * c, void* vsp) {*c = a*b;}
 
 template <typename T>
 void add(T a, T b, T * c, void* vsp) {*c = a+b;}
