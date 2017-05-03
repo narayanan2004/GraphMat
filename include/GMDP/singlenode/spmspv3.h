@@ -42,7 +42,7 @@ void my_spmspv3(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
 	       Tvp * vpvalue, int * vpbit_vector, Ty * yvalue,
                int * ybit_vector, 
 	       int m, int n, int* nnz, void (*op_mul)(const Ta&, const Tx&, const Tvp&, Ty*, void*),
-               void (*op_add)(Ty, Ty, Ty*, void*), void* vsp) {
+               void (*op_add)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
 
 #pragma omp parallel for schedule(dynamic, 1)
   for (int p = 0; p < num_partitions; p++) {
@@ -96,7 +96,7 @@ void my_coospmspv3(Ta* a, int* ia, int* ja, int num_partitions, int * partition_
 	          Tvp * vpvalue, int * vpbit_vector, Ty * yvalue,
                   int * ybit_vector, 
  	          int m, int n, int* nnz, void (*op_mul)(const Ta&, const Tx&, const Tvp&, Ty*, void*),
-                  void (*op_add)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*op_add)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
 
 
 
@@ -144,7 +144,7 @@ template <typename Ta, typename Tx, typename Tvp, typename Ty>
 void mult_segment3(const DCSCTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
                   const DenseSegment<Tvp> * segmentvp,
                   DenseSegment<Ty> * segmenty,
-                  void (*mul_fp)(const Ta&, const Tx&, const Tvp&, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*mul_fp)(const Ta&, const Tx&, const Tvp&, Ty*, void*), void (*add_fp)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
   int nnz = 0;
@@ -161,7 +161,7 @@ template <typename Ta, typename Tx, typename Tvp, typename Ty>
 void mult_segment3(const COOTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
                   const DenseSegment<Tvp> * segmentvp,
                   DenseSegment<Ty>* segmenty,
-                  void (*mul_fp)(const Ta&, const Tx&, const Tvp&, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*mul_fp)(const Ta&, const Tx&, const Tvp&, Ty*, void*), void (*add_fp)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
   int nnz = 0;

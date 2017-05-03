@@ -43,7 +43,7 @@ template <template <typename> class SpTile, template<typename> class SpSegment, 
           typename Ty>
 void SpMSpV3(const SpMat<SpTile<Ta> > * grida, SpVec<SpSegment<Tx> >* vecx,
                  SpVec<SpSegment<Tvp> >* vecvp,
-                 SpVec<SpSegment<Ty> >* vecy,void (*mul_fp)(const Ta&, const Tx&, const Tvp&, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp=NULL) {
+                 SpVec<SpSegment<Ty> >* vecy,void (*mul_fp)(const Ta&, const Tx&, const Tvp&, Ty*, void*), void (*add_fp)(const Ty&, const Ty&, Ty*, void*), void* vsp=NULL) {
   int start_m = 0;
   int start_n = 0;
   int end_m = grida->ntiles_y;

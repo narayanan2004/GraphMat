@@ -41,7 +41,7 @@ void my_spmspv(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
                int num_partitions, int* row_pointers, int* col_starts,
                int* edge_pointers, Tx* xvalue, int * xbit_vector, Ty* yvalue,
                int * ybit_vector, int m, int n, int* nnz, void (*op_mul)(const Ta&, const Tx&, Ty*, void*),
-               void (*op_add)(Ty, Ty, Ty*, void*), void* vsp) {
+               void (*op_add)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
 
 // int * new_nnz = new int[num_partitions];
 // memset(new_nnz, 0, num_partitions * sizeof(int));
@@ -88,7 +88,7 @@ void my_spmspv(int* row_inds, int* col_ptrs, int* col_indices, Ta* vals,
 template <typename Ta, typename Tx, typename Ty>
 void my_csrspmspv(Ta* a, int* ia, int* ja, Tx* xvalue, int * xbit_vector,
                   Ty* yvalue, int * ybit_vector, int m, int n, int* nnz,
-                  void (*op_mul)(const Ta&, const Tx&, Ty*, void*), void (*op_add)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*op_mul)(const Ta&, const Tx&, Ty*, void*), void (*op_add)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
 
   int num_partitions = omp_get_max_threads() * 4;
   int rows_per_partition = (m + num_partitions - 1) / num_partitions;
@@ -141,7 +141,7 @@ template <typename Ta, typename Tx, typename Ty>
 void my_dcsrspmspv(Ta* a, int* ia, int* ja, int * row_ids, int num_rows, int * partition_ptrs, int num_partitions,
                   Tx* xvalue, int * xbit_vector,
                   Ty* yvalue, int * ybit_vector, int m, int n, int* nnz,
-                  void (*op_mul)(const Ta&, const Tx&, Ty*, void*), void (*op_add)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*op_mul)(const Ta&, const Tx&, Ty*, void*), void (*op_add)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
 
   #pragma omp parallel for schedule(dynamic, 1)
   for(int p = 0 ; p < num_partitions ; p++)
@@ -186,7 +186,7 @@ template <typename Ta, typename Tx, typename Ty>
 void my_coospmspv(Ta* a, int* ia, int* ja, int num_partitions, int * partition_starts,
                   Tx* xvalue, int * xbit_vector,
                   Ty* yvalue, int * ybit_vector, int m, int n, int* nnz,
-                  void (*op_mul)(const Ta&, const Tx&, Ty*, void*), void (*op_add)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*op_mul)(const Ta&, const Tx&, Ty*, void*), void (*op_add)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
 
   #pragma omp parallel for schedule(dynamic, 1)
   for(int partition = 0 ; partition < num_partitions ; partition++)
@@ -226,7 +226,7 @@ void my_coospmspv(Ta* a, int* ia, int* ja, int num_partitions, int * partition_s
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const DCSCTile<Ta>* tile, DenseSegment<Tx>* segmentx,
                   DenseSegment<Ty>* segmenty, 
-                  void (*mul_fp)(const Ta&, const Tx&, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*mul_fp)(const Ta&, const Tx&, Ty*, void*), void (*add_fp)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
   my_spmspv(tile->row_inds, tile->col_ptrs, tile->col_indices, tile->vals,
@@ -241,7 +241,7 @@ void mult_segment(const DCSCTile<Ta>* tile, DenseSegment<Tx>* segmentx,
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const HybridTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
                   DenseSegment<Ty>* segmenty, 
-                  void (*mul_fp)(const Ta&, const Tx&, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*mul_fp)(const Ta&, const Tx&, Ty*, void*), void (*add_fp)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
   int nnz = 0;
@@ -265,7 +265,7 @@ void mult_segment(const HybridTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const CSRTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
                   DenseSegment<Ty>* segmenty, 
-                  void (*mul_fp)(const Ta&, const Tx&, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*mul_fp)(const Ta&, const Tx&, Ty*, void*), void (*add_fp)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
   int nnz = 0;
@@ -282,7 +282,7 @@ void mult_segment(const CSRTile<Ta>* tile, const DenseSegment<Tx> * segmentx,
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const COOTile<Ta>* tile, const DenseSegment<Tx>* segmentx,
                   DenseSegment<Ty>* segmenty, 
-                  void (*mul_fp)(const Ta&, const Tx&, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*mul_fp)(const Ta&, const Tx&, Ty*, void*), void (*add_fp)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
   int nnz = 0;
@@ -299,7 +299,7 @@ void mult_segment(const COOTile<Ta>* tile, const DenseSegment<Tx>* segmentx,
 template <typename Ta, typename Tx, typename Ty>
 void mult_segment(const COOSIMD32Tile<Ta>* tile, const DenseSegment<Tx>* segmentx,
                   DenseSegment<Ty>* segmenty, 
-                  void (*mul_fp)(const Ta&, const Tx&, Ty*, void*), void (*add_fp)(Ty, Ty, Ty*, void*), void* vsp) {
+                  void (*mul_fp)(const Ta&, const Tx&, Ty*, void*), void (*add_fp)(const Ty&, const Ty&, Ty*, void*), void* vsp) {
   segmenty->alloc();
   segmenty->initialize();
   int nnz = 0;

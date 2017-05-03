@@ -52,7 +52,7 @@ void Mulfn(const E& a, const T& b, const V& v, U * c, void* gpv) {
 }
 
 template <class T, class U, class V, class E>
-void Addfn(U a, U b, U * c, void* gpv) { 
+void Addfn(const U& a, const U& b, U * c, void* gpv) { 
   GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv; 
   *c = a;
   gp->reduce_function(*c, b);

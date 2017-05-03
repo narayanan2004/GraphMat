@@ -37,7 +37,7 @@
 
 template <typename Ta, typename Tb, typename Tc>
 void union_dense(Ta* v1, int * bv1, int nnz, int num_ints, Tb * v2, int * bv2, Tc * v3, int * bv3,
-                          void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) 
+                          void (*op_fp)(const Ta&, const Tb&, Tc*, void*), void* vsp) 
 {
 
   #pragma omp parallel for
@@ -67,7 +67,7 @@ void union_dense(Ta* v1, int * bv1, int nnz, int num_ints, Tb * v2, int * bv2, T
 
 template <typename Ta, typename Tb>
 void union_compressed(Ta* v1, int* indices, int nnz, int capacity, int num_ints, Tb * v2, int * bv2,
-                          void (*op_fp)(Ta, Tb, Tb*, void*), void* vsp) 
+                          void (*op_fp)(const Ta&, const Tb&, Tb*, void*), void* vsp) 
 {
   //int * indices = reinterpret_cast<int*>(v1 + nnz);
   int npartitions = omp_get_max_threads() * 16;

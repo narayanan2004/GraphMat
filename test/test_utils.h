@@ -167,12 +167,12 @@ template <typename T>
 void mul(const T& a, const T& b, T * c, void* vsp) {*c = a*b;}
 
 template <typename T>
-void add(T a, T b, T * c, void* vsp) {*c = a+b;}
+void add(const T& a, const T& b, T * c, void* vsp) {*c = a+b;}
 
 template <typename T>
-void max(T a, T b, T * c, void* vsp) {*c = std::max(a,b);}
+void max(const T& a, const T& b, T * c, void* vsp) {*c = std::max(a,b);}
 
 template <typename T>
-void min(T a, T b, T * c, void* vsp) {*c = std::min(a,b);}
+void min(const T& a, const T& b, T * c, void* vsp) {*c = std::min(a,b);}
 
 #endif

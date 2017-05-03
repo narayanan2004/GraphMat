@@ -806,7 +806,7 @@ class DenseSegment {
   }
 
   template <typename Ta, typename Tb, typename Tc>
-  void union_received(void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) {
+  void union_received(void (*op_fp)(const Ta&, const Tb&, Tc*, void*), void* vsp) {
     alloc();
     initialize();
     for(auto it = received.begin() ; it != received.end() ; it++)
