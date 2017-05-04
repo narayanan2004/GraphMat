@@ -38,7 +38,7 @@
 
 template <template<typename> class SpSegment, typename T, typename VT>
 void MapReduce(SpVec<SpSegment<VT> > * vec, T* res,
-                 void (*op_map)(VT*, T*, void*), void (*op_fp)(T, T, T*, void*), void* vsp) {
+                 void (*op_map)(VT*, T*, void*), void (*op_fp)(const T&, const T&, T*, void*), void* vsp) {
   int global_myrank = get_global_myrank();
   int global_nrank = get_global_nrank();
   int start = 0;

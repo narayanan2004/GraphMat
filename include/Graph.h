@@ -50,7 +50,7 @@ inline double sec(struct timeval start, struct timeval end)
 
 
 template<class T>
-void AddFn(T a, T b, T* c, void* vsp) {
+void AddFn(const T& a, const T& b, T* c, void* vsp) {
   *c = a + b ;
 }
 
@@ -95,8 +95,8 @@ class Graph {
     void reset();
     void shareVertexProperty(Graph<V,E>& g);
     int getNumberOfVertices() const;
-    void applyToAllVertices(void (*ApplyFn)(V, V*, void*), void* param=nullptr);
-    template<class T> void applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*)=AddFn<T>, void* param=nullptr);
+    void applyToAllVertices(void (*ApplyFn)(const V&, V*, void*), void* param=nullptr);
+    template<class T> void applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(const T&, const T&,T*,void*)=AddFn<T>, void* param=nullptr);
     void applyToAllEdges(void (*ApplyFn)(E*, const V&, const V&, void*), void* param=nullptr);
     ~Graph();
 
@@ -369,14 +369,14 @@ int Graph<V,E>::getNumberOfVertices() const {
 }
 
 template<class V, class E> 
-void Graph<V,E>::applyToAllVertices( void (*ApplyFn)(V, V*, void*), void* param) {
+void Graph<V,E>::applyToAllVertices( void (*ApplyFn)(const V&, V*, void*), void* param) {
   GraphMat::Apply(vertexproperty, vertexproperty, ApplyFn, param);
 }
 
 
 template<class V, class E> 
 template<class T> 
-void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(T,T,T*,void*), void* param) {
+void Graph<V,E>::applyReduceAllVertices(T* val, void (*ApplyFn)(V*, T*, void*), void (*ReduceFn)(const T&, const T&,T*,void*), void* param) {
   GraphMat::MapReduce(vertexproperty, val, ApplyFn, ReduceFn, param);
 }
 

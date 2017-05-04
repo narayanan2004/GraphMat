@@ -38,7 +38,7 @@
 
 template <template<typename> class SpSegment, typename Ta, typename Tb>
 void Apply(const SpVec<SpSegment<Ta> > * v_in, SpVec<SpSegment<Tb> > * v_out,
-                 void (*add_fp)(Ta, Tb*, void*), void* vsp) {
+                 void (*add_fp)(const Ta&, Tb*, void*), void* vsp) {
   int start = 0; 
   int end = v_in->nsegments;
   for (int i = start; i < end; i++) {

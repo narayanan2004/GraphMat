@@ -110,7 +110,7 @@ void CheckBucketNotEmpty(DeltaSteppingDS* v, int* result, void* param) {
 }
 
 template<typename T>
-void Add(T a, T b, T *c, void *param) {
+void Add(const T& a, const T& b, T *c, void *param) {
   *c = a + b;
 }
 

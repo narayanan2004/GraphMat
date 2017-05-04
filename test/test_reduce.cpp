@@ -34,7 +34,7 @@
 #include "test_utils.h"
 
 void mapdouble(int * a, int * b, void * vsp) { *b = 2 * (*a); }
-void sumreduce(int a, int b, int * c, void * vsp) { *c = a + b; } 
+void sumreduce(const int& a, const int& b, int * c, void * vsp) { *c = a + b; } 
 
 TEST_CASE("reduce", "reduce")
 {

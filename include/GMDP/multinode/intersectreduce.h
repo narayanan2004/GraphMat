@@ -40,7 +40,7 @@ template <template <typename> class SpSegment, typename Ta, typename Tb, typenam
 void IntersectReduce(const SpVec<SpSegment<Ta> > * veca,
                           const SpVec<SpSegment<Tb> > * vecb,
                           SpVec<SpSegment<Tc> > * vecc,
-                          void (*op_fp)(Ta, Tb, Tc*, void*), void* vsp) {
+                          void (*op_fp)(const Ta&, const Tb&, Tc*, void*), void* vsp) {
   int global_myrank = get_global_myrank();
   int start = 0;
   int end = veca->nsegments;

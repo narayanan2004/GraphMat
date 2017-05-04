@@ -121,7 +121,7 @@ void IfTerm(LatentVector<K>* v, LatentVector<K>* out, void* param) {
 }
 
 template<unsigned int K>
-void Add(LatentVector<K> v1, LatentVector<K> v2, LatentVector<K>* out, void* param) {
+void Add(const LatentVector<K>& v1, const LatentVector<K>& v2, LatentVector<K>* out, void* param) {
     for (int i = 0; i < K; i++) out->N[i] = v1.N[i] + v2.N[i];
 }
 

@@ -77,7 +77,7 @@ void graph_program_clear(struct run_graph_program_temp_structure<T,U,V>& rgpts) 
 
 
 template <class T,class U, class V, class E>
-void send_message(bool a, V _v, T* b, void* gpv) {
+void send_message(const bool& a, const V& _v, T* b, void* gpv) {
   GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
   if(a == true) {
     gp->send_message(_v, *b);
@@ -85,7 +85,7 @@ void send_message(bool a, V _v, T* b, void* gpv) {
 }
 
 template <class T, class U, class V, class E>
-void apply_func(U y, V* b, void* gpv) {
+void apply_func(const U& y, V* b, void* gpv) {
   GraphProgram<T,U,V,E>* gp = (GraphProgram<T,U,V,E>*) gpv;
   gp->apply(y, *b);
 }

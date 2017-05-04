@@ -35,7 +35,7 @@
 
 template <typename T>
 void reduce_dense_segment(T* value, int * bitvector, int nnz, T* result, bool* res_set,
-                          void (*op_fp)(T, T, T*, void*), void* vsp) {
+                          void (*op_fp)(const T&, const T&, T*, void*), void* vsp) {
 
   for(int i = 0 ; i < nnz ; i++)
   {
@@ -50,7 +50,7 @@ void reduce_dense_segment(T* value, int * bitvector, int nnz, T* result, bool* r
 
 template <typename VT, typename T>
 void mapreduce_dense_segment(VT* value, int * bitvector, int nnz, T* result, bool* res_set,
-                          void (*op_map)(VT*, T*, void*), void (*op_fp)(T, T, T*, void*), void* vsp) {
+                          void (*op_map)(VT*, T*, void*), void (*op_fp)(const T&, const T&, T*, void*), void* vsp) {
 
   int nthreads = omp_get_max_threads();
   T * local_reduced = new T[nthreads*16];
@@ -100,14 +100,14 @@ void mapreduce_dense_segment(VT* value, int * bitvector, int nnz, T* result, boo
 
 template <typename T>
 void reduce_segment(const DenseSegment<T> * segment, T* res, bool* res_set,
-                    void (*op_fp)(T, T, T*, void*), void* vsp) {
+                    void (*op_fp)(const T&, const T&, T*, void*), void* vsp) {
 
   reduce_dense_segment(segment->properties->value, segment->properties->bit_vector, segment->capacity, res, res_set, op_fp, vsp);
 }
 
 template <typename VT, typename T>
 void mapreduce_segment(DenseSegment<VT> * segment, T* res, bool* res_set,
-                    void (*op_map)(VT*, T*, void*), void (*op_fp)(T, T, T*, void*), void* vsp) {
+                    void (*op_map)(VT*, T*, void*), void (*op_fp)(const T&, const T&, T*, void*), void* vsp) {
   segment->alloc();
   segment->initialize();
   mapreduce_dense_segment(segment->properties->value, segment->properties->bit_vector, segment->capacity, res, res_set, op_map, op_fp, vsp);
