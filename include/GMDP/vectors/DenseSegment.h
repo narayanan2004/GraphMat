@@ -818,11 +818,13 @@ class DenseSegment {
       else if(should_compress((*it)->nnz) == SERIALIZED)
       {
         (*it)->decompress();
-        union_dense((*it)->value, (*it)->bit_vector, capacity, num_ints, properties->value, properties->bit_vector, properties->value, properties->bit_vector, op_fp, vsp);
+        //union_dense((*it)->value, (*it)->bit_vector, capacity, num_ints, properties->value, properties->bit_vector, properties->value, properties->bit_vector, op_fp, vsp);
+        union_dense(properties->value, properties->bit_vector, capacity, num_ints, (*it)->value, (*it)->bit_vector, properties->value, properties->bit_vector, op_fp, vsp);
       }
       else
       {
-        union_dense((*it)->value, (*it)->bit_vector, capacity, num_ints, properties->value, properties->bit_vector, properties->value, properties->bit_vector, op_fp, vsp);
+        //union_dense((*it)->value, (*it)->bit_vector, capacity, num_ints, properties->value, properties->bit_vector, properties->value, properties->bit_vector, op_fp, vsp);
+        union_dense(properties->value, properties->bit_vector, capacity, num_ints, (*it)->value, (*it)->bit_vector, properties->value, properties->bit_vector, op_fp, vsp);
       }
     } 
   }

@@ -93,7 +93,8 @@ void union_compressed(Ta* v1, int* indices, int nnz, int capacity, int num_ints,
       {
         //Tb tmp = v2[idx];
         //op_fp(v1[i], tmp, &(v2[idx]), vsp);
-        op_fp(v1[i], v2[idx], &(v2[idx]), vsp);
+        //op_fp(v1[i], v2[idx], &(v2[idx]), vsp);
+        op_fp(v2[idx], v1[i], &(v2[idx]), vsp);
       }
       else
       {
