@@ -78,9 +78,6 @@ void test_graph_getset(int n) {
     }
   }
 
-  //std::string fname = "/dev/shm/vprop.txt";
-  //G.saveVertexproperty(fname);
-
 }
 
 void test_graph_size(int n) {
@@ -115,6 +112,33 @@ void test_graph_size(int n) {
   }
 }
 
+void test_graph_io(int n) {
+    auto E = generate_random_edgelist<int>(n, 16);
+    GraphMat::random_edge_weights(&E, 128);
+    GraphMat::Graph<custom_vertex_type> G;
+    G.ReadEdgelist(E);
+    
+    GraphMat::edgelist_t<int> E2, E3, E4;
+    G.getEdgelist(E2);
+
+    collect_edges(E, E3);
+    std::sort(E3.edges, E3.edges + E3.nnz, edge_compare<int>);
+    collect_edges(E2, E4);
+    std::sort(E4.edges, E4.edges + E4.nnz, edge_compare<int>);
+   
+    REQUIRE(E3.nnz == E4.nnz); 
+    for (int i = 0; i < E3.nnz; i++) {
+      REQUIRE(E3.edges[i].src == E4.edges[i].src);
+      REQUIRE(E3.edges[i].dst == E4.edges[i].dst);
+      REQUIRE(E3.edges[i].val == E4.edges[i].val);
+    }
+
+    E.clear();   
+    E2.clear();   
+    E3.clear();   
+    E4.clear();   
+}
+
 TEST_CASE("Graph tests", "[random]")
 {
   SECTION("test get set", "[get][set]") {
@@ -125,5 +149,8 @@ TEST_CASE("Graph tests", "[random]")
     test_graph_size(50);
     test_graph_size(500);
     test_graph_size(1000);
+  }
+  SECTION("test edgelist in/out", "[io]") {
+    test_graph_io(500);
   }
 }
