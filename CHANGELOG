@@ -1,3 +1,6 @@
+- All function signatures to be passed for apply, reduce etc. use const references for read-only arguments
+- New primitive "applyToAllEdges" added to Graph
+
 Changes in v2.0 from both v1.0-single-node and v1.0-distributed
 - All the GraphMat classes and routines are in the "GraphMat::" namespace.
 - All the GraphMat include files have been moved to include/ directory. src/ directory contains only the apps.
