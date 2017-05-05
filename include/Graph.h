@@ -330,6 +330,7 @@ void Graph<V,E>::getEdgelist(GraphMat::edgelist_t<E> & myedges) {
   for(unsigned int i = 0 ; i < myedges.nnz ; i++)
   {
     myedges.edges[i].src = nativeToVertex(myedges.edges[i].src, tiles_per_dim, nvertices);
+    myedges.edges[i].dst = nativeToVertex(myedges.edges[i].dst, tiles_per_dim, nvertices);
   }
 }
 
