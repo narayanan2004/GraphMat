@@ -115,13 +115,18 @@ void test_graph_size(int n) {
 void test_graph_io(int n) {
     auto E = generate_random_edgelist<int>(n, 16);
     GraphMat::random_edge_weights(&E, 128);
+
+    GraphMat::edgelist_t<int> E1(E.m, E.n, E.nnz);
+    memcpy(E1.edges, E.edges, E.nnz*sizeof(GraphMat::edge_t<int>));
+
     GraphMat::Graph<custom_vertex_type> G;
     G.ReadEdgelist(E);
+    E.clear();
     
     GraphMat::edgelist_t<int> E2, E3, E4;
     G.getEdgelist(E2);
 
-    collect_edges(E, E3);
+    collect_edges(E1, E3);
     std::sort(E3.edges, E3.edges + E3.nnz, edge_compare<int>);
     collect_edges(E2, E4);
     std::sort(E4.edges, E4.edges + E4.nnz, edge_compare<int>);
@@ -133,7 +138,7 @@ void test_graph_io(int n) {
       REQUIRE(E3.edges[i].val == E4.edges[i].val);
     }
 
-    E.clear();   
+    E1.clear();   
     E2.clear();   
     E3.clear();   
     E4.clear();   
