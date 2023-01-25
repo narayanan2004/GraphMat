@@ -1,5 +1,5 @@
 MPICXX=mpiicpc
-CXX=icpc
+CXX=dpcpp
 
 SRCDIR=./src
 INCLUDEDIR=./include
@@ -10,36 +10,39 @@ CATCHDIR=./test/Catch
 TESTDIR=./test
 TESTBINDIR=./testbin
 
-ifeq (${CXX}, icpc)
-  CXX_OPTIONS=-qopenmp -std=c++11
+
+ifeq (${CXX}, dpcpp)
+	CXX_OPTIONS=-qopenmp -std=c++11 -I/opt/intel/oneapi/mpi/latest/include
 else
-  CXX_OPTIONS=-fopenmp --std=c++11 -I/usr/include/mpi/
+	CXX_OPTIONS=-fopenmp --std=c++11 -I/usr/include/mpi/
 endif
 
-CXX_OPTIONS+=-I$(INCLUDEDIR) -I$(DIST_PRIMITIVES_PATH)
+CXX_OPTIONS+=-I$(INCLUDEDIR) -I$(DIST_PRIMITIVES_PATH) -I${BOOST_ROOT}
 
 ifeq (${debug}, 1)
-  CXX_OPTIONS += -O0 -g -D__DEBUG 
+	CXX_OPTIONS += -O0 -g -D__DEBUG 
 else
-  ifeq (${CXX}, icpc)
-    CXX_OPTIONS += -O3 -ipo 
-  else
-    CXX_OPTIONS += -O3 -flto -fwhole-program
-  endif
+	ifeq (${CXX}, dpcpp)
+	  CXX_OPTIONS += -O3 -ipo 
+	else
+	  CXX_OPTIONS += -O3 -flto -fwhole-program
+	endif
 endif
 
-ifeq (${CXX}, icpc)
-  CXX_OPTIONS += -xHost
+ifeq (${CXX}, dpcpp)
+	CXX_OPTIONS += -xHost
 else
-  CXX_OPTIONS += -march=native
+	CXX_OPTIONS += -march=native
 endif
 
 ifeq (${timing}, 1)
-  CXX_OPTIONS += -D__TIMING
+	CXX_OPTIONS += -D__TIMING
 else
 endif
 
-LD_OPTIONS += -lboost_serialization
+CXX_OPTIONS += -Wno-format -Wno-dangling-else
+
+LD_OPTIONS += -L${BOOST_ROOT}/stage/lib/ -lboost_serialization
 
 # --- Apps --- #
 sources = $(wildcard $(SRCDIR)/*.cpp)
@@ -49,7 +52,7 @@ deps = $(include_headers) $(dist_primitives_headers)
 apps = $(patsubst $(SRCDIR)/%.cpp, $(BINDIR)/%, $(sources))
 
 all: $(apps)
-	
+
 $(BINDIR)/% : $(SRCDIR)/%.cpp $(deps)  
 	$(MPICXX) -cxx=$(CXX) $(CXX_OPTIONS) -o $@ $< $(LD_OPTIONS)
 

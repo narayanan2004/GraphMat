@@ -39,6 +39,7 @@
 #include <sys/time.h>
 #include <math.h>
 #include <parallel/algorithm>
+#include <immintrin.h> // for _mm_malloc
 #include <map>
 #include <set>
 #include <string>
